@@ -71,6 +71,8 @@ class Context2D {
     this.lineWidth = 1;
     this._path = [];
     this._cursor = [0, 0];
+    this._stateStack = [];
+    this._lineDash = [];
   }
 
   blend(x, y, colour) {
@@ -90,6 +92,36 @@ class Context2D {
     for (let py = Math.floor(y); py < Math.ceil(y + h); py += 1) {
       for (let px = Math.floor(x); px < Math.ceil(x + w); px += 1) this.blend(px, py, c);
     }
+  }
+
+  save() {
+    this._stateStack.push({
+      fillStyle: this.fillStyle,
+      strokeStyle: this.strokeStyle,
+      lineWidth: this.lineWidth,
+      lineCap: this.lineCap,
+      lineJoin: this.lineJoin,
+      lineDash: [...this._lineDash],
+    });
+  }
+
+  restore() {
+    const state = this._stateStack.pop();
+    if (!state) return;
+    this.fillStyle = state.fillStyle;
+    this.strokeStyle = state.strokeStyle;
+    this.lineWidth = state.lineWidth;
+    this.lineCap = state.lineCap;
+    this.lineJoin = state.lineJoin;
+    this._lineDash = state.lineDash;
+  }
+
+  setLineDash(segments = []) {
+    this._lineDash = Array.from(segments);
+  }
+
+  getLineDash() {
+    return [...this._lineDash];
   }
 
   beginPath() { this._path = []; }

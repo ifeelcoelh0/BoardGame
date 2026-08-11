@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createPeerConfig, getNetworkConfigSummary, parseIceServers } from "../src/multiplayer/config.js";
+import { createPeerConfig, getNetworkConfigSummary, parseIceServers, resolvePeerConfig } from "../src/multiplayer/config.js";
 
 test("uses safe STUN-only defaults", () => {
   const config = createPeerConfig({});
@@ -44,4 +44,47 @@ test("TURN can be made a deployment requirement without hard-coding a provider",
       { urls: "turns:turn.example.com:5349", username: "temporary", credential: "temporary" },
     ]),
   }));
+});
+
+
+test("resolves short-lived TURN credentials from a same-origin endpoint", async () => {
+  const config = await resolvePeerConfig({
+    VITE_TURN_CREDENTIALS_ENDPOINT: "/api/turn-credentials",
+    VITE_REQUIRE_TURN: "true",
+  }, {
+    fetchFn: async (url) => {
+      assert.equal(url, "/api/turn-credentials");
+      return new Response(JSON.stringify({
+        iceServers: [
+          { urls: "stun:stun.cloudflare.com:3478" },
+          { urls: "turns:turn.cloudflare.com:443?transport=tcp", username: "temp", credential: "temp-secret" },
+        ],
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+    timeoutMs: 1000,
+  });
+
+  assert.equal(getNetworkConfigSummary(config).turnEnabled, true);
+});
+
+test("required TURN fails closed when temporary credentials cannot be fetched", async () => {
+  await assert.rejects(() => resolvePeerConfig({
+    VITE_TURN_CREDENTIALS_ENDPOINT: "/api/turn-credentials",
+    VITE_REQUIRE_TURN: "true",
+  }, {
+    fetchFn: async () => new Response("unavailable", { status: 503 }),
+    timeoutMs: 1000,
+  }), /credenciais TURN temporárias/);
+});
+
+
+test("can force relay-only transport for TURN verification", () => {
+  const config = createPeerConfig({
+    VITE_FORCE_TURN_RELAY: "true",
+    VITE_ICE_SERVERS_JSON: JSON.stringify([
+      { urls: "turns:turn.example.com:443", username: "temporary", credential: "temporary" },
+    ]),
+  });
+  assert.equal(config.config.iceTransportPolicy, "relay");
+  assert.equal(getNetworkConfigSummary(config).relayOnly, true);
 });

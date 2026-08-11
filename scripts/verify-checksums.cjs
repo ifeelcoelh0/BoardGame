@@ -48,6 +48,7 @@ for (const rel of listed.keys()) {
 if (failures.length) {
   console.error("Falhas nos checksums:");
   failures.forEach((failure) => console.error(`- ${failure}`));
+  console.error("\nSe estas alterações são intencionais, executa: npm run checksums:update");
   process.exit(1);
 }
 console.log(`Checksums verificados: ${actualFiles.length} ficheiros.`);

@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const { readRuntimeSource } = require("./lib/runtime-source.cjs");
 const runtimeSource = readRuntimeSource();
-assert.match(runtimeSource, /const startHostTransport = \(hostGame, attemptId\) =>/);
+assert.match(runtimeSource, /const startHostTransport = (?:async )?\(hostGame, attemptId\) =>/);
 assert.match(runtimeSource, /const installHostGame = \(nextGame, hostIndex\) =>/);
 /* O `setCharacterSelectionIntent` foi removido: a selecção deriva do stage. O
    que continua a importar é a ordem, o reino local instalado e a galeria aberta
