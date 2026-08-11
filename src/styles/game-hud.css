@@ -1,0 +1,127 @@
+/* ========================================================================== */
+/* REINOS DO DRAGÃO — HUD PERSISTENTE                                         */
+/* Estrutura discreta em madeira/bronze. Conteúdo contextual abre em          */
+/* pergaminho; acontecimentos cerimoniais continuam noutra camada.            */
+/* ========================================================================== */
+
+.rd-game-hud { position: fixed; inset: 0; z-index: var(--rd-z-hud); pointer-events: none; font-family: var(--rd-font-body); }
+.rd-game-hud button, .rd-game-hud nav { pointer-events: auto; }
+.rd-game-hud__topline { position: absolute; top: 10px; left: 50%; display: flex; align-items: center; gap: 9px; transform: translateX(-50%); }
+.rd-game-hud__realm { display: grid; grid-template-columns: auto auto 1px auto; align-items: center; gap: 8px; min-height: 42px; padding: 6px 12px; white-space: nowrap; }
+.rd-game-hud__realm small { color: var(--rd-bronze-bright); font: 800 7px/1 var(--rd-font-label); letter-spacing: .14em; }
+.rd-game-hud__realm strong { color: var(--rd-gold-bright); font: 400 18px/1 var(--rd-font-display); letter-spacing: .08em; }
+.rd-game-hud__realm i { width: 1px; height: 22px; background: linear-gradient(transparent, rgba(208,161,79,.62), transparent); }
+.rd-game-hud__realm span { color: var(--rd-muted); font: 800 8px/1 var(--rd-font-label); letter-spacing: .08em; }
+
+.rd-game-hud__dice { display: flex; gap: 4px; padding: 5px; border: 1px solid var(--rd-bronze-dark); border-top-color: var(--rd-bronze); border-radius: var(--rd-radius-sm); background: rgba(18,11,7,.94); box-shadow: var(--rd-shadow-low); animation: rd-hud-dice .28s var(--rd-ease-emphasis); }
+.rd-game-hud__dice span { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid #a88755; border-radius: 4px; background: linear-gradient(145deg,#f1e4c2,#d5bd8e); color: var(--rd-ink); font: 900 13px/1 var(--rd-font-label); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35), 0 2px 4px rgba(0,0,0,.4); }
+@keyframes rd-hud-dice { from { transform: translateY(-5px) scale(.94); opacity: .3; } to { transform: none; opacity: 1; } }
+
+.rd-game-hud__utilities { position: absolute; top: 66px; right: 12px; display: grid; gap: 5px; padding: 6px; background: linear-gradient(180deg,rgba(43,27,15,.92),rgba(13,8,5,.94)); }
+.rd-game-hud__utilities .rd-ui-icon-button { min-width: 58px; width: 58px; box-shadow: none; background: rgba(18,11,7,.72); }
+.rd-game-hud__utilities .rd-ui-icon-button__badge { right: -3px; top: -4px; }
+
+.rd-game-hud__status { position: absolute; left: 50%; bottom: 158px; max-width: min(680px, calc(100vw - 520px)); transform: translateX(-50%); text-align: center; }
+.rd-game-hud__status span { display: inline-block; padding: 6px 14px 7px; border: 1px solid rgba(162,115,49,.72); border-radius: var(--rd-radius-sm); background: rgba(18,11,7,.91); color: #ead9b3; box-shadow: var(--rd-shadow-low), var(--rd-highlight-inset); font: 400 14px/1.25 var(--rd-font-body); }
+.rd-game-hud__sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* ---------- Barra compacta de inventário ---------- */
+.rd-game-resource-strip { display: flex; align-items: center; justify-content: center; gap: 7px; width: max-content; max-width: 100%; margin: 0 auto; padding: 5px 8px; border: 1px solid rgba(162,115,49,.58); border-radius: var(--rd-radius-sm); background: linear-gradient(180deg,rgba(47,29,16,.96),rgba(17,10,6,.96)); box-shadow: var(--rd-shadow-low), var(--rd-highlight-inset); pointer-events: auto; }
+.rd-game-resource-strip__resource { display: grid; grid-template-columns: 22px auto; align-items: center; gap: 2px; min-width: 38px; color: var(--rd-ivory); }
+.rd-game-resource-strip__resource img { filter: drop-shadow(1px 2px 1px rgba(0,0,0,.6)); }
+.rd-game-resource-strip__resource b { color: var(--rd-gold-bright); font: 800 11px/1 var(--rd-font-label); }
+.rd-game-resource-strip__divider { width: 1px; height: 27px; background: linear-gradient(transparent,rgba(208,161,79,.55),transparent); }
+.rd-game-resource-strip__cards { display: grid; grid-template-columns: 22px auto; grid-template-rows: auto auto; column-gap: 3px; align-items: center; padding: 2px 5px; border: 0; background: transparent; color: var(--rd-muted); cursor: pointer; }
+.rd-game-resource-strip__cards img { grid-row: 1/3; }
+.rd-game-resource-strip__cards b { color: var(--rd-gold-bright); font: 800 11px/1 var(--rd-font-label); text-align: left; }
+.rd-game-resource-strip__cards span { font: 800 6px/1 var(--rd-font-label); letter-spacing: .07em; text-transform: uppercase; }
+.rd-game-resource-strip__cards:hover { color: var(--rd-gold-bright); }
+.rd-game-resource-strip__cards:focus-visible { outline: 2px solid var(--rd-gold-bright); outline-offset: 2px; }
+
+/* ---------- Custos compactos ---------- */
+.rd-resource-cost { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 2px 5px; margin-top: 2px; vertical-align: middle; }
+.rd-resource-cost__item { display: inline-flex; align-items: center; gap: 1px; color: #e6d3a8; }
+.rd-resource-cost__item img { filter: drop-shadow(1px 1px 1px rgba(0,0,0,.55)); }
+.rd-resource-cost__item b { font: 800 8px/1 var(--rd-font-label); }
+.rd-resource-cost--compact { gap: 2px 3px; }
+.rd-resource-cost--compact .rd-resource-cost__item b { font-size: 7px; }
+
+/* ---------- Painéis contextuais do HUD ---------- */
+.rd-hud-panel-overlay { position: fixed; inset: 0; z-index: var(--rd-z-modal); display: grid; place-items: center; padding: 18px; background: rgba(7,4,3,.56); backdrop-filter: blur(2px); animation: rd-hud-panel-fade var(--rd-motion-fast) ease; }
+.rd-hud-panel { width: min(470px, 100%); max-height: min(76vh, 640px); overflow: auto; padding: 18px; animation: rd-hud-panel-rise var(--rd-motion-standard) var(--rd-ease-out); }
+.rd-hud-panel::after { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(91,61,31,.25); pointer-events: none; }
+.rd-hud-panel__header { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 12px; padding-bottom: 12px; margin-bottom: 13px; border-bottom: 1px solid rgba(92,70,41,.28); }
+.rd-hud-panel__header > div { flex: 1; }
+.rd-hud-panel__header small { display: block; color: var(--rd-rubric); font: 800 8px/1 var(--rd-font-label); letter-spacing: .13em; text-transform: uppercase; }
+.rd-hud-panel__header h3 { margin: 4px 0 0; color: var(--rd-ink); font: 400 28px/.95 var(--rd-font-display); }
+.rd-hud-panel__close { position: relative; z-index: 2; width: 34px; height: 34px; border: 1px solid rgba(92,70,41,.45); border-radius: 50%; background: rgba(92,70,41,.08); color: var(--rd-ink-soft); font: 400 23px/1 var(--rd-font-display); cursor: pointer; }
+.rd-hud-panel__close:hover { border-color: var(--rd-rubric); color: var(--rd-rubric); }
+
+.rd-hud-resources__total { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 9px 11px; border: 1px solid rgba(92,70,41,.2); background: rgba(255,250,220,.18); }
+.rd-hud-resources__total div { display: grid; }
+.rd-hud-resources__total strong { color: var(--rd-ink); font: 700 23px/1 var(--rd-font-label); }
+.rd-hud-resources__total span { color: var(--rd-ink-faded); font: 400 13px/1.2 var(--rd-font-body); }
+.rd-hud-resources__grid { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin-bottom: 14px; }
+.rd-hud-resources__grid article { min-width: 0; display: grid; justify-items: center; gap: 4px; padding: 8px 4px; border: 1px solid rgba(92,70,41,.22); background: rgba(255,250,220,.16); text-align: center; }
+.rd-hud-resources__grid article div { min-width: 0; display: grid; gap: 2px; }
+.rd-hud-resources__grid small { overflow: hidden; color: var(--rd-ink-faded); font: 800 6px/1 var(--rd-font-label); text-overflow: ellipsis; text-transform: uppercase; }
+.rd-hud-resources__grid strong { color: var(--rd-ink); font: 800 18px/1 var(--rd-font-label); }
+.rd-hud-panel > .rd-ui-button { position: relative; z-index: 1; width: 100%; }
+
+.rd-hud-options__row { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; }
+.rd-hud-options__row > div { flex: 1; min-width: 0; }
+.rd-hud-options__row small { display: block; color: var(--rd-rubric); font: 800 7px/1 var(--rd-font-label); letter-spacing: .11em; }
+.rd-hud-options__row strong { display: block; margin-top: 3px; color: var(--rd-ink); font: 400 18px/1.1 var(--rd-font-display); }
+.rd-hud-options__row p { margin: 3px 0 0; color: var(--rd-ink-faded); font: 400 13px/1.25 var(--rd-font-body); }
+.rd-hud-options__divider { height: 1px; margin: 14px 0; background: linear-gradient(90deg,transparent,rgba(92,70,41,.34),transparent); }
+.rd-hud-options__row--exit strong { color: #68291f; }
+
+@keyframes rd-hud-panel-fade { from { opacity: 0; } }
+@keyframes rd-hud-panel-rise { from { transform: translateY(10px) scale(.985); opacity: .45; } }
+
+@media (max-width: 820px) {
+  .rd-game-hud__topline { top: 7px; }
+  .rd-game-hud__realm { min-height: 36px; padding: 4px 8px; }
+  .rd-game-hud__realm strong { font-size: 15px; }
+  .rd-game-hud__realm small { display: none; }
+  .rd-game-hud__utilities { top: auto; right: 50%; bottom: 8px; grid-template-columns: repeat(5,1fr); gap: 3px; padding: 4px; transform: translateX(50%); z-index: var(--rd-z-floating); }
+  .rd-game-hud__utilities .rd-ui-icon-button { width: 50px; min-width: 50px; min-height: 48px; grid-template-rows: 26px auto; padding: 3px 4px 5px; }
+  .rd-game-hud__utilities .rd-ui-icon-button__icon { height: 26px; }
+  .rd-game-hud__status { bottom: 130px; max-width: calc(100vw - 24px); }
+  .rd-game-hud__status span { font-size: 12px; padding: 5px 9px; }
+  .rd-hud-resources__grid { grid-template-columns: repeat(5,minmax(48px,1fr)); gap: 3px; }
+}
+
+@media (max-width: 560px) {
+  .rd-game-hud__topline { left: 8px; transform: none; }
+  .rd-game-hud__realm span { display: none; }
+  .rd-game-hud__realm i { display: none; }
+  .rd-game-hud__dice span { width: 24px; height: 24px; }
+  .rd-game-resource-strip { gap: 4px; padding: 4px 5px; }
+  .rd-game-resource-strip__resource { grid-template-columns: 18px auto; min-width: 31px; }
+  .rd-game-resource-strip__resource img { width: 18px !important; height: 18px !important; }
+  .rd-game-resource-strip__cards { grid-template-columns: 18px auto; }
+  .rd-game-resource-strip__cards img { width: 18px !important; height: 18px !important; }
+  .rd-hud-panel-overlay { padding: 10px; }
+  .rd-hud-panel { padding: 14px 12px; }
+  .rd-hud-resources__grid { grid-template-columns: repeat(5,1fr); }
+  .rd-hud-resources__grid article { padding: 6px 2px; }
+  .rd-hud-resources__grid img { width: 27px !important; height: 27px !important; }
+  .rd-hud-options__row { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .rd-hud-options__row .rd-ui-button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-game-hud__dice, .rd-hud-panel-overlay, .rd-hud-panel { animation: none; }
+}
+
+/* Preview do componente real dentro do UI Lab. */
+.rd-game-hud--embedded { position: relative; inset: auto; min-height: 270px; overflow: hidden; border: 1px solid rgba(162,115,49,.3); border-radius: var(--rd-radius-md); background: radial-gradient(circle at 50% 48%,rgba(64,50,31,.32),rgba(5,4,3,.96) 72%); }
+.rd-game-hud--embedded .rd-game-hud__topline { position: absolute; }
+.rd-game-hud--embedded .rd-game-hud__utilities { position: absolute; }
+.rd-game-hud--embedded .rd-game-hud__status { bottom: 18px; max-width: calc(100% - 40px); }
+
+
+@media (max-width: 820px) {
+  .empanel { bottom: 74px; }
+}

@@ -1,0 +1,36 @@
+{
+  "group_id": "b9858fcc-309b-40a3-9bff-4c90bfca123f",
+  "states": [
+    {
+      "character": {
+        "id": "3b575741-654d-4267-9325-fecd43011adb",
+        "name": "Idle",
+        "prompt": "Short hunched goblin with green skin and long pointed ears, big yellow eyes, wide toothy grin showing white teeth, brown hood and ragged sack slung over one shoulder, clutching a coin. Palette: bright green \n#63a83c, dark green \n#3d7024, pale green \n#8ed158, hood brown \n#7a5228, yellow eyes \n#f2d94e.",
+        "size": {
+          "width": 88,
+          "height": 88
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-31T16:20:49.794105+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-07-31T18:01:13.688754"
+}

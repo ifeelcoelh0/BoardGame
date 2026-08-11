@@ -1,0 +1,8 @@
+import { APP_VERSION } from "./appVersion.js";
+
+export const APP_BUILD_VERSION = APP_VERSION;
+export const APP_BUILD_COMPATIBILITY_VERSION = 2;
+
+export function isCompatibleBuild(remoteCompatibilityVersion) {
+  return remoteCompatibilityVersion === APP_BUILD_COMPATIBILITY_VERSION;
+}

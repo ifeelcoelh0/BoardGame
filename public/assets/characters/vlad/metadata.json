@@ -1,0 +1,36 @@
+{
+  "group_id": "ea0b0416-6151-4e6e-9fd0-95e397ec9355",
+  "states": [
+    {
+      "character": {
+        "id": "08af4854-c514-493c-8ea2-306a4b3f8c9c",
+        "name": "Idle",
+        "prompt": "Pale gaunt vampire lord in a high-collared black cape with crimson inner lining, dark slicked hair, small red eyes, cream ruffled shirt, pale ivory skin. Palette: near-black \n#08080e, dark violet-grey \n#26263a, cold lavender \n#b9b9d4, blood red \n#c22a33, cream \n#f4ecdd.",
+        "size": {
+          "width": 88,
+          "height": 88
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-31T17:46:28.817722+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-07-31T17:50:21.947139"
+}

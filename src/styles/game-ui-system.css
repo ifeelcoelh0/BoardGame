@@ -1,0 +1,295 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=VT323&family=IM+Fell+English+SC&family=UnifrakturCook:wght@700&family=Fondamento:ital@0;1&family=Mrs+Saint+Delafield&display=swap');
+
+/* ========================================================================== */
+/* REINOS DO DRAGÃO — SISTEMA VISUAL CANÓNICO                                */
+/*                                                                            */
+/* Esta folha contém apenas tokens e primitives. Log, HUD e eventos podem      */
+/* compor estes materiais. Cartas de Desenvolvimento são um objeto visual      */
+/* próprio e partilham apenas os tokens que fazem sentido.                     */
+/* ========================================================================== */
+
+:root {
+  /* Tipografia */
+  --rd-font-display: 'IM Fell English SC', 'Palatino Linotype', Georgia, serif;
+  --rd-font-body: 'Fondamento', Georgia, serif;
+  --rd-font-label: 'Cinzel', Georgia, serif;
+  --rd-font-hand: 'Fondamento', Georgia, serif;
+  --rd-font-signature: 'Mrs Saint Delafield', 'Fondamento', cursive;
+  --rd-font-blackletter: 'UnifrakturCook', 'IM Fell English SC', Georgia, serif;
+  --rd-font-technical: 'VT323', ui-monospace, monospace;
+
+  /* Tinta / pergaminho */
+  --rd-ink: #2e1f14;
+  --rd-ink-soft: #5c4629;
+  --rd-ink-faded: #7d684a;
+  --rd-rubric: #8e2c1b;
+  --rd-rubric-bright: #a3462c;
+  --rd-paper-light: #f4e6c5;
+  --rd-paper: #e7d2a7;
+  --rd-paper-shadow: #bea173;
+  --rd-paper-edge: #8c6739;
+
+  /* Estrutura escura / metal */
+  --rd-night: #080504;
+  --rd-oak-deep: #120b07;
+  --rd-oak: #24170d;
+  --rd-oak-raised: #382417;
+  --rd-bronze-dark: #66431f;
+  --rd-bronze: #a27331;
+  --rd-bronze-bright: #d0a14f;
+  --rd-gold: #e0b23a;
+  --rd-gold-bright: #f5d87a;
+  --rd-ivory: #f4e5c0;
+  --rd-muted: #b8a37d;
+
+  /* Semântica */
+  --rd-danger: #8e342c;
+  --rd-danger-bright: #c26754;
+  --rd-success: #58985a;
+  --rd-success-bright: #9fd08d;
+  --rd-info: #4f7e8e;
+  --rd-info-bright: #a9d8e5;
+
+  /* Geometria: ligeiramente irregular/física, nunca UI arredondada genérica */
+  --rd-radius-xs: 3px;
+  --rd-radius-sm: 5px;
+  --rd-radius-md: 8px;
+  --rd-radius-lg: 11px;
+
+  /* Espaçamento base */
+  --rd-space-1: 4px;
+  --rd-space-2: 8px;
+  --rd-space-3: 12px;
+  --rd-space-4: 16px;
+  --rd-space-5: 24px;
+  --rd-space-6: 32px;
+
+  /* Profundidade */
+  --rd-shadow-low: 0 5px 12px rgba(0, 0, 0, .38);
+  --rd-shadow-panel: 0 12px 30px rgba(0, 0, 0, .55);
+  --rd-shadow-float: 0 20px 52px rgba(0, 0, 0, .68);
+  --rd-highlight-inset: inset 0 1px rgba(255, 244, 207, .09);
+
+  /* Movimento */
+  --rd-motion-press: 90ms;
+  --rd-motion-fast: 160ms;
+  --rd-motion-standard: 240ms;
+  --rd-motion-reveal: 420ms;
+  --rd-motion-ceremonial: 640ms;
+  --rd-ease-out: cubic-bezier(.2, .72, .22, 1);
+  --rd-ease-emphasis: cubic-bezier(.18, .88, .24, 1.18);
+
+  /* Camadas — espelham GAME_UI_Z em gameVisualLanguage.js */
+  --rd-z-board: 0;
+  --rd-z-hud: 30;
+  --rd-z-floating: 45;
+  --rd-z-modal: 60;
+  --rd-z-toast: 80;
+  --rd-z-event: 95;
+  --rd-z-fatal: 110;
+}
+
+/* ---------- Tipografia ---------- */
+.rd-ui-heading { display: grid; gap: 4px; color: var(--rd-ivory); }
+.rd-ui-heading--center { justify-items: center; text-align: center; }
+.rd-ui-heading > small {
+  color: var(--rd-bronze-bright);
+  font: 800 10px/1 var(--rd-font-label);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.rd-ui-heading > h1,
+.rd-ui-heading > h2,
+.rd-ui-heading > h3,
+.rd-ui-heading > h4,
+.rd-ui-heading > h5,
+.rd-ui-heading > h6 {
+  margin: 0;
+  font-family: var(--rd-font-display);
+  font-weight: 400;
+  letter-spacing: .025em;
+  line-height: 1.02;
+}
+.rd-ui-heading > h1 { font-size: clamp(34px, 5vw, 64px); }
+.rd-ui-heading > h2 { font-size: clamp(25px, 3.2vw, 40px); }
+.rd-ui-heading > h3 { font-size: clamp(20px, 2.5vw, 28px); }
+.rd-ui-heading > p {
+  max-width: 64ch;
+  margin: 3px 0 0;
+  color: var(--rd-muted);
+  font: 400 16px/1.38 var(--rd-font-body);
+}
+
+/* ---------- Superfícies ---------- */
+.rd-ui-surface { position: relative; box-sizing: border-box; }
+.rd-ui-surface--oak {
+  border: 1px solid var(--rd-bronze-dark);
+  border-top-color: var(--rd-bronze);
+  border-radius: var(--rd-radius-md);
+  background:
+    linear-gradient(100deg, rgba(255,255,255,.025), transparent 28%),
+    linear-gradient(180deg, rgba(55,34,20,.97), rgba(18,11,7,.98));
+  color: var(--rd-ivory);
+  box-shadow: var(--rd-shadow-panel), var(--rd-highlight-inset);
+}
+.rd-ui-surface--bronze {
+  border: 1px solid var(--rd-bronze-bright);
+  border-radius: var(--rd-radius-sm);
+  background: linear-gradient(180deg, #765126, #422810);
+  color: var(--rd-ivory);
+  box-shadow: var(--rd-shadow-low), inset 0 1px rgba(255,255,255,.1);
+}
+.rd-ui-surface--inset {
+  border: 1px solid rgba(164, 116, 49, .38);
+  border-radius: var(--rd-radius-sm);
+  background: rgba(5, 3, 2, .34);
+  color: var(--rd-ivory);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.32);
+}
+.rd-ui-surface--parchment,
+.rd-ui-surface--parchment-raised {
+  border: 1px solid var(--rd-paper-edge);
+  color: var(--rd-ink);
+  background:
+    radial-gradient(ellipse at 14% 12%, rgba(255,250,220,.42), transparent 32%),
+    radial-gradient(ellipse at 88% 72%, rgba(118,72,27,.10), transparent 36%),
+    linear-gradient(100deg, rgba(110,69,30,.055), transparent 18%, rgba(255,255,255,.12) 52%, transparent 80%),
+    var(--rd-paper);
+  box-shadow: inset 0 0 28px rgba(101, 63, 25, .13);
+}
+.rd-ui-surface--parchment-raised {
+  box-shadow: var(--rd-shadow-float), inset 0 0 30px rgba(101, 63, 25, .14);
+}
+.rd-ui-surface--veil {
+  border: 1px solid rgba(208, 161, 79, .25);
+  border-radius: var(--rd-radius-lg);
+  background: rgba(8, 5, 4, .78);
+  color: var(--rd-ivory);
+  box-shadow: var(--rd-shadow-panel);
+  backdrop-filter: blur(4px);
+}
+
+.rd-ui-emphasis--interactive { border-color: var(--rd-bronze); }
+.rd-ui-emphasis--important { border-color: var(--rd-gold); box-shadow: var(--rd-shadow-panel), 0 0 18px rgba(224,178,58,.13); }
+.rd-ui-emphasis--ceremonial { border-color: var(--rd-gold-bright); box-shadow: var(--rd-shadow-float), 0 0 34px rgba(224,178,58,.2); }
+
+/* ---------- Botões ---------- */
+.rd-ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 0;
+  border-radius: var(--rd-radius-sm);
+  font-family: var(--rd-font-label);
+  font-weight: 700;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform var(--rd-motion-press) ease,
+    border-color var(--rd-motion-fast) ease,
+    filter var(--rd-motion-fast) ease,
+    box-shadow var(--rd-motion-fast) ease;
+}
+.rd-ui-button--sm { min-height: 32px; padding: 5px 9px; font-size: 9px; }
+.rd-ui-button--md { min-height: 42px; padding: 8px 14px; font-size: 10px; }
+.rd-ui-button--lg { min-height: 50px; padding: 10px 18px; font-size: 11px; }
+.rd-ui-button__icon { display: grid; place-items: center; flex: none; }
+.rd-ui-button__copy { display: grid; gap: 2px; text-align: left; }
+.rd-ui-button__copy small { opacity: .62; font-size: .72em; letter-spacing: .14em; }
+.rd-ui-button__copy strong { font: inherit; }
+.rd-ui-button--primary {
+  border: 1px solid var(--rd-gold-bright);
+  background: linear-gradient(180deg, #9b6d1f, #51310d);
+  color: #fff0bd;
+  box-shadow: var(--rd-shadow-low), inset 0 1px rgba(255,255,255,.12), 0 0 14px rgba(224,178,58,.12);
+  text-shadow: 0 1px 1px rgba(0,0,0,.7);
+}
+.rd-ui-button--secondary {
+  border: 1px solid var(--rd-bronze);
+  background: linear-gradient(180deg, #4c3119, #24150b);
+  color: #ead39f;
+  box-shadow: var(--rd-shadow-low), var(--rd-highlight-inset);
+  text-shadow: 0 1px 1px rgba(0,0,0,.7);
+}
+.rd-ui-button--quiet {
+  border: 1px solid rgba(184, 163, 125, .32);
+  background: rgba(16, 10, 7, .58);
+  color: var(--rd-muted);
+}
+.rd-ui-button--danger {
+  border: 1px solid var(--rd-danger-bright);
+  background: linear-gradient(180deg, #722a25, #3c1512);
+  color: #f0cbc2;
+  box-shadow: var(--rd-shadow-low), var(--rd-highlight-inset);
+}
+.rd-ui-button:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.rd-ui-button:active:not(:disabled) { transform: translateY(0) scale(.985); }
+.rd-ui-button:focus-visible,
+.rd-ui-icon-button:focus-visible { outline: 2px solid var(--rd-gold-bright); outline-offset: 3px; }
+.rd-ui-button:disabled { cursor: not-allowed; opacity: .4; filter: grayscale(.7); }
+
+/* ---------- Controlos compactos do HUD ---------- */
+.rd-ui-icon-button {
+  position: relative;
+  display: grid;
+  grid-template-rows: 30px auto;
+  justify-items: center;
+  align-items: center;
+  gap: 3px;
+  min-width: 56px;
+  min-height: 54px;
+  padding: 5px 7px 6px;
+  border: 1px solid var(--rd-bronze-dark);
+  border-top-color: var(--rd-bronze);
+  border-radius: var(--rd-radius-sm);
+  background: linear-gradient(180deg, rgba(57,36,20,.96), rgba(19,11,7,.97));
+  color: var(--rd-muted);
+  box-shadow: var(--rd-shadow-low), var(--rd-highlight-inset);
+  cursor: pointer;
+  transition: transform var(--rd-motion-press) ease, filter var(--rd-motion-fast) ease, border-color var(--rd-motion-fast) ease;
+}
+.rd-ui-icon-button__icon { display: grid; place-items: center; height: 30px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
+.rd-ui-icon-button__label { font: 800 7px/1 var(--rd-font-label); letter-spacing: .06em; text-transform: uppercase; }
+.rd-ui-icon-button__badge {
+  position: absolute;
+  right: -5px;
+  top: -6px;
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border: 1px solid #f0c467;
+  border-radius: 9px;
+  background: #7c2b20;
+  color: #ffe8bd;
+  font: 800 9px/1 var(--rd-font-label);
+  box-shadow: 0 3px 8px rgba(0,0,0,.45);
+}
+.rd-ui-icon-button:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.rd-ui-icon-button.is-active { border-color: var(--rd-gold); color: var(--rd-gold-bright); box-shadow: var(--rd-shadow-low), 0 0 13px rgba(224,178,58,.18); }
+.rd-ui-icon-button:disabled { cursor: not-allowed; opacity: .38; }
+
+/* ---------- Helpers tipográficos de uso deliberado ---------- */
+.rd-ui-copy { color: var(--rd-ink-soft); font: 400 16px/1.42 var(--rd-font-body); }
+.rd-ui-copy--dark { color: var(--rd-muted); }
+.rd-ui-label { color: var(--rd-bronze-bright); font: 800 9px/1 var(--rd-font-label); letter-spacing: .14em; text-transform: uppercase; }
+.rd-ui-hand { color: var(--rd-ink-soft); font: 400 18px/1.25 var(--rd-font-hand); }
+.rd-ui-signature { color: var(--rd-ink); font: 400 34px/1 var(--rd-font-signature); }
+.rd-ui-blackletter { font-family: var(--rd-font-blackletter); }
+.rd-ui-technical { font-family: var(--rd-font-technical); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --rd-motion-press: 1ms;
+    --rd-motion-fast: 1ms;
+    --rd-motion-standard: 1ms;
+    --rd-motion-reveal: 1ms;
+    --rd-motion-ceremonial: 1ms;
+  }
+  .rd-ui-button,
+  .rd-ui-icon-button { scroll-behavior: auto; }
+}
+.rd-rich-term{display:inline-flex;align-items:center;gap:.16em;white-space:nowrap;vertical-align:-.12em}.rd-rich-term img{flex:none;image-rendering:pixelated}

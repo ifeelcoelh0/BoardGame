@@ -1,0 +1,10 @@
+import fs from "node:fs";
+import { renderTile, sceneFor, writePNG, V } from "./render-core.mjs";
+const OUT=process.argv[2]; fs.mkdirSync(OUT,{recursive:true});
+const cw=420,ch=340;
+const tris=sceneFor("bones");
+const views=[[V(-0.5,1.62,-1.25),V(0.05,1.24,-0.5)],[V(0.5,1.5,-1.15),V(0.05,1.23,-0.5)],[V(-1.0,1.35,-0.9),V(0.05,1.22,-0.5)]];
+const buf=Buffer.alloc(cw*3*ch*3,8);
+views.forEach(([c,t],i)=>{const px=renderTile({tris,camPos:c,target:t,fov:26,width:cw,height:ch,groundY:null});
+for(let y=0;y<ch;y++) px.copy(buf,(y*cw*3+i*cw)*3,y*cw*3,(y+1)*cw*3);});
+writePNG(`${OUT}/livro.png`,cw*3,ch,buf); console.log("ok");

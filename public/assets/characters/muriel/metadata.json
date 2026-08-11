@@ -1,0 +1,36 @@
+{
+  "group_id": "fdb696fc-8d79-42f0-a786-dbe4de022bcd",
+  "states": [
+    {
+      "character": {
+        "id": "a331a2c5-454c-4de3-b907-374e47298fb7",
+        "name": "Idle",
+        "prompt": "Sorceress in a flowing deep purple robe with a wide pointed hat, holding a glowing crystal orb, long dark hair, gold trim and star motifs on the sleeves, knowing smile. Palette: royal purple \n#7b3fc4, dark purple \n#2f1d43, light violet \n#a86be0, gold trim \n#ffd76b, warm skin \n#f0d2b4.",
+        "size": {
+          "width": 92,
+          "height": 92
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-31T16:42:00.630507+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-07-31T17:43:33.554394"
+}

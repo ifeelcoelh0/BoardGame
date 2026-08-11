@@ -1,0 +1,36 @@
+{
+  "group_id": "bb0a00be-f75a-4686-9ce2-a70a36b1083f",
+  "states": [
+    {
+      "character": {
+        "id": "59c12193-0662-47a5-9987-e01bbd018e14",
+        "name": "Idle",
+        "prompt": "Walking skeleton warrior, bare bone-white skull and ribcage, hollow eye sockets glowing cyan, tattered dark grey cloak and rusty red scarf, relaxed casual stance, missing one finger. Palette: bone white \n#e8f0fb, pale grey \n#b9c4d6, dark slate \n#2a3040, cyan glow \n#3fd0ff, rust red \n#7d1820.",
+        "size": {
+          "width": 88,
+          "height": 88
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-31T16:44:40.367451+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-07-31T17:43:30.661284"
+}

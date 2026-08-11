@@ -1,0 +1,36 @@
+{
+  "group_id": "d8e6713a-ccb3-420d-857c-5213c4bbddc0",
+  "states": [
+    {
+      "character": {
+        "id": "a792fe5e-1479-4616-a0fe-ba9ad671444d",
+        "name": "Idle",
+        "prompt": "Fat elderly king with a huge white beard and rosy cheeks, crimson robe trimmed with cream fur, oversized gold crown tilted, wine goblet in one hand, big round belly. Palette: deep crimson \n#a8232b, dark red \n#7d1820, warm gold \n#c9922e, cream fur \n#e8e0d0, ruddy skin \n#e0907c.",
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-31T16:35:22.873844+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-07-31T17:43:34.762028"
+}

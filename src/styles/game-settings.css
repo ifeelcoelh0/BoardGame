@@ -1,0 +1,19 @@
+.rd-settings{display:grid;gap:12px;font-family:var(--rd-font-body);color:var(--rd-ink)}
+.rd-settings section{display:grid;gap:7px;padding:10px;border:1px solid rgba(92,70,41,.22);background:rgba(255,250,220,.13)}
+.rd-settings section>header{display:flex;align-items:baseline;gap:8px;padding-bottom:5px;border-bottom:1px solid rgba(92,70,41,.18)}
+.rd-settings section>header small{color:var(--rd-rubric);font:800 7px/1 var(--rd-font-label);letter-spacing:.14em}.rd-settings section>header strong{font:400 18px/1 var(--rd-font-display)}
+.rd-settings__row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:5px 0}.rd-settings__row>span{display:grid;gap:2px}.rd-settings__row strong{font:700 12px/1.1 var(--rd-font-body)}.rd-settings__row small{color:var(--rd-ink-faded);font:400 10px/1.2 var(--rd-font-body)}
+.rd-settings__slider-wrap{display:grid;grid-template-columns:minmax(90px,150px) 38px;align-items:center;gap:7px}.rd-settings__slider-wrap input{accent-color:#8a5a24}.rd-settings__slider-wrap b{font:800 9px/1 var(--rd-font-label);text-align:right}
+.rd-settings__row--toggle input{width:34px;height:18px;accent-color:#8a5a24}.rd-settings__row--select select{min-width:84px;padding:5px;border:1px solid rgba(92,70,41,.35);background:#efe0b6;color:#3b2614;font:700 10px/1 var(--rd-font-label)}
+.rd-settings__quality{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.rd-settings__quality button{padding:7px;border:1px solid rgba(92,70,41,.33);background:rgba(255,250,220,.22);color:var(--rd-ink);font:800 8px/1 var(--rd-font-label);text-transform:uppercase;cursor:pointer}.rd-settings__quality button.is-active{border-color:#9d672c;background:rgba(155,103,44,.18);box-shadow:inset 0 0 0 1px rgba(255,245,210,.3)}
+.rd-settings.is-compact section{padding:8px}.rd-settings.is-compact .rd-settings__row small{display:none}
+html{--rd-ui-scale:1}body{font-size:calc(16px * var(--rd-ui-scale))}
+html[data-reduced-motion="true"] *,html[data-reduced-motion="true"] *::before,html[data-reduced-motion="true"] *::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+/* UI scale applies only to interface surfaces; the Three.js canvas keeps its native viewport. */
+.rd-player-rail{scale:var(--rd-ui-scale);transform-origin:top left}
+.rd-utility-rail{scale:var(--rd-ui-scale);transform-origin:bottom right}
+.rd-economy,.rd-action-panel,.rd-action-roll,.rd-action-placement,.rd-action-minimized{scale:var(--rd-ui-scale);transform-origin:bottom center}
+.handcol{scale:var(--rd-ui-scale);transform-origin:bottom right}
+.rd-game-hud__topline{scale:var(--rd-ui-scale);transform-origin:top center}
+.rd-game-hud__status{scale:var(--rd-ui-scale);transform-origin:bottom center}
+.rd-story-toast,.rd-hud-panel,.rd-chronicle,.rd-endgame{scale:var(--rd-ui-scale)}

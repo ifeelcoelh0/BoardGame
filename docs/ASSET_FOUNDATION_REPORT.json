@@ -1,0 +1,48 @@
+{
+  "iconCount": 496,
+  "iconCategories": [
+    {
+      "id": "acessorios",
+      "label": "Acessórios",
+      "count": 14
+    },
+    {
+      "id": "armaduras",
+      "label": "Armaduras e roupa",
+      "count": 14
+    },
+    {
+      "id": "armas",
+      "label": "Armas",
+      "count": 138
+    },
+    {
+      "id": "elmos",
+      "label": "Elmos e chapéus",
+      "count": 5
+    },
+    {
+      "id": "habilidades",
+      "label": "Habilidades e magia",
+      "count": 154
+    },
+    {
+      "id": "itens",
+      "label": "Itens",
+      "count": 97
+    },
+    {
+      "id": "materiais",
+      "label": "Materiais",
+      "count": 17
+    },
+    {
+      "id": "pocoes",
+      "label": "Poções",
+      "count": 57
+    }
+  ],
+  "characterCount": 8,
+  "characterDirections": 64,
+  "allIcons34x34": true
+}

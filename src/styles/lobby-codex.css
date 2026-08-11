@@ -1,0 +1,611 @@
+/* ==========================================================================
+   LOBBY CODEX
+
+   O livro 3D é cenografia e ritual. O códice é uma interface 2D deliberada,
+   fixa ao viewport e independente da câmara. A sala permanece visível por
+   baixo para preservar contexto, mas deixa de competir com a leitura.
+   ========================================================================== */
+
+.rd-lobby-codex-layer{
+  position:absolute;
+  inset:0;
+  z-index:12;
+  display:grid;
+  place-items:center;
+  padding:clamp(22px,4vw,58px);
+  pointer-events:auto;
+  background:
+    radial-gradient(ellipse at 50% 48%,rgba(24,13,7,.24) 0 24%,rgba(7,4,2,.66) 72%,rgba(2,1,1,.84) 100%),
+    rgba(5,3,2,.36);
+  -webkit-backdrop-filter:blur(2px) saturate(.78);
+  backdrop-filter:blur(2px) saturate(.78);
+  animation:rd-codex-backdrop-in 240ms ease both;
+}
+.rd-lobby-codex-layer.is-leaving{animation:rd-codex-backdrop-out 240ms ease both;pointer-events:none}
+@keyframes rd-codex-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes rd-codex-backdrop-out{from{opacity:1}to{opacity:0}}
+
+.rd-lobby-codex{
+  --ink:#33200f;
+  --ink-soft:#5c4629;
+  --ink-faint:#7a6242;
+  --ink-caps:#7d5320;
+  --ink-rule:rgba(122,86,36,.32);
+  --ink-red:#7a2f26;
+  --gilt-ink:#8a6a3c;
+  position:relative;
+  width:min(84vw,1180px);
+  height:min(82dvh,760px);
+  min-height:520px;
+  color:var(--ink);
+  font-size:clamp(11px,1.05vw,14px);
+  filter:drop-shadow(0 28px 42px rgba(0,0,0,.58));
+  animation:rd-codex-enter 300ms cubic-bezier(.2,.78,.24,1) both;
+}
+.rd-lobby-codex-layer.is-leaving .rd-lobby-codex{animation:rd-codex-leave 220ms ease both}
+@keyframes rd-codex-enter{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes rd-codex-leave{from{opacity:1;transform:none}to{opacity:0;transform:translateY(8px) scale(.99)}}
+
+/* Capa e corte existem apenas nesta interface 2D: não tentam coincidir com o
+   modelo 3D. São uma moldura gráfica assumida para o códice. */
+.rd-lobby-codex::before{
+  content:"";
+  position:absolute;
+  inset:-18px -22px -24px;
+  z-index:-2;
+  border:1px solid rgba(181,137,70,.48);
+  border-radius:24px;
+  background:linear-gradient(145deg,#3b2015,#25130d 44%,#442719 70%,#1d0e09);
+  box-shadow:inset 0 0 0 3px rgba(196,152,88,.14),inset 0 0 38px rgba(0,0,0,.58);
+}
+.rd-lobby-codex::after{
+  content:"";
+  position:absolute;
+  inset:-8px -10px -11px;
+  z-index:-1;
+  border-radius:18px;
+  background:linear-gradient(180deg,#b99d6d,#d0b786 48%,#9b7d4f);
+  box-shadow:0 8px 0 -3px #6f5732;
+}
+
+.rd-lobby-codex__binding{
+  position:absolute;
+  z-index:4;
+  left:50%;
+  top:0;
+  bottom:0;
+  width:34px;
+  transform:translateX(-50%);
+  pointer-events:none;
+  background:linear-gradient(90deg,rgba(85,58,31,.08),rgba(62,39,19,.38) 46%,rgba(44,27,13,.5) 50%,rgba(62,39,19,.38) 54%,rgba(85,58,31,.08));
+  mix-blend-mode:multiply;
+}
+
+.rd-lobby-book-ui__spread{
+  position:relative;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  border:1px solid rgba(91,49,22,.42);
+  border-radius:14px;
+  background:
+    radial-gradient(circle at 20% 18%,rgba(255,250,230,.62),transparent 36%),
+    radial-gradient(circle at 78% 72%,rgba(171,119,56,.08),transparent 40%),
+    linear-gradient(90deg,#ead9b4 0 49.3%,#d6bd8e 49.8%,#ccb181 50%,#d6bd8e 50.2%,#ead9b4 50.7% 100%);
+  box-shadow:inset 0 0 50px rgba(87,51,22,.25),inset 0 0 0 1px rgba(255,247,222,.45);
+}
+.rd-lobby-book-ui__spread::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;opacity:.34;
+  background-image:radial-gradient(circle at 12% 32%,rgba(92,58,27,.22) 0 1px,transparent 1.4px),radial-gradient(circle at 72% 68%,rgba(92,58,27,.14) 0 1px,transparent 1.3px);
+  background-size:31px 29px,43px 37px;
+}
+.rd-lobby-book-ui__spread.is-status{grid-template-columns:1fr 1fr}
+
+.rd-lobby-book-ui__page{
+  position:relative;
+  z-index:2;
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+  min-width:0;
+  padding:clamp(28px,3.1em,46px) clamp(28px,3.4em,54px) clamp(62px,5em,78px);
+  overflow:hidden;
+}
+.rd-lobby-book-ui__page.is-left{padding-right:clamp(34px,4em,60px)}
+.rd-lobby-book-ui__page.is-right{padding-left:clamp(34px,4em,60px)}
+
+
+/* --- cabeça da folha --- */
+.rd-leaf__head{position:relative;margin:0 0 1.1em;text-align:center}
+.rd-leaf__mark{display:block;margin:0 auto .3em;opacity:.85;filter:sepia(.4) saturate(.9) drop-shadow(0 1px 0 rgba(255,248,222,.6))}
+.rd-leaf__head:has(.rd-leaf__mark){padding-top:0}
+.rd-lobby-book-ui__page header small,.rd-leaf__head small{
+  display:block;
+  color:var(--ink-caps);
+  font:700 .62em/1.4 'Cinzel',serif;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+}
+.rd-lobby-book-ui__page h2,.rd-leaf__head h2{
+  margin:.15em 0 0;
+  color:var(--ink);
+  font:600 1.9em/1.06 'Fondamento',serif;
+  letter-spacing:.005em;
+}
+.rd-leaf__rule{display:flex;align-items:center;justify-content:center;gap:.6em;margin-top:.55em;color:var(--gilt-ink)}
+.rd-leaf__rule i{display:block;flex:1;height:1px;max-width:6em;background:linear-gradient(90deg,transparent,rgba(122,86,36,.6),transparent)}
+.rd-leaf__rule b{font:400 .85em/1 serif}
+
+/* --- corpo da folha ---
+   O corpo é o único sítio que pode ganhar barra de scroll, e só quando o
+   conteúdo for realmente maior do que a folha. Antes era a página inteira que
+   rolava, cabeçalho incluído, e via-se o título a deslizar por baixo do bordo do
+   pergaminho. */
+.rd-leaf__body{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(122,86,36,.5) transparent;
+}
+.rd-leaf__body>:last-child{margin-bottom:0}
+/* O bloco de acções, quando fecha a folha, desce para o pé: um livro não deixa
+   os comandos a meio da página com espaço branco por baixo. */
+.rd-leaf__body>.rd-lobby-book-ui__actions:last-child{margin-top:auto;padding-top:.8em}
+
+.rd-leaf__folio{
+  position:absolute;
+  right:2.4em;
+  bottom:2.4em;
+  color:var(--gilt-ink);
+  font:600 .68em/1 'Cinzel',serif;
+  letter-spacing:.2em;
+}
+.rd-lobby-book-ui__page.is-left .rd-leaf__folio{right:auto;left:2.4em}
+
+/* Capitular: abre o capítulo como num livro impresso. */
+.rd-leaf__opening{margin:0 0 .9em;color:var(--ink-soft);font:1.05em/1.44 'Fondamento',serif}
+.rd-leaf__opening::first-letter{float:left;margin:.15em .28em 0 0;color:var(--ink-red);font:700 3.1em/.76 'Cinzel',serif}
+
+/* --- blocos de texto --- */
+.rd-lobby-book-ui__folio-copy{margin:0 0 .9em;color:var(--ink-soft);font:1em/1.46 'Fondamento',serif}
+.rd-lobby-book-ui__error{margin:.7em 0 0;color:#8e2f2a;font:600 .95em/1.35 'Fondamento',serif}
+.rd-lobby-book-ui__test-note{margin:.5em 0 0;color:var(--ink-faint);font:italic .85em/1.3 'Fondamento',serif}
+
+.rd-lobby-book-ui__facts{margin:0 0 1em;border-top:1px solid var(--ink-rule)}
+.rd-lobby-book-ui__facts>div{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:.8em;
+  padding:.45em .1em;
+  border-bottom:1px solid rgba(122,86,36,.18);
+}
+.rd-lobby-book-ui__facts dt{color:var(--ink-caps);font:700 .6em/1.4 'Cinzel',serif;letter-spacing:.18em;text-transform:uppercase}
+.rd-lobby-book-ui__facts dd{margin:0;color:var(--ink);font:600 1em/1.2 'Fondamento',serif;text-align:right}
+
+.rd-lobby-book-ui__rules-list{margin:.2em 0 1em;padding:0;list-style:none;counter-reset:leaf-step}
+.rd-lobby-book-ui__rules-list li{
+  position:relative;
+  margin:0 0 .55em;
+  padding-left:2.2em;
+  color:var(--ink-soft);
+  font:1em/1.42 'Fondamento',serif;
+  counter-increment:leaf-step;
+}
+.rd-lobby-book-ui__rules-list li::before{
+  content:counter(leaf-step,upper-roman);
+  position:absolute;
+  left:0;
+  top:.1em;
+  width:1.6em;
+  color:var(--gilt-ink);
+  font:700 .72em/1.5 'Cinzel',serif;
+  letter-spacing:.06em;
+  text-align:right;
+}
+
+/* ==========================================================================
+   CLICÁVEIS
+
+   Este era o problema mais concreto da folha: um botão era
+   `background:rgba(255,246,218,.62)` sobre papel `#e2cda3`, ou seja quase o mesmo
+   valor do fundo, sem sombra e sem relevo. Nada dizia que se podia clicar, e
+   portanto tudo lia como um bloco de texto.
+
+   Três degraus, e só três:
+
+     TERCIÁRIO  texto com filete, para voltar atrás e navegar
+     SECUNDÁRIO tabuleta de pergaminho levantada, com sombra e bordo quente
+     PRIMÁRIO   selo de cera, um por folha no máximo
+
+   Todos levantam no hover e afundam no active, porque é o movimento que promete
+   que a coisa responde.
+   ========================================================================== */
+/* `:where` para não ganhar especificidade: com `.rd-lobby-book-ui button` (0-1-1)
+   esta regra vencia a família declarada em `.rd-lobby-book-ui__setting` (0-1-0) e
+   os botões de opção saíam em Cinzel em vez de Fondamento. */
+.rd-lobby-codex :where(button){font-family:'Cinzel',serif}
+.rd-lobby-codex button:focus-visible{outline:2px solid rgba(122,84,38,.8);outline-offset:2px}
+
+.rd-lobby-book-ui__actions{display:grid;grid-template-columns:1fr 1fr;gap:.55em;margin-top:.9em}
+.rd-lobby-book-ui__actions.is-single-column{grid-template-columns:1fr}
+
+.rd-lobby-book-ui__actions>button,
+.rd-lobby-book-ui__setting,
+.rd-lobby-book-ui__modes>button,
+.rd-lobby-book-ui__code,
+.rd-lobby-book-ui__saved>article>div>button{
+  position:relative;
+  border:1px solid rgba(104,68,28,.5);
+  border-radius:.32em;
+  background:linear-gradient(180deg,rgba(255,250,232,.9),rgba(233,214,174,.82));
+  color:#3a2410;
+  cursor:pointer;
+  box-shadow:
+    0 .12em .32em rgba(58,33,12,.26),
+    inset 0 1px 0 rgba(255,255,255,.55),
+    inset 0 -.12em .2em rgba(120,86,40,.14);
+  transition:transform .14s ease,box-shadow .14s ease,background .14s ease,border-color .14s ease;
+}
+.rd-lobby-book-ui__actions>button:hover:not(:disabled),
+.rd-lobby-book-ui__setting:hover:not(:disabled),
+.rd-lobby-book-ui__modes>button:hover:not(:disabled),
+.rd-lobby-book-ui__code:hover,
+.rd-lobby-book-ui__saved>article>div>button:hover:not(:disabled){
+  transform:translateY(-.1em);
+  border-color:rgba(104,68,28,.85);
+  background:linear-gradient(180deg,#fffaea,rgba(240,224,188,.94));
+  box-shadow:0 .28em .6em rgba(58,33,12,.3),inset 0 1px 0 rgba(255,255,255,.7);
+}
+.rd-lobby-book-ui__actions>button:active:not(:disabled),
+.rd-lobby-book-ui__setting:active:not(:disabled),
+.rd-lobby-book-ui__modes>button:active:not(:disabled),
+.rd-lobby-book-ui__code:active{
+  transform:translateY(.04em);
+  box-shadow:inset 0 .1em .3em rgba(58,33,12,.3);
+}
+.rd-lobby-book-ui__actions>button:disabled,
+.rd-lobby-book-ui__setting:disabled,
+.rd-lobby-book-ui__modes>button:disabled,
+.rd-lobby-book-ui__saved>article>div>button:disabled{
+  opacity:.42;
+  box-shadow:none;
+  cursor:not-allowed;
+  transform:none;
+}
+.rd-lobby-book-ui__modes>button:disabled{cursor:wait}
+
+.rd-lobby-book-ui__actions>button{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:.65em;
+  min-height:2.9em;
+  padding:.7em .8em;
+  font-size:.72em;
+  font-weight:700;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+
+/* Selo de cera: a acção que faz a coisa acontecer. Um por folha. */
+.rd-lobby-book-ui__actions>button.is-primary{
+  border-color:#5f2118;
+  background:linear-gradient(180deg,#993e2e,#6d251c 62%,#5a1d15);
+  color:#f8ecd0;
+  text-shadow:0 1px 0 rgba(0,0,0,.45);
+  box-shadow:
+    0 .2em .5em rgba(46,12,7,.44),
+    inset 0 1px 0 rgba(255,214,190,.32),
+    inset 0 -.14em .24em rgba(0,0,0,.28);
+}
+.rd-lobby-book-ui__actions>button.is-primary:hover:not(:disabled){
+  background:linear-gradient(180deg,#ac4735,#7a2a1f 62%,#631f16);
+  border-color:#7a2f26;
+  box-shadow:0 .34em .7em rgba(46,12,7,.5),inset 0 1px 0 rgba(255,214,190,.38);
+}
+.rd-lobby-book-ui__actions>button.is-ready{background:linear-gradient(180deg,rgba(246,232,196,.94),rgba(214,190,142,.9))}
+.rd-lobby-book-ui__actions>button.is-leave{
+  border-color:rgba(120,44,36,.5);
+  background:none;
+  color:var(--ink-red);
+  box-shadow:none;
+}
+.rd-lobby-book-ui__actions>button.is-leave:hover:not(:disabled){background:rgba(140,58,24,.1);box-shadow:none}
+.rd-lobby-book-ui__waiting{grid-column:1/-1;margin:.2em 0 0;color:var(--ink-faint);font:italic .9em/1.3 'Fondamento',serif;text-align:center}
+
+/* Escolha de modo: cada linha é uma tabuleta com brasão à esquerda. */
+.rd-lobby-book-ui__modes{display:grid;gap:.4em}
+.rd-lobby-book-ui__modes>button{
+  display:grid;
+  grid-template-columns:2em 1fr;
+  align-items:center;
+  gap:.7em;
+  width:100%;
+  padding:.55em .7em;
+  text-align:left;
+}
+.rd-lobby-book-ui__modes>button>span:first-child{display:grid;place-items:center;line-height:1}
+.rd-lobby-book-ui__modes strong{display:block;font:700 1em/1.2 'Fondamento',serif}
+.rd-lobby-book-ui__modes em{display:block;margin-top:.1em;color:var(--ink-faint);font:italic .8em/1.3 'Fondamento',serif}
+
+/* Código do reino: é para copiar, portanto é um botão e parece um. */
+.rd-lobby-book-ui__code{display:grid;width:100%;margin:.9em 0;padding:.7em;text-align:center}
+.rd-lobby-book-ui__code small{color:var(--ink-caps);font:700 .58em/1.6 'Cinzel',serif;letter-spacing:.22em}
+.rd-lobby-book-ui__code strong{font:700 2.4em/1 'VT323',monospace;letter-spacing:.18em}
+.rd-lobby-book-ui__code span{color:var(--ink-faint);font-family:'Fondamento',serif;font-size:.78em;font-style:italic}
+
+.rd-lobby-book-ui__code-input{
+  width:100%;
+  margin:.4em 0;
+  padding:.5em;
+  border:1px solid rgba(104,68,28,.5);
+  border-radius:.32em;
+  background:rgba(255,251,235,.6);
+  color:#382411;
+  font:700 2.2em/1 'Cinzel',serif;
+  letter-spacing:.3em;
+  text-align:center;
+  text-transform:uppercase;
+  box-shadow:inset 0 .12em .3em rgba(90,58,22,.22);
+}
+.rd-lobby-book-ui__code-input:focus{outline:2px solid rgba(122,84,38,.7);outline-offset:1px}
+
+.rd-lobby-book-ui__setting{display:grid;gap:.15em;width:100%;padding:.6em .7em;font:700 .9em/1.3 'Fondamento',serif;text-align:left}
+.rd-lobby-book-ui__setting b{color:var(--ink-red)}
+.rd-lobby-book-ui__setting span{color:var(--ink-faint);font:italic .78em/1.3 'Fondamento',serif}
+
+/* --- listas --- */
+.rd-lobby-book-ui__players{display:grid;gap:.3em}
+.rd-lobby-book-ui__player{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:.6em;
+  padding:.5em .1em;
+  border-bottom:1px solid rgba(122,86,36,.2);
+}
+.rd-lobby-book-ui__player>span{display:grid;min-width:0}
+.rd-lobby-book-ui__player small{color:var(--ink-caps);font:700 .58em/1.5 'Cinzel',serif;letter-spacing:.16em}
+.rd-lobby-book-ui__player strong{overflow:hidden;font:700 1.2em/1.2 'Fondamento',serif;text-overflow:ellipsis;white-space:nowrap}
+.rd-lobby-book-ui__player em{color:var(--ink-faint);font:italic .82em/1.3 'Fondamento',serif}
+.rd-lobby-book-ui__player.is-local{box-shadow:inset .18em 0 var(--gilt-ink)}
+.rd-lobby-book-ui__player.is-local strong{color:var(--ink-red)}
+.rd-lobby-book-ui__player.is-disconnected{opacity:.6}
+.rd-lobby-book-ui__player.is-empty{color:var(--ink-faint);font:italic .95em/1.4 'Fondamento',serif}
+.rd-lobby-book-ui__player button{
+  padding:.35em .55em;
+  border:1px solid rgba(140,58,24,.45);
+  border-radius:.28em;
+  background:none;
+  color:var(--ink-red);
+  font:700 .56em/1 'Cinzel',serif;
+  letter-spacing:.1em;
+  cursor:pointer;
+}
+.rd-lobby-book-ui__player button:hover:not(:disabled){background:rgba(140,58,24,.12)}
+
+.rd-lobby-book-ui__confirm{margin:.6em 0;padding:.6em .7em;border:1px solid rgba(140,58,24,.42);border-radius:.32em;background:rgba(140,58,24,.08)}
+.rd-lobby-book-ui__confirm p{margin:0 0 .5em;font:.95em/1.35 'Fondamento',serif}
+.rd-lobby-book-ui__confirm>div{display:flex;gap:.4em}
+.rd-lobby-book-ui__confirm button{
+  flex:1;
+  padding:.5em;
+  border:1px solid rgba(104,68,28,.45);
+  border-radius:.28em;
+  background:rgba(255,250,232,.7);
+  color:#432b15;
+  font:700 .62em/1 'Cinzel',serif;
+  letter-spacing:.08em;
+  cursor:pointer;
+}
+.rd-lobby-book-ui__confirm button:last-child{border-color:#7a2f26;background:linear-gradient(180deg,#993e2e,#6d251c);color:#f8ecd0}
+
+.rd-lobby-book-ui__perk{margin:.8em 0;padding:.7em 0;border-top:1px solid var(--ink-rule);border-bottom:1px solid var(--ink-rule)}
+.rd-lobby-book-ui__perk small{color:var(--ink-caps);font:700 .58em/1.5 'Cinzel',serif;letter-spacing:.18em}
+.rd-lobby-book-ui__perk strong{display:block;margin:.2em 0;color:var(--ink-red);font:700 1.3em/1.1 'Fondamento',serif}
+.rd-lobby-book-ui__perk p{margin:0;color:var(--ink-soft);font:.95em/1.35 'Fondamento',serif}
+
+.rd-lobby-book-ui__saved{display:grid;gap:.4em}
+.rd-lobby-book-ui__saved>article{
+  display:flex;
+  justify-content:space-between;
+  gap:.7em;
+  padding:.55em .7em;
+  border:1px solid rgba(122,86,36,.28);
+  border-radius:.32em;
+  background:rgba(255,249,229,.34);
+}
+.rd-lobby-book-ui__saved strong{display:block;font:700 1.2em/1 'Cinzel',serif;letter-spacing:.12em}
+.rd-lobby-book-ui__saved em{display:block;margin-top:.15em;color:var(--ink-faint);font:italic .78em/1.35 'Fondamento',serif}
+.rd-lobby-book-ui__saved em.is-error{color:#8e2f2a}
+.rd-lobby-book-ui__saved>article>div{display:grid;gap:.3em;align-content:start;min-width:6.4em}
+.rd-lobby-book-ui__saved>article>div>button{padding:.4em .5em;font-size:.6em;letter-spacing:.09em;text-transform:uppercase}
+
+.rd-lobby-book-ui__diagnostics{display:grid;gap:.3em}
+.rd-lobby-book-ui__diagnostics>article{padding:.4em .55em;border-left:2px solid rgba(122,86,36,.45);background:rgba(255,249,229,.3)}
+.rd-lobby-book-ui__diagnostics span{display:flex;justify-content:space-between;gap:.6em;align-items:baseline}
+.rd-lobby-book-ui__diagnostics strong{font:700 .8em/1.2 'Cinzel',serif}
+.rd-lobby-book-ui__diagnostics em{color:var(--ink-faint);font:italic .7em/1.2 'Fondamento',serif}
+.rd-lobby-book-ui__diagnostics p{margin:.2em 0 0;color:var(--ink-soft);font:.8em/1.3 'Fondamento',serif;word-break:break-word}
+
+/* ==========================================================================
+   PÉ DO LIVRO
+
+   O folheador e o botão de fechar estavam pendurados FORA do volume, em
+   `bottom:-5px; transform:translateY(100%)`, com fundo de couro próprio e sombra
+   própria. Leem-se como barra de ferramentas de uma aplicação por baixo de um
+   livro. Passam para a margem inferior do pergaminho, que é justamente o espaço
+   que uma página composta deixa livre, e ganham o aspecto de reclames impressos.
+   ========================================================================== */
+.rd-lobby-book-ui__foot{
+  position:absolute;
+  z-index:7;
+  left:8%;
+  right:8%;
+  bottom:1.3em;
+  pointer-events:auto;
+}
+.rd-book-pager{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+  gap:.8em;
+  padding-top:.5em;
+  border-top:1px solid var(--ink-rule);
+}
+.rd-book-pager__turn{
+  min-height:2.55em;
+  padding:.48em .72em;
+  border:1px solid rgba(122,86,36,.26);
+  border-radius:.3em;
+  background:rgba(255,248,225,.34);
+  color:var(--gilt-ink);
+  font:700 .66em/1.3 'Cinzel',serif;
+  letter-spacing:.08em;
+  cursor:pointer;
+  transition:color .14s ease,transform .14s ease,background .14s ease,border-color .14s ease;
+}
+.rd-book-pager__turn.is-previous{text-align:left}
+.rd-book-pager__turn.is-next{text-align:right}
+.rd-book-pager__turn:hover:not(:disabled){color:var(--ink-red);border-color:rgba(122,86,36,.58);background:rgba(255,248,225,.72)}
+.rd-book-pager__turn.is-previous:hover:not(:disabled){transform:translateX(-.2em)}
+.rd-book-pager__turn.is-next:hover:not(:disabled){transform:translateX(.2em)}
+.rd-book-pager__turn:disabled{opacity:.28;cursor:default;transform:none}
+.rd-book-pager__index{display:grid;justify-items:center;min-width:7em;text-align:center;color:var(--ink-caps)}
+.rd-book-pager__index small{font:700 .52em/1.4 'Cinzel',serif;letter-spacing:.22em}
+.rd-book-pager__index strong{color:var(--ink);font:700 .86em/1.3 'Fondamento',serif}
+.rd-book-pager__index span{color:var(--ink-faint);font:.66em/1.3 'Fondamento',serif}
+
+/* Fechar: fita de marcador no canto, não um botão de diálogo. */
+.rd-lobby-book-ui__close{
+  position:absolute;
+  z-index:8;
+  right:-.2em;
+  top:1.6em;
+  padding:.45em .8em .45em 1em;
+  border:0;
+  border-radius:.2em 0 0 .2em;
+  background:linear-gradient(180deg,#93342a,#6b2118);
+  color:#f6e2c0;
+  font:700 .6em/1 'Cinzel',serif;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  cursor:pointer;
+  pointer-events:auto;
+  box-shadow:0 .2em .4em rgba(30,10,6,.45);
+  transition:transform .14s ease,background .14s ease;
+}
+.rd-lobby-book-ui__close:hover:not(:disabled){transform:translateX(-.2em);background:linear-gradient(180deg,#a83e31,#7a2a1f)}
+.rd-lobby-book-ui__close:disabled{opacity:.45;cursor:default}
+.rd-lobby-book-ui__close:focus-visible{outline:2px solid rgba(246,226,192,.8);outline-offset:2px}
+
+/* ==========================================================================
+   VIRAR A FOLHA
+
+   Não existia: mudar de página trocava o conteúdo instantaneamente, e um livro
+   que salta de capítulo sem folhear é um separador de abas com moldura de couro.
+
+   A folha que passa é PERGAMINHO, não conteúdo. Manter a página anterior montada
+   para a desenhar do outro lado custaria uma árvore React duplicada por cada
+   folhear, e o que se lê num livro a folhear é o dorso do pergaminho a atravessar
+   o campo de visão, não o texto que vem atrás.
+   ========================================================================== */
+.rd-lobby-book-ui__turn{
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:50%;
+  pointer-events:none;
+  z-index:3;
+  background:linear-gradient(90deg,rgba(226,208,170,.99),rgba(238,224,192,.97) 42%,rgba(208,186,142,.96));
+  box-shadow:0 0 2.4em rgba(52,30,10,.5);
+  backface-visibility:hidden;
+  will-change:transform;
+}
+.rd-lobby-book-ui__turn.is-forward{
+  left:50%;
+  transform-origin:left center;
+  animation:rd-book-turn-forward 460ms cubic-bezier(.42,.04,.32,1) both;
+}
+.rd-lobby-book-ui__turn.is-back{
+  left:0;
+  transform-origin:right center;
+  animation:rd-book-turn-back 460ms cubic-bezier(.42,.04,.32,1) both;
+}
+@keyframes rd-book-turn-forward{
+  from{transform:perspective(110em) rotateY(0deg);filter:brightness(1.04)}
+  55%{filter:brightness(.82)}
+  to{transform:perspective(110em) rotateY(-176deg);filter:brightness(1)}
+}
+@keyframes rd-book-turn-back{
+  from{transform:perspective(110em) rotateY(0deg);filter:brightness(1.04)}
+  55%{filter:brightness(.82)}
+  to{transform:perspective(110em) rotateY(176deg);filter:brightness(1)}
+}
+/* A tinta assenta depois de a folha passar. */
+.rd-lobby-book-ui__page{animation:rd-book-ink-in 420ms ease both 140ms}
+@keyframes rd-book-ink-in{from{opacity:0}to{opacity:1}}
+
+@media(prefers-reduced-motion:reduce){
+  .rd-lobby-book-ui__turn{display:none}
+  .rd-lobby-book-ui__page{animation:none}
+  .rd-lobby-book-ui__actions>button,.rd-lobby-book-ui__setting,.rd-lobby-book-ui__modes>button,
+  .rd-lobby-book-ui__code,.rd-book-pager__turn,.rd-lobby-book-ui__close{transition:none}
+}
+
+/* Ecrãs baixos: menos margem de fólio, senão a caixa de texto desaparece. */
+@media(max-height:640px){
+  .rd-lobby-book-ui__page{padding:1.7em 1.7em 3.4em}
+  .rd-leaf__folio{display:none}
+}
+
+
+
+/* Ações rápidas do salão. Prontidão e início não obrigam a abrir o códice. */
+.rd-entry-book-access{position:absolute;z-index:7;left:50%;bottom:24px;display:grid;justify-items:center;gap:6px;transform:translateX(-50%);text-align:center;pointer-events:auto}
+.rd-entry-book-access__actions{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.rd-entry-book-access button{min-height:39px;padding:9px 16px;border:1px solid #916a2e;border-radius:6px;background:linear-gradient(180deg,#4c3119,#24150b);color:#ead39f;font:700 9px/1 'Cinzel',serif;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.07);transition:filter .14s ease,transform .14s ease,border-color .14s ease}
+.rd-entry-book-access button:hover:not(:disabled){filter:brightness(1.13);transform:translateY(-1px)}
+.rd-entry-book-access button:disabled{opacity:.38;filter:grayscale(.7);cursor:not-allowed}
+.rd-entry-book-access button.is-ready{border-color:#557d38;background:linear-gradient(180deg,#315528,#162d14);color:#c9edb8}
+.rd-entry-book-access button.is-ready.is-on{border-color:#68d87a;background:linear-gradient(180deg,#285b35,#12331d);color:#dcffe2;box-shadow:0 8px 24px rgba(0,0,0,.38),0 0 14px rgba(82,222,105,.2),inset 0 1px rgba(255,255,255,.08)}
+.rd-entry-book-access button.is-start{border-color:#c89a34;background:linear-gradient(180deg,#8c611c,#4d300d);color:#fff0b5}
+.rd-entry-book-access small{color:#b8a37d;font:italic 11px 'Fondamento',serif;text-shadow:0 1px 4px #000}
+
+@media(max-width:760px){
+  .rd-entry-book-access{bottom:14px;width:calc(100% - 24px)}
+  .rd-entry-book-access__actions{flex-wrap:wrap;gap:6px}
+  .rd-entry-book-access button{min-height:35px;padding:8px 11px;font-size:8px}
+  .rd-entry-book-access>small{display:none}
+  .rd-lobby-codex-layer{padding:16px 12px}
+  .rd-lobby-codex{width:min(94vw,680px);height:min(88dvh,820px);min-height:0;font-size:12px}
+  .rd-lobby-codex::before{inset:-10px -11px -13px;border-radius:16px}
+  .rd-lobby-codex::after{inset:-5px -6px -7px;border-radius:12px}
+  .rd-lobby-codex__binding{display:none}
+  .rd-lobby-book-ui__spread,.rd-lobby-book-ui__spread.is-status{display:block;overflow-y:auto;background:#ead9b4}
+  .rd-lobby-book-ui__page{min-height:auto;padding:28px 24px 72px}
+  .rd-lobby-book-ui__page.is-left,.rd-lobby-book-ui__page.is-right{padding-left:24px;padding-right:24px}
+  .rd-lobby-book-ui__page.is-left{border-bottom:1px solid rgba(122,86,36,.22)}
+  .rd-lobby-book-ui__foot{position:sticky;left:auto;right:auto;bottom:0;padding:8px 18px 12px;background:linear-gradient(180deg,rgba(234,217,180,0),#ead9b4 32%)}
+  .rd-book-pager{grid-template-columns:1fr auto 1fr}
+  .rd-book-pager__turn{font-size:.58em}
+  .rd-book-pager__index small{display:none}
+  .rd-leaf__folio{display:none}
+  .rd-lobby-book-ui__turn{display:none}
+  .rd-lobby-book-ui__close{right:8px;top:8px;z-index:6}
+}
+
+@media(max-height:620px) and (min-width:761px){
+  .rd-lobby-codex{height:88dvh;min-height:0;font-size:11px}
+  .rd-lobby-book-ui__page{padding-top:22px;padding-bottom:52px}
+  .rd-leaf__folio{display:none}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .rd-lobby-codex-layer,.rd-lobby-codex-layer.is-leaving,.rd-lobby-codex,.rd-lobby-codex-layer.is-leaving .rd-lobby-codex{animation:none}
+}

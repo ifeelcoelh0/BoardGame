@@ -1,0 +1,36 @@
+{
+  "group_id": "60dd095f-1a8e-486a-a38e-3c846ffa5169",
+  "states": [
+    {
+      "character": {
+        "id": "7f10c1ae-28c1-4102-8b42-7e2268ae62af",
+        "name": "Idle",
+        "prompt": "Slender elf ranger with long pointed ears, forest green hooded cloak over leather armour, wooden longbow in hand, quiver on her back, long pale hair, calm expression. Palette: forest green \n#2f7d4a, deep green \n#1c5230, mint highlight \n#2fb98a, pale gold hair \n#e8d98a, fair skin \n#f6ddc0.",
+        "size": {
+          "width": 96,
+          "height": 96
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-31T17:50:16.105757+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-07-31T17:54:22.018663"
+}

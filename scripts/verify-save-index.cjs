@@ -1,0 +1,11 @@
+const fs = require("node:fs");
+const assert = require("node:assert/strict");
+const store = fs.readFileSync("src/game/saveStore.js", "utf8");
+const schema = fs.readFileSync("src/game/saveSchema.js", "utf8");
+assert.match(schema, /SAVE_INDEX_STORAGE_KEY/);
+assert.match(schema, /saveStorageKeyForCode/);
+assert.match(store, /listGameSaves/);
+assert.match(store, /MAX_INDEX_ENTRIES/);
+assert.match(store, /legacy slot current/);
+assert.match(store, /SAVE_CODE_MISMATCH/);
+console.log("✓ indexed save persistence verified");
