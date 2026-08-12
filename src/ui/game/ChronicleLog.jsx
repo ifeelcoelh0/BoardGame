@@ -4,6 +4,8 @@ import GameIcon from "../assets/GameIcon.jsx";
 import { GAME_ACTION_ICONS, GAME_UTILITY_ICONS } from "../../assets/gameUiIcons.js";
 import { cleanGameUiText } from "./gameTextPresentation.js";
 import GameRichText from "./GameRichText.jsx";
+import ResourceIcon from "./hud/ResourceIcon.jsx";
+import { RESOURCE_DEFINITIONS } from "../../game/resources.js";
 import "../../styles/chronicle-log.css";
 
 const FILTERS = Object.freeze([
@@ -28,6 +30,38 @@ function chroniclePresentation(entry) {
     icon: entry?.icon || CHRONICLE_ICON_BY_KIND[entry?.kind || "realm"] || GAME_UTILITY_ICONS.history,
     text: cleanGameUiText(text),
   };
+}
+
+
+function resourceFlowLabel(resources = []) {
+  const gain = resources.some((entry) => entry.amount > 0);
+  const loss = resources.some((entry) => entry.amount < 0);
+  if (gain && loss) return "TROCA";
+  if (gain) return "RECEBEU";
+  if (loss) return "PAGOU";
+  return "";
+}
+
+function ChronicleResourceFlow({ resources = [] }) {
+  if (!resources.length) return null;
+  return (
+    <div className="rd-chronicle__resource-flow" aria-label="Movimento de recursos">
+      <small>{resourceFlowLabel(resources)}</small>
+      <div>
+        {resources.map((entry, index) => {
+          const positive = entry.amount > 0;
+          const label = RESOURCE_DEFINITIONS[entry.resource]?.n || entry.resource;
+          return (
+            <span key={`${entry.resource}-${index}`} className={positive ? "is-gain" : "is-loss"} title={`${positive ? "+" : ""}${entry.amount} ${label}`}>
+              <b>{positive ? "+" : "−"}{Math.abs(entry.amount)}</b>
+              <ResourceIcon resource={entry.resource} size={22} />
+              <em>{label}</em>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function entryPlayer(game, entry) {
@@ -89,6 +123,7 @@ export default function ChronicleLog({ game, entries = [], onClose = null, embed
                   <i aria-hidden="true" />
                 </div>
                 <p><GameRichText>{message.text}</GameRichText></p>
+                <ChronicleResourceFlow resources={entry.resources || []} />
               </div>
             </article>
           );

@@ -1,4 +1,7 @@
 export { default as GameHud } from "./GameHud.jsx";
+export { default as GameBottomDock } from "./GameBottomDock.jsx";
+export { default as GameDevelopmentHand } from "./GameDevelopmentHand.jsx";
+export { default as GameMatchStrip } from "./GameMatchStrip.jsx";
 export { default as GameEconomyStrip } from "./GameEconomyStrip.jsx";
 export { default as GameUtilityRail } from "./GameUtilityRail.jsx";
 export { default as ResourceCost } from "./ResourceCost.jsx";

@@ -8,7 +8,7 @@ import ChronicleLog from "./ChronicleLog.jsx";
 import GameActionPanel from "./GameActionPanel.jsx";
 import {
   GameHud,
-  GameEconomyStrip,
+  GameBottomDock,
   GameUtilityRail,
   OptionsUtilityPanel,
   HUD_UTILITY,
@@ -26,7 +26,7 @@ import { CHARACTER_GLOW_COLORS as GLOW, shadeColor as shade } from "../board/boa
 import { stableBoardGeometryKey } from "../board/boardUpdateSignature.js";
 import { GAME_ACTION } from "../../game/gameProtocol.js";
 import { gameTurnReconnectSeconds } from "../../game/playerPresence.js";
-import { BUILD_COSTS as COSTS, PIECE_LIMITS as LIMITS, RESOURCE_DEFINITIONS as RES, RESOURCE_KEYS as RKEYS, handSize } from "../../game/resources.js";
+import { PIECE_LIMITS as LIMITS, RESOURCE_DEFINITIONS as RES, RESOURCE_KEYS as RKEYS, BUILD_COSTS as COSTS, handSize } from "../../game/resources.js";
 import { validPalaces, validRoads, validVillages } from "../../game/buildingRules.js";
 import { DISASTER_DEFINITIONS as DISASTERS } from "../../game/disasterReducer.js";
 import { bribeTargets, militaryActionsLeft, neighboringHexes as hexNbrs, unitTargets, validDeployHexes } from "../../game/warReducer.js";
@@ -39,7 +39,7 @@ import { VICTORY_POINT_ATTRIBUTES as VPATTR } from "../../game/gameFactory.js";
 import { isClassicMode as CLASSICO, isExplorationMode, isRapidMode, isWarMode as GUERRA } from "../../game/gameModes.js";
 import { characterById as charOf } from "../../game/characterCatalog.js";
 import { createInitialGameUiState, gameUiCloseDecision, gameUiOpenDecision, gameUiReducer, gameUiSet } from "./gameUiState.js";
-import { deriveActionPresentation, ACTION_PRESENTATION } from "./gameUiComposition.js";
+import { deriveActionPresentation } from "./gameUiComposition.js";
 import { buildGameActionModel, GAME_ACTION_COMMAND } from "./gameActionModel.js";
 import { boardInteractionBlockReason, developmentCardPlayReason } from "./gameInteractionGuards.js";
 import { createGameActionDispatchGate } from "./gameActionDispatchGate.js";
@@ -376,6 +376,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
             onExit();
     };
     const lens = g.players.map((_, i) => longestRoadLen(g, gr, i));
+    const roadsBuilt = g.players.map((_, i) => Object.values(g.roads || {}).filter((owner) => owner === i).length);
     const pubVPs = g.players.map((_, i) => calcVP(g, i, false));
     const mySecretVP = [...me.devNew, ...me.devOld].filter((c) => c.kind === "vp").length;
     const rankOrder = rankPlayers(g, { includeSecret: false }).map((entry) => entry.playerIndex);
@@ -394,6 +395,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
             secretVictoryPoints={i === seat ? mySecretVP : 0}
             resourceCount={handSize(p)}
             developmentCards={p.devNew.length + p.devOld.length}
+            roadCount={roadsBuilt[i]}
             longestRoad={lens[i]}
             troopCount={troopTotal(p)}
             hasLongestRoad={hasLR}
@@ -462,6 +464,8 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
         dice={g.turn.dice}
         diceAnimationKey={gameLog.length && g.turn.dice ? g.turn.dice.join("") + g.round + g.turn.pos : "idle"}
         status={status}
+        fullscreen={fullscreen}
+        onToggleFullscreen={onToggleFullscreen}
     />{playersRow}{GUERRA(g.mode) && g.troll && g.troll.awake && !g.troll.defeated && g.troll.giant &&  <div className={"trollhud"}><div className={"th-top"}>{"Troll Gigante"}<span className={"th-hp"}>{g.troll.giant.hp + "/" + g.troll.giant.maxHp}</span></div><div className={"th-bar"}><div className={"th-fill"} style={{ width: Math.max(0, 100 * g.troll.giant.hp / g.troll.giant.maxHp) + "%" }}/></div><div className={"th-dmg"}>{g.players.map((pp, i) =>  <span key={i} className={"th-c"} title={pname(g, i) + ": " + (g.troll.dmg[i] || 0) + " dano"}><i style={{ background: GLOW[pp.ch] }}/>{g.troll.dmg[i] || 0}</span>)}</div>{g.troll.giant.at === "0,0" &&  <div className={"th-warn"}>{"Domina o Coração — a horda repõe-se"}</div>}</div>}{GUERRA(g.mode) && g.troll && !g.troll.awake && g.troll.rush > 0 &&  <div className={"trollhud omen"}><div className={"th-top"}>{"O pântano agita-se"}<span className={"th-hp"}>{g.troll.rush + "/" + g.players.length}</span></div></div>}
     <GameUtilityRail
         game={g}
@@ -473,15 +477,20 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
         onOpenUtility={openUtility}
         logCount={gameLog.length > 99 ? "99+" : gameLog.length}
     />
-    {g.phase !== "ended" && <GameEconomyStrip
+    {g.phase !== "ended" && <GameBottomDock
+        code={g.code}
+        round={g.round}
+        dice={g.turn.dice}
+        diceAnimationKey={gameLog.length && g.turn.dice ? g.turn.dice.join("") + g.round + g.turn.pos : "idle"}
         resources={me.res}
         resourceDefinitions={RES}
         resourceKeys={RKEYS}
         costs={COSTS}
-        cardCount={me.devNew.length + me.devOld.length}
+        showCosts={!myTurn}
+        cards={[...me.devOld.map((card) => ({ card, isNew: false })), ...me.devNew.map((card) => ({ card, isNew: true }))]}
+        characterId={me.ch}
+        onOpenCard={({ card, isNew }) => setZoomCard({ c: card, nov: isNew })}
         onOpenCards={() => setShowCards(true)}
-        costsOpen={myTurn && g.phase === "play" && g.turn.rolled && actionPresentation.mode === ACTION_PRESENTATION.FULL}
-        compact={actionPresentation.mode === ACTION_PRESENTATION.PLACEMENT}
     />}
     <GameActionPanel
         model={actionModel}
@@ -491,7 +500,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
         onRestore={() => setActionPanelMinimized(false)}
         onCancelPlacement={() => { setMode(null); setSelW(null); setSelU(null); }}
     />
-{me.devOld.length + me.devNew.length > 0 && g.phase !== "ended" &&  <div className={"handcol"}>{[...me.devOld.map((c) => [c, false]), ...me.devNew.map((c) => [c, true])].map(([c, nov]) =>  <div key={c.id} className={"dcmini dmini" + (nov ? " new" : "")} onClick={() => setZoomCard({ c, nov })}><DevelopmentCard card={c} characterId={me.ch} mini /></div>)}</div>}{zoomCard && (() => {
+{zoomCard && (() => {
         const c = zoomCard.c;
         const playReason = developmentCardPlayReason(g, gr, seat, c, { isNew: !!zoomCard.nov, isLibrary: !!zoomCard.lib, myTurn });
         const playable = playReason == null;

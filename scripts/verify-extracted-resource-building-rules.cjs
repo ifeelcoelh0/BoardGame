@@ -6,7 +6,8 @@ const root = path.resolve(__dirname, "..");
 const legacy = readRuntimeSource(root);
 const gameScreen = fs.readFileSync(path.join(root, "src/ui/game/GameScreen.jsx"), "utf8");
 const decisionModel = fs.readFileSync(path.join(root, "src/ui/game/gameDecisionModel.js"), "utf8");
-const runtimeUi = `${legacy}\n${gameScreen}\n${decisionModel}`;
+const actionModel = fs.readFileSync(path.join(root, "src/ui/game/gameActionModel.js"), "utf8");
+const runtimeUi = `${legacy}\n${gameScreen}\n${decisionModel}\n${actionModel}`;
 const resources = fs.readFileSync(path.join(root, "src/game/resources.js"), "utf8");
 const buildings = fs.readFileSync(path.join(root, "src/game/buildingRules.js"), "utf8");
 const tests = fs.readFileSync(path.join(root, "tests/resources-building.test.js"), "utf8");
@@ -15,7 +16,6 @@ const failures = [];
 const requiredGameScreenImports = [
   'from "../../game/resources.js"',
   'from "../../game/buildingRules.js"',
-  "BUILD_COSTS as COSTS",
   "RESOURCE_DEFINITIONS as RES",
   "validRoads",
   "validVillages",
@@ -25,6 +25,9 @@ for (const fragment of requiredGameScreenImports) {
 }
 if (!decisionModel.includes('from "../../game/buildingRules.js"') || !decisionModel.includes("bankRatio")) {
   failures.push("Decision System deixou de consumir bankRatio canónico.");
+}
+if (!actionModel.includes('from "../../game/resources.js"') || !actionModel.includes("BUILD_COSTS")) {
+  failures.push("Game Action Model deixou de consumir BUILD_COSTS canónico.");
 }
 
 const forbiddenLegacyDeclarations = [

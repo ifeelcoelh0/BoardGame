@@ -1,0 +1,13 @@
+.rd-game-bottom-dock{position:fixed;left:50%;bottom:10px;z-index:var(--rd-z-hud);transform:translateX(-50%);display:block;max-width:calc(100vw - 160px);pointer-events:none}
+.rd-game-bottom-dock>*{pointer-events:auto}
+.rd-game-bottom-dock__match{position:absolute;right:calc(100% + 8px);bottom:0}
+.rd-game-bottom-dock__hand{position:relative;display:block;pointer-events:none}
+.rd-game-bottom-dock__economy{position:relative;z-index:2;display:block;width:max-content;margin:0 auto;pointer-events:auto}
+.rd-game-bottom-dock__cards{position:absolute;left:calc(100% + 16px);bottom:0;z-index:1;pointer-events:auto}
+.rd-game-bottom-dock--embedded{position:relative;left:auto;bottom:auto;transform:none;max-width:none}
+.rd-game-bottom-dock--embedded .rd-game-bottom-dock__match{position:relative;right:auto;bottom:auto;margin-bottom:6px}
+.rd-game-bottom-dock--embedded .rd-game-bottom-dock__cards{position:relative;left:auto;bottom:auto;margin-left:16px}
+.rd-game-bottom-dock--embedded .rd-game-bottom-dock__hand{display:flex;align-items:flex-end}
+@media(max-width:920px){.rd-game-bottom-dock{max-width:calc(100vw - 118px)}.rd-game-bottom-dock__match{right:calc(100% + 5px)}.rd-game-bottom-dock__cards{left:calc(100% + 12px)}}
+@media(max-width:700px){.rd-game-bottom-dock{left:8px;right:8px;transform:none;max-width:none}.rd-game-bottom-dock__hand{display:flex;justify-content:center}.rd-game-bottom-dock__economy{margin:0}.rd-game-bottom-dock__match{position:absolute;left:0;right:auto;bottom:0;transform:translateX(-4px) scale(.86);transform-origin:bottom left}.rd-game-bottom-dock__cards{position:relative;left:auto;bottom:auto;margin-left:10px}}
+@media(prefers-reduced-motion:reduce){.rd-game-bottom-dock *{transition:none!important}}

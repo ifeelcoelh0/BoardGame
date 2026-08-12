@@ -306,13 +306,13 @@ export default function useRealmSession({ stage, navigate, book }) {
         if (!gameLog.length) return;
         const top = gameLog[0];
         if (seenLog.current !== null && seenLog.current !== top.id) {
-            setToast(top);
+            // As Crónicas são histórico, não HUD transitório. Mantemos apenas
+            // as pistas de áudio sem transformar cada linha do registo num toast.
             const fresh = freshLogEntries(gameLog, seenLog.current);
             const cue = latestCurrentAudioCue(fresh);
             if (cue) AudioSys.playCue(cue);
-            const timer = setTimeout(() => setToast(null), 3200);
             seenLog.current = top.id;
-            return () => clearTimeout(timer);
+            return;
         }
         seenLog.current = top.id;
     }, [game]);

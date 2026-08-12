@@ -61,10 +61,11 @@ test("presentation writers keep the log bounded and clone payloads", () => {
 
   setGameStory(game, { kind: "char", pi: 0, title: "Título", text: "Texto" }, { id: 102 });
   setGameAward(game, { kind: "army", pi: 0, prev: null, value: 3 }, { id: 103 });
-  const semanticLog = appendGameLog(game, "🛤️ Título mudou", 0, { id: 105, kind: "event", emphasis: "ceremonial", audio: { sfx: "award" } });
+  const semanticLog = appendGameLog(game, "🛤️ Título mudou", 0, { id: 105, kind: "event", emphasis: "ceremonial", resources: [{ resource: "madeira", amount: 2 }, { resource: "tijolo", amount: -1 }], audio: { sfx: "award" } });
   assert.equal(semanticLog.kind, "event");
   assert.equal(semanticLog.emphasis, "ceremonial");
   assert.deepEqual(semanticLog.audio, { sfx: "award" });
+  assert.deepEqual(semanticLog.resources, [{ resource: "madeira", amount: 2 }, { resource: "tijolo", amount: -1 }]);
   const safeLog = appendGameLog(game, "entrada antiga", 0, { id: 106, kind: "desconhecido", emphasis: "ruidoso" });
   assert.equal(safeLog.kind, "realm");
   assert.equal(safeLog.emphasis, "ambient");

@@ -32,14 +32,15 @@ function BannerIcon({ name, size = 20, title, className = "" }) {
   return <GameIcon name={name} size={size} title={title} className={className} />;
 }
 
-function BannerStat({ icon, label, value, highlighted = false }) {
+function BannerStat({ icon, label, value, highlighted = false, compactLabel = null }) {
   return (
     <span
       className={`rdb-player-banner__stat${highlighted ? " is-highlighted" : ""}`}
       title={label}
       aria-label={`${label}: ${value}`}
     >
-      <BannerIcon name={icon} size={18} />
+      <BannerIcon name={icon} size={17} />
+      <small>{compactLabel || label}</small>
       <b>{value}</b>
     </span>
   );
@@ -117,6 +118,7 @@ export default function PlayerBanner({
   secretVictoryPoints = 0,
   resourceCount,
   developmentCards,
+  roadCount,
   longestRoad,
   troopCount,
   hasLongestRoad = false,
@@ -138,6 +140,7 @@ export default function PlayerBanner({
     : 0;
   const hasStatuses = player.immune || player.sick > 0 || tsunamiTurns > 0;
   const visibleVictoryPoints = publicVictoryPoints;
+  const isBot = player.controller === "bot";
 
   const handleKeyDown = (event) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -148,7 +151,7 @@ export default function PlayerBanner({
 
   return (
     <article
-      className={`rdb-player-banner${isActive ? " is-active" : ""}${isExpanded ? " is-expanded" : ""}${player.connected === false ? " is-disconnected" : ""}`}
+      className={`rdb-player-banner${isActive ? " is-active" : ""}${isExpanded ? " is-expanded" : ""}${player.connected === false ? " is-disconnected" : ""}${isBot ? " is-bot-controlled" : ""}`}
       style={style}
       role="button"
       tabIndex={0}
@@ -171,7 +174,7 @@ export default function PlayerBanner({
         <span className="rdb-player-banner__name-line">
           <strong>{character.n.split(" ").pop()}</strong>
           {isLocal && <i>(tu)</i>}
-          {player.controller === "bot" && <i>(bot)</i>}
+          {isBot && <em className="rdb-player-banner__presence is-bot">bot</em>}
           {player.connected === false && (
             <em className="rdb-player-banner__presence is-offline">
               {reconnectSeconds != null ? `OFFLINE · ${reconnectSeconds}s` : "OFFLINE"}
@@ -208,10 +211,10 @@ export default function PlayerBanner({
       </span>
 
       <span className="rdb-player-banner__stats">
-        <BannerStat icon={SUMMARY_ICONS.resources} label="Recursos" value={resourceCount} />
-        <BannerStat icon={SUMMARY_ICONS.cards} label="Cartas" value={developmentCards} />
-        <BannerStat icon={SUMMARY_ICONS.road} label="Estrada" value={longestRoad} highlighted={hasLongestRoad} />
-        <BannerStat icon={SUMMARY_ICONS.troops} label="Tropas" value={troopCount} highlighted={hasLargestArmy} />
+        <BannerStat icon={SUMMARY_ICONS.resources} label="Recursos na mão" compactLabel="Recursos" value={resourceCount} />
+        <BannerStat icon={SUMMARY_ICONS.cards} label="Cartas de desenvolvimento" compactLabel="Cartas" value={developmentCards} />
+        <BannerStat icon={SUMMARY_ICONS.road} label="Estradas construídas" compactLabel="Estradas" value={roadCount} highlighted={hasLongestRoad} />
+        <BannerStat icon={SUMMARY_ICONS.troops} label="Força do exército" compactLabel="Exército" value={troopCount} highlighted={hasLargestArmy} />
       </span>
 
       <span className="rdb-player-banner__affordance" aria-hidden="true">

@@ -40,7 +40,7 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
   });
   const logEvent = (game, message, playerIndex = null, emphasis = "important", audio = null) => addLog(game, message, playerIndex, { kind: "event", emphasis, ...(audio ? { audio } : {}) });
   const logWar = (game, message, playerIndex = null, audio = null) => addLog(game, message, playerIndex, { kind: "war", ...(audio ? { audio } : {}) });
-  const logTrade = (game, message, playerIndex = null, audio = null) => addLog(game, message, playerIndex, { kind: "trade", ...(audio ? { audio } : {}) });
+  const logTrade = (game, message, playerIndex = null, audio = null, meta = null) => addLog(game, message, playerIndex, { kind: "trade", ...(meta || {}), ...(audio ? { audio } : {}) });
   const logExploration = (game, message, playerIndex = null, audio = null) => addLog(game, message, playerIndex, { kind: "exploration", ...(audio ? { audio } : {}) });
   const speak = (game, playerIndex) => {
     const quotes = characterById(game.players[playerIndex].ch)?.q || [];
@@ -228,7 +228,13 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
 
   function presentTradeEvent(g, event) {
       if (event.type === "BANK_TRADE_COMPLETED") {
-          logTrade(g, "⚖️ " + pname(g, event.actorIndex) + " trocou " + event.ratio + RES[event.give].i + " por 1" + RES[event.get].i + " no banco.", event.actorIndex, sfxCue("deal"));
+          logTrade(
+              g,
+              "⚖️ " + pname(g, event.actorIndex) + " trocou " + event.ratio + RES[event.give].i + " por 1" + RES[event.get].i + " no banco.",
+              event.actorIndex,
+              sfxCue("deal"),
+              { resources: [{ resource: event.give, amount: -event.ratio }, { resource: event.get, amount: 1 }] },
+          );
           return;
       }
       if (event.type === "PLAYER_TRADE_PROPOSED") {
@@ -469,7 +475,12 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
                       const parts = Object.entries(gain).filter(([, amount]) => amount > 0);
                       if (!parts.length)
                           return;
-                      addLog(g, pname(g, playerIndex) + " colheu " + parts.map(([resource, amount]) => amount + RES[resource].i).join(" "), playerIndex);
+                      addLog(
+                          g,
+                          pname(g, playerIndex) + " colheu " + parts.map(([resource, amount]) => amount + RES[resource].i).join(" "),
+                          playerIndex,
+                          { resources: parts.map(([resource, amount]) => ({ resource, amount })) },
+                      );
                       lines.push(pname(g, playerIndex) + " " + parts.map(([resource, amount]) => FLAV[resource](amount)).join(" e ") + ".");
                       gains.push({
                           playerIndex,

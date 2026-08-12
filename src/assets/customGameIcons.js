@@ -8,6 +8,7 @@
 export const CUSTOM_GAME_ICONS = Object.freeze({
   RDD_Dice: Object.freeze({ id: "RDD_Dice", path: "assets/icons/reinos/rd-dice.png", width: 36, height: 36 }),
   RDD_Options: Object.freeze({ id: "RDD_Options", path: "assets/icons/reinos/rd-options.png", width: 36, height: 36 }),
+  RDD_Fullscreen: Object.freeze({ id: "RDD_Fullscreen", path: "assets/icons/reinos/rd-fullscreen.png", width: 36, height: 36 }),
   RDD_Road: Object.freeze({ id: "RDD_Road", path: "assets/icons/reinos/rd-road.png", width: 36, height: 36 }),
   RDD_Village: Object.freeze({ id: "RDD_Village", path: "assets/icons/reinos/rd-village.png", width: 36, height: 36 }),
   RDD_Palace: Object.freeze({ id: "RDD_Palace", path: "assets/icons/reinos/rd-palace.png", width: 36, height: 36 }),
