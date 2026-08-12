@@ -19,7 +19,8 @@ assert.match(realmPages, /data-testid="start-game"/);
 assert.match(realmPages, /Confirmar expulsão/);
 assert.match(realmPages, /onTogglePerks/);
 assert.match(realmPages, /title=\{localPlayer\?\.character\?\.n \?\? "Casa por escolher"\}[\s\S]*onSwapCharacter/, "Trocar/Escolher casa deve estar na primeira página do reino");
-assert.match(realmPages, /onLeave/);
+assert.match(realmPages, /data-testid="leave-realm"/);
+assert.match(realmPages, /onSwapCharacter[\s\S]{0,1500}data-testid="leave-realm"/, "Sair do reino deve ficar visível logo após Trocar/Escolher casa");
 assert.match(css, /\.rd-lobby-codex/);
 assert.match(css, /\.rd-entry-book-access/);
 

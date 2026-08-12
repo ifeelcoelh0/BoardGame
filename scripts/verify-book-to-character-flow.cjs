@@ -5,16 +5,19 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('src/app/App.jsx');
 const session = read('src/app/useRealmSession.js');
 const experience = read('src/ui/lobby/LobbyExperience.jsx');
-const foyer = read('src/ui/lobby/pages/FoyerPages.jsx');
+const homePage = read('src/ui/lobby/pages/foyer/HomePage.jsx');
+const modePage = read('src/ui/lobby/pages/foyer/ModePage.jsx');
+const joinPage = read('src/ui/lobby/pages/foyer/JoinPage.jsx');
 const failures = [];
 const need = (source, token, label) => { if (!source.includes(token)) failures.push(`falta ${label}: ${token}`); };
 const reject = (source, token, label) => { if (source.includes(token)) failures.push(`${label}: ${token}`); };
 
-need(foyer, 'data-testid="create-realm"', 'botão de fundar reino');
-need(foyer, 'data-testid="join-realm"', 'botão de entrar com código');
-need(foyer, 'data-testid="join-submit"', 'submissão do código');
-need(foyer, 'foyer.onCreate(mode.id)', 'a página de modos chama o criador do reino');
-need(foyer, 'onClick={foyer.onJoin}', 'a página de código chama a entrada');
+need(homePage, 'data-testid="create-realm"', 'botão de fundar reino');
+need(homePage, 'data-testid="join-realm"', 'botão de entrar com código');
+need(joinPage, 'data-testid="join-submit"', 'submissão do código');
+need(modePage, 'foyer.onCreate(selectedMode.id)', 'a confirmação do modo chama o criador do reino');
+need(modePage, 'data-testid="create-realm-submit"', 'botão de confirmação do modo');
+need(joinPage, 'onClick={foyer.onJoin}', 'a página de código chama a entrada');
 
 need(app, 'const foyer = {', 'pacote de dados do foyer');
 need(app, 'session.createRealm(selectedMode)', 'ligação do foyer à sessão');

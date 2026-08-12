@@ -17,7 +17,6 @@ import {
   roughFrame,
   ruleWithLozenge,
 } from "./lobbyQuillInk.js";
-
 /* ============================================================================
    CARTA DE SELEÇÃO
 
@@ -58,7 +57,6 @@ const LAYOUT = Object.freeze({
   giftBody: 684,
   motto: 776,
   footerRule: 830,
-  returnLabel: 952,
 });
 
 /* Faixa da assinatura: um plano próprio, porque é a única zona do pergaminho
@@ -398,19 +396,6 @@ export function paintWritOfSelection(ctx, options = {}) {
   /* --- Rodapé ------------------------------------------------------------- */
   quillRule(ctx, 96, width - 96, LAYOUT.footerRule, { color: INK.ironSoft, alpha: 0.35, weight: 2.4 });
 
-  /* "Voltar" é uma nota do próprio escrivão na margem, não um botão. */
-  ctx.save();
-  ctx.translate(LAYOUT.columnX - 8, LAYOUT.returnLabel);
-  ctx.rotate(-0.016);
-  handText(ctx, "return to the wall", 0, 0, {
-    size: 25,
-    color: INK.faded,
-    jitter: 1.2,
-    tilt: 0.03,
-    seed: seed + 50,
-  });
-  ctx.restore();
-
   /* Datação, na mão do escrivão. Ocupa a faixa vazia acima da assinatura, que é
      onde um documento real põe o lugar e a data. */
   ctx.save();
@@ -493,18 +478,19 @@ export function paintSignatureStrip(ctx, options = {}) {
     seed: seed + 2,
   });
 
+  const signature = name || "Anon";
+  const opts = {
+    size: 82,
+    family: INK_FONTS.sign,
+    color: INK.iron,
+    jitter: 1.4,
+    tilt: 0.02,
+    sizeVary: 0.04,
+    bleed: true,
+    seed: seed + 3,
+  };
+
   if (progress > 0) {
-    const signature = name || "Anon";
-    const opts = {
-      size: 82,
-      family: INK_FONTS.sign,
-      color: INK.iron,
-      jitter: 1.4,
-      tilt: 0.02,
-      sizeVary: 0.04,
-      bleed: true,
-      seed: seed + 3,
-    };
     const total = Math.min(measureHand(ctx, signature, opts), lineTo - lineFrom - 20);
     const revealed = total * Math.min(1, progress / 0.82);
 

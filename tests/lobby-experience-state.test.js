@@ -4,6 +4,7 @@ import { BOOK_PAGE, BOOK_SCOPE, bookReducer, bookScopeForStage, createInitialBoo
 import { BOOK_PAGE_ORDER, bookPagesForScope } from "../src/ui/lobby/bookPages.js";
 import { APP_STAGE } from "../src/ui/appFlow.js";
 import { createEmptyLobbyViewModel, createLobbyViewModel } from "../src/ui/lobby/lobbyViewModel.js";
+import { LOBBY_MODES, getLobbyModeMeta } from "../src/ui/lobby/lobbyModeCatalog.js";
 
 test("book pages are independent from app stages", () => {
   assert.equal(normalizeBookPage(BOOK_PAGE.MODE), BOOK_PAGE.MODE);
@@ -17,6 +18,13 @@ test("foyer view model has no fake room or character ownership", () => {
   assert.deepEqual(model.seatCharacters, [null, null, null, null]);
   assert.deepEqual(model.availableCharacterIds, ["a", "b"]);
   assert.equal(Object.hasOwn(model, "bookContent"), false);
+});
+
+test("o salão usa um catálogo único para apresentar os modos", () => {
+  assert.equal(LOBBY_MODES.length, 5);
+  assert.equal(getLobbyModeMeta("dragao").name, "Modo Dragão");
+  assert.equal(getLobbyModeMeta("guerra").duration, "75–120 min");
+  assert.equal(getLobbyModeMeta("desconhecido").id, "dragao");
 });
 
 test("authenticated lobby view model derives pending character state", () => {

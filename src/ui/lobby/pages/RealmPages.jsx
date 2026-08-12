@@ -94,14 +94,31 @@ export function RealmPage({ realm }) {
           <div><dt>Prontidão</dt><dd>{localPlayer?.ready ? "Pronto" : "A preparar"}</dd></div>
           <div><dt>Mínimo</dt><dd>{requiredPlayers} jogadores</dd></div>
         </dl>
-        <div className="rd-lobby-book-ui__actions is-single-column">
+        <div className="rd-lobby-book-ui__realm-actions">
           <button
-            className={!hasConfirmedCharacter ? "is-primary" : ""}
+            className={`rd-lobby-book-ui__realm-action${!hasConfirmedCharacter ? " is-primary" : ""}`}
             type="button"
             onClick={realm.onSwapCharacter}
             disabled={isStarting}
           >
-            {hasConfirmedCharacter ? "Trocar de casa" : "Escolher a minha casa"}
+            <GameIcon name="RDD_Palace" size={24} alt="" />
+            <span>
+              <strong>{hasConfirmedCharacter ? "Trocar de casa" : "Escolher a minha casa"}</strong>
+              <em>{hasConfirmedCharacter ? "Volta à parede das casas e escolhe outro brasão." : "Escolhe a casa que te representará nesta partida."}</em>
+            </span>
+          </button>
+          <button
+            className="rd-lobby-book-ui__realm-action is-leave"
+            type="button"
+            onClick={realm.onLeave}
+            disabled={isStarting}
+            data-testid="leave-realm"
+          >
+            <span className="rd-lobby-book-ui__action-symbol" aria-hidden="true">↩</span>
+            <span>
+              <strong>Sair do reino</strong>
+              <em>{realm.isHost ? "Desfaz o reino e desliga os convidados." : "Liberta o teu lugar e regressa ao salão."}</em>
+            </span>
           </button>
         </div>
         {game.test && <p className="rd-lobby-book-ui__test-note">Reino de teste · pode iniciar a partir de {requiredPlayers} jogadores.</p>}
@@ -183,11 +200,6 @@ export function SettingsPage({ realm, scope, audio }) {
           onToggleFullscreen={audio?.onToggleFullscreen}
           compact
         />
-        {inRealm && (
-          <div className="rd-lobby-book-ui__actions is-single-column">
-            <button className="is-leave" type="button" onClick={realm.onLeave} disabled={realm.isStarting}>Sair do reino</button>
-          </div>
-        )}
       </Leaf>
     </>
   );

@@ -1,10 +1,4 @@
-export const DEFAULT_MODE_META = Object.freeze({
-  dragao: { name: "Modo Dragão", icon: "RDD_ModeDragon", duration: "60–90 min" },
-  classico: { name: "Modo Clássico", icon: "RDD_Palace", duration: "45–75 min" },
-  rapido: { name: "Cerco Relâmpago", icon: "S_Thunder03", duration: "20–35 min" },
-  guerra: { name: "Guerra dos Reinos", icon: "W_Sword006", duration: "75–120 min" },
-  exploracao: { name: "Terras do Além", icon: "I_Map", duration: "60–100 min" },
-});
+import { getLobbyModeMeta } from "./lobbyModeCatalog.js";
 
 export function createEmptyLobbyViewModel(characters = []) {
   const characterStates = Object.fromEntries(
@@ -30,7 +24,7 @@ export function createLobbyViewModel({ game, seat, characters = [], perks = {} }
     return createEmptyLobbyViewModel(characters);
   }
 
-  const mode = DEFAULT_MODE_META[game.mode] ?? DEFAULT_MODE_META.dragao;
+  const mode = getLobbyModeMeta(game.mode);
   const players = game.players.map((player, index) => {
     const character = characters.find((item) => item.id === player.ch);
     return {
@@ -72,7 +66,6 @@ export function createLobbyViewModel({ game, seat, characters = [], perks = {} }
     ready: player?.ready === true,
     connected: player ? player.connected !== false : true,
   }));
-
 
   return {
     mode,

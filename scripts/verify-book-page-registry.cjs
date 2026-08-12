@@ -39,7 +39,12 @@ for (const { constant, id } of entries) {
    partilhada, senão as decisões tipográficas voltam a ficar espalhadas por
    dezoito cabeçalhos escritos à mão. */
 const leaf = fs.readFileSync("src/ui/lobby/pages/Leaf.jsx", "utf8");
-const foyerPages = fs.readFileSync("src/ui/lobby/pages/FoyerPages.jsx", "utf8");
+const foyerPages = [
+  "src/ui/lobby/pages/foyer/HomePage.jsx",
+  "src/ui/lobby/pages/foyer/ModePage.jsx",
+  "src/ui/lobby/pages/foyer/JoinPage.jsx",
+  "src/ui/lobby/pages/foyer/SavedRealmsPage.jsx",
+].map((file) => fs.readFileSync(file, "utf8")).join("\n");
 const realmPages = fs.readFileSync("src/ui/lobby/pages/RealmPages.jsx", "utf8");
 assert.match(registry, /export function bookFolio/, "a numeração do livro tem de derivar da ordem");
 for (const { id } of entries) {

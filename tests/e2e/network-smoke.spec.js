@@ -7,6 +7,7 @@ test.describe("PeerJS real", () => {
     await page.goto("/");
     await page.getByTestId("create-realm").click();
     await page.getByTestId("mode-classico").click();
+    await page.getByTestId("create-realm-submit").click();
     await expect(page.getByTestId("lobby-root")).toBeVisible({ timeout: 20_000 });
   });
 });

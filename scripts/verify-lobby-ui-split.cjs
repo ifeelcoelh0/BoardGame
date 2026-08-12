@@ -14,6 +14,12 @@ const book = read("src/ui/lobby/lobbySceneBook.js");
 const panels = read("src/ui/lobby/LobbyPanels.jsx");
 const codex = read("src/ui/lobby/LobbyCodex.jsx");
 const foyerPages = read("src/ui/lobby/pages/FoyerPages.jsx");
+const foyerPageSources = [
+  "HomePage.jsx",
+  "ModePage.jsx",
+  "JoinPage.jsx",
+  "SavedRealmsPage.jsx",
+].map((file) => read(`src/ui/lobby/pages/foyer/${file}`));
 const realmPages = read("src/ui/lobby/pages/RealmPages.jsx");
 
 assert.ok(ui.length < 20000, "DragonLobby.jsx voltou a crescer para além da camada de UI");
@@ -26,7 +32,8 @@ assert.doesNotMatch(ui, /LobbyCodex|LobbyBook/, "DragonLobby não deve desenhar 
 assert.match(ui, /from "\.\/LobbyPanels\.jsx"/);
 assert.match(codex, /from "\.\/pages\/FoyerPages\.jsx"/);
 assert.match(codex, /from "\.\/pages\/RealmPages\.jsx"/);
-assert.ok(foyerPages.length < 14000, "FoyerPages.jsx cresceu para além das páginas do foyer");
+assert.ok(foyerPages.length < 3000, "FoyerPages.jsx deve permanecer uma fachada pequena");
+for (const source of foyerPageSources) assert.ok(source.length < 7000, "uma página do foyer voltou a crescer para além da sua responsabilidade");
 assert.ok(realmPages.length < 20000, "RealmPages.jsx cresceu para além das páginas do reino");
 assert.doesNotMatch(ui, /new THREE\.|WebGLRenderer|createLobbyScene/);
 assert.match(scene, /export default function LobbyScene/);

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { APP_STAGE, appFlowReducer, createInitialAppFlow, navigateTo } from "../src/ui/appFlow.js";
+import { BOOK_SECTION, bookSectionsForScope, firstBookPageForSection } from "../src/ui/lobby/bookPages.js";
 import {
   BOOK_PAGE,
   BOOK_SCOPE,
@@ -166,4 +167,26 @@ test("voltar ao título restaura o livro do foyer", () => {
   assert.equal(app.scope, BOOK_SCOPE.FOYER);
   assert.equal(app.page, BOOK_PAGE.HOME);
   assert.equal(app.open, true);
+});
+
+
+test("o foyer apresenta quatro secções semânticas", () => {
+  assert.deepEqual(bookSectionsForScope(BOOK_SCOPE.FOYER), [
+    BOOK_SECTION.START,
+    BOOK_SECTION.PLAY,
+    BOOK_SECTION.SAVES,
+    BOOK_SECTION.MORE,
+  ]);
+  assert.equal(firstBookPageForSection(BOOK_SECTION.START, BOOK_SCOPE.FOYER), BOOK_PAGE.HOME);
+  assert.equal(firstBookPageForSection(BOOK_SECTION.PLAY, BOOK_SCOPE.FOYER), BOOK_PAGE.MODE);
+  assert.equal(firstBookPageForSection(BOOK_SECTION.SAVES, BOOK_SCOPE.FOYER), BOOK_PAGE.SAVED_REALMS);
+  assert.equal(firstBookPageForSection(BOOK_SECTION.MORE, BOOK_SCOPE.FOYER), BOOK_PAGE.SETTINGS);
+});
+
+test("o livro do reino mantém partida, jogadores e mais como áreas próprias", () => {
+  assert.deepEqual(bookSectionsForScope(BOOK_SCOPE.REALM), [
+    BOOK_SECTION.REALM,
+    BOOK_SECTION.PLAYERS,
+    BOOK_SECTION.MORE,
+  ]);
 });
