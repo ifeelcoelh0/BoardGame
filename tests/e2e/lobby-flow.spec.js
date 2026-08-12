@@ -14,6 +14,7 @@ async function createRealm(page, mode = "classico") {
   await openApp(page);
   await page.getByTestId("create-realm").click();
   await page.getByTestId(`mode-${mode}`).click();
+  await page.getByTestId("create-realm-submit").click();
   await expect(page.getByTestId("lobby-root")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Galeria das casas" })).toBeVisible();
   await expect(page.locator(".rd-lobby-scene canvas")).toBeVisible();
@@ -56,7 +57,8 @@ test("o jogo abre diretamente no salão com o livro como entrada", async ({ page
   await openApp(page);
   await expect(page.getByTestId("lobby-experience")).toHaveAttribute("data-stage", "title");
   await page.getByTestId("create-realm").click();
-  await expect(page.getByRole("heading", { name: "Escolhe o Modo de Jogo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Modo de jogo" })).toBeVisible();
+  await expect(page.getByTestId("create-realm-submit")).toBeDisabled();
 });
 
 test("quatro páginas reservam lugares e escolhem casas distintas", async ({ browser }) => {

@@ -15,7 +15,7 @@ const pager = fs.readFileSync("src/ui/lobby/BookPager.jsx", "utf8");
 const experience = fs.readFileSync("src/ui/lobby/LobbyExperience.jsx", "utf8");
 const runtimeSource = readRuntimeSource();
 
-for (const token of ["BOOK_PAGE_ORDER", "bookPagesForScope", "firstBookPageForScope"]) {
+for (const token of ["BOOK_PAGE_ORDER", "BOOK_SECTION", "bookPagesForScope", "bookSectionsForScope", "firstBookPageForSection", "firstBookPageForScope"]) {
   assert.ok(pages.includes(token), `bookPages must export ${token}`);
 }
 for (const token of ["bookReducer", "getBookNavigation", "bookScopeForStage"]) {
@@ -24,12 +24,13 @@ for (const token of ["bookReducer", "getBookNavigation", "bookScopeForStage"]) {
 assert.match(codex, /<BookPager/);
 assert.match(codex, /data-book-page=/);
 assert.match(codex, /data-book-scope=/);
-assert.match(pager, /is-previous/);
-assert.match(pager, /is-next/);
+assert.match(pager, /rd-book-pager__sections/);
+assert.match(pager, /rd-book-pager__section/);
+assert.match(pager, /firstBookPageForSection/);
 assert.match(experience, /bookScope/);
 assert.match(runtimeSource, /useReducer\(bookReducer/);
 assert.match(runtimeSource, /bookOpen=\{bookState\.open\}/);
 assert.match(runtimeSource, /onBookOpenChange=\{setBookOpen\}/);
 assert.doesNotMatch(experience, /const \[bookOpen, setBookOpen\]/);
 
-console.log("Paginação funcional verificada: uma ordem, âmbito derivado do stage, um renderizador.");
+console.log("Paginação funcional verificada: ordem física única, secções semânticas, âmbito derivado do stage e um renderizador.");

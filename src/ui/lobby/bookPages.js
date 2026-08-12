@@ -1,17 +1,10 @@
 /*
    Registo único das páginas do livro.
 
-   Antes as páginas estavam definidas em quatro sítios que tinham de concordar à
-   mão: as constantes de página, as sequências escritas à mão, o mapa de rótulos
-   no folheador, e a cadeia de `if` do renderizador (duplicada, porque as páginas
-   do foyer viviam como JSX inline no monólito e as do reino num componente).
-   Acrescentar uma página exigia editar os quatro. Agora é uma entrada aqui.
-
-   O livro é folheado de uma ponta à outra por `BOOK_PAGE_ORDER`. O que muda com
-   o estado da aplicação não é a ordem, é quais das páginas estão disponíveis:
-   uma página de reino não existe antes de haver reino, e as páginas do foyer
-   deixam de fazer sentido depois de o haver. Cada entrada declara isso em
-   `scope`, e a sequência efectiva é derivada, nunca escrita.
+   O Book v2 mantém uma ordem física para a animação das folhas, mas deixa de
+   apresentar essa ordem como a arquitetura principal. A navegação visível é
+   organizada por secções semânticas: começar, jogar, arquivos e mais. No reino,
+   as secções mudam para partida, jogadores e mais.
 */
 
 export const BOOK_PAGE = Object.freeze({
@@ -26,20 +19,31 @@ export const BOOK_PAGE = Object.freeze({
   DIAGNOSTICS: "diagnostics",
 });
 
-/**
- * Âmbito de uma página.
- *
- * `FOYER` só antes de haver reino, `REALM` só depois, `ANY` sempre. Opções,
- * regras e diagnóstico são `ANY` porque não dependem de haver partida, e é
- * precisamente por isso que faz sentido poderem ser consultadas nos dois lados.
- */
 export const BOOK_SCOPE = Object.freeze({
   FOYER: "foyer",
   REALM: "realm",
   ANY: "any",
 });
 
-/** A ordem pela qual o livro é folheado. É a única lista escrita à mão. */
+export const BOOK_SECTION = Object.freeze({
+  START: "start",
+  PLAY: "play",
+  SAVES: "saves",
+  REALM: "realm",
+  PLAYERS: "players",
+  MORE: "more",
+});
+
+export const BOOK_SECTIONS = Object.freeze({
+  [BOOK_SECTION.START]: Object.freeze({ id: BOOK_SECTION.START, label: "Começar" }),
+  [BOOK_SECTION.PLAY]: Object.freeze({ id: BOOK_SECTION.PLAY, label: "Jogar" }),
+  [BOOK_SECTION.SAVES]: Object.freeze({ id: BOOK_SECTION.SAVES, label: "Arquivos" }),
+  [BOOK_SECTION.REALM]: Object.freeze({ id: BOOK_SECTION.REALM, label: "Partida" }),
+  [BOOK_SECTION.PLAYERS]: Object.freeze({ id: BOOK_SECTION.PLAYERS, label: "Jogadores" }),
+  [BOOK_SECTION.MORE]: Object.freeze({ id: BOOK_SECTION.MORE, label: "Mais" }),
+});
+
+/** Ordem física das folhas. Continua a ser a única lista de páginas escrita à mão. */
 export const BOOK_PAGE_ORDER = Object.freeze([
   BOOK_PAGE.HOME,
   BOOK_PAGE.MODE,
@@ -52,12 +56,6 @@ export const BOOK_PAGE_ORDER = Object.freeze([
   BOOK_PAGE.DIAGNOSTICS,
 ]);
 
-/*
-   O `icon` é o ícone do conjunto RPG que identifica a página, e vive aqui pela
-   mesma razão que o rótulo: era a última coisa que ainda ia ficar espalhada por
-   componentes. `folio` é derivado da ordem, portanto a numeração do livro nunca
-   pode divergir da paginação.
-*/
 export const BOOK_PAGES = Object.freeze({
   [BOOK_PAGE.HOME]: Object.freeze({
     id: BOOK_PAGE.HOME,
@@ -65,20 +63,23 @@ export const BOOK_PAGES = Object.freeze({
     label: "Início",
     chapter: "O SALÃO",
     scope: BOOK_SCOPE.FOYER,
+    section: BOOK_SECTION.START,
   }),
   [BOOK_PAGE.MODE]: Object.freeze({
     id: BOOK_PAGE.MODE,
     icon: "I_Map",
-    label: "Modos",
+    label: "Fundar",
     chapter: "FUNDAR REINO",
     scope: BOOK_SCOPE.FOYER,
+    section: BOOK_SECTION.PLAY,
   }),
   [BOOK_PAGE.JOIN]: Object.freeze({
     id: BOOK_PAGE.JOIN,
     icon: "I_Key01",
-    label: "Código",
+    label: "Entrar",
     chapter: "ENTRAR NUM REINO",
     scope: BOOK_SCOPE.FOYER,
+    section: BOOK_SECTION.PLAY,
   }),
   [BOOK_PAGE.SAVED_REALMS]: Object.freeze({
     id: BOOK_PAGE.SAVED_REALMS,
@@ -86,6 +87,7 @@ export const BOOK_PAGES = Object.freeze({
     label: "Arquivos",
     chapter: "REINOS GUARDADOS",
     scope: BOOK_SCOPE.FOYER,
+    section: BOOK_SECTION.SAVES,
   }),
   [BOOK_PAGE.REALM]: Object.freeze({
     id: BOOK_PAGE.REALM,
@@ -93,6 +95,7 @@ export const BOOK_PAGES = Object.freeze({
     label: "Partida",
     chapter: "A PARTIDA",
     scope: BOOK_SCOPE.REALM,
+    section: BOOK_SECTION.REALM,
   }),
   [BOOK_PAGE.PLAYERS]: Object.freeze({
     id: BOOK_PAGE.PLAYERS,
@@ -100,6 +103,7 @@ export const BOOK_PAGES = Object.freeze({
     label: "Jogadores",
     chapter: "A MESA",
     scope: BOOK_SCOPE.REALM,
+    section: BOOK_SECTION.PLAYERS,
   }),
   [BOOK_PAGE.SETTINGS]: Object.freeze({
     id: BOOK_PAGE.SETTINGS,
@@ -107,6 +111,7 @@ export const BOOK_PAGES = Object.freeze({
     label: "Opções",
     chapter: "CONFIGURAÇÃO",
     scope: BOOK_SCOPE.ANY,
+    section: BOOK_SECTION.MORE,
   }),
   [BOOK_PAGE.RULES]: Object.freeze({
     id: BOOK_PAGE.RULES,
@@ -114,13 +119,15 @@ export const BOOK_PAGES = Object.freeze({
     label: "Regras",
     chapter: "REGRAS DA MESA",
     scope: BOOK_SCOPE.ANY,
+    section: BOOK_SECTION.MORE,
   }),
   [BOOK_PAGE.DIAGNOSTICS]: Object.freeze({
     id: BOOK_PAGE.DIAGNOSTICS,
     icon: "I_Telescope",
-    label: "Diagnóstico",
+    label: "Suporte",
     chapter: "ESTADO DO SISTEMA",
     scope: BOOK_SCOPE.ANY,
+    section: BOOK_SECTION.MORE,
   }),
 });
 
@@ -132,6 +139,10 @@ export function bookPageMeta(page) {
   return isBookPage(page) ? BOOK_PAGES[page] : null;
 }
 
+export function bookSectionMeta(section) {
+  return BOOK_SECTIONS[section] ?? null;
+}
+
 export function isPageInScope(page, scope) {
   const meta = bookPageMeta(page);
   if (!meta) return false;
@@ -139,19 +150,32 @@ export function isPageInScope(page, scope) {
   return meta.scope === scope;
 }
 
-/** Sequência efectiva para um âmbito, derivada da ordem única. */
 export function bookPagesForScope(scope) {
   return BOOK_PAGE_ORDER.filter((page) => isPageInScope(page, scope));
 }
 
-/** Primeira página de um âmbito, usada quando a página actual deixa de existir. */
 export function firstBookPageForScope(scope) {
   return bookPagesForScope(scope)[0] ?? BOOK_PAGE.HOME;
 }
 
+export function firstBookPageForSection(section, scope) {
+  return bookPagesForScope(scope).find((page) => bookPageMeta(page)?.section === section) ?? null;
+}
+
+export function bookSectionsForScope(scope) {
+  const seen = new Set();
+  const sections = [];
+  for (const page of bookPagesForScope(scope)) {
+    const section = bookPageMeta(page)?.section;
+    if (!section || seen.has(section)) continue;
+    seen.add(section);
+    sections.push(section);
+  }
+  return sections;
+}
+
 const ROMAN = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
 
-/** Número de fólio de uma página, em romanos, derivado da ordem do livro. */
 export function bookFolio(page) {
   const index = BOOK_PAGE_ORDER.indexOf(page);
   if (index < 0) return "";

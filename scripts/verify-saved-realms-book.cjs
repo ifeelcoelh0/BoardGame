@@ -8,7 +8,8 @@ function need(file, text) {
 need("src/ui/lobby/bookPages.js", 'SAVED_REALMS: "saved-realms"');
 need("src/game/saveStore.js", "export function inspectGameSaves");
 need("src/ui/lobby/pages/FoyerPages.jsx", "SavedRealmsPage");
-need("src/ui/lobby/pages/FoyerPages.jsx", "disabled={!status.recoverable}");
+need("src/ui/lobby/pages/foyer/SavedRealmsPage.jsx", "disabled={!summary.recoverable}");
+need("src/ui/lobby/savedRealmsModel.js", "export function savedRealmSummary");
 need("src/ui/lobby/LobbyCodex.jsx", "SavedRealmsPage");
 need("src/app/useRealmSession.js", "clearGameSave(globalThis.localStorage");
 console.log("✓ livro de reinos guardados verificado");

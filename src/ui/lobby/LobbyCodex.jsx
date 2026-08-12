@@ -180,7 +180,7 @@ export default function LobbyCodex({
 
         {onClose && (
           <button className="rd-lobby-book-ui__close" type="button" onClick={onClose} disabled={leaving} aria-label="Fechar o códice">
-            <span aria-hidden="true">×</span> Fechar
+            Fechar <span aria-hidden="true">×</span>
           </button>
         )}
       </section>

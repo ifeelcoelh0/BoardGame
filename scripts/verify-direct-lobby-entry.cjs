@@ -11,7 +11,7 @@ const runtimeSource = readRuntimeSource(root);
 const factorySource = fs.readFileSync(factoryPath, "utf8");
 const identitySource = fs.readFileSync(identityPath, "utf8");
 const hostSessionSource = fs.readFileSync(path.join(root, "src/multiplayer/hostSessionPresenceController.js"), "utf8");
-const foyerPagesSource = fs.readFileSync(path.join(root, "src/ui/lobby/pages/FoyerPages.jsx"), "utf8");
+const foyerPagesSource = fs.readFileSync(path.join(root, "src/ui/lobby/pages/foyer/ModePage.jsx"), "utf8");
 const errors = [];
 
 const requireText = (text, label, source = runtimeSource) => {
@@ -24,7 +24,8 @@ const rejectText = (text, label) => {
 requireText("const createRealm = async (selectedMode) =>", "criação direta a partir do modo");
 /* A escolha do modo passou do JSX inline do monólito para a página de modos do
    livro, que chama o callback fornecido pelo monólito. */
-requireText("foyer.onCreate(mode.id)", "entrada direta no lobby ao escolher o modo", foyerPagesSource);
+requireText("foyer.onCreate(selectedMode.id)", "criação do reino após confirmar o modo", foyerPagesSource);
+requireText('data-testid="create-realm-submit"', "confirmação explícita do modo", foyerPagesSource);
 requireText("session.createRealm(selectedMode)", "App liga o callback à criação do reino");
 requireText("const player = createPlayer(null, identity)", "lugar criado sem personagem provisória", hostSessionSource);
 requireText("void takeSeat()", "reserva automática de lugar para novos convidados");

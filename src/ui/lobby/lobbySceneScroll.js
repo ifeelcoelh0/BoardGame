@@ -2,6 +2,10 @@ import * as THREE from "three";
 import { material, mesh } from "./lobbyScenePrimitives.js";
 import { createCharacterScrollTexture, scrollCopyFor } from "./lobbySceneTextures.js";
 import { SIGNATURE_STRIP, paintSignatureStrip } from "./lobbyScrollArt.js";
+import {
+  SIGNATURE_CANCEL_HIT_AREA,
+  SIGNATURE_CONFIRM_HIT_AREA,
+} from "./lobbySelectionAffordance.js";
 
 /* ============================================================================
    PERGAMINHO DE CONFIRMAÇÃO
@@ -29,6 +33,61 @@ const WRITE_TIME = 1.05;
 const SEAL_DELAY = 0.16;
 const SEAL_TIME = 0.42;
 const AFTER_SEAL = 0.34;
+
+function createCloseButtonTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+
+  const shadow = ctx.createRadialGradient(128, 136, 18, 128, 136, 86);
+  shadow.addColorStop(0, "rgba(52,18,10,0.34)");
+  shadow.addColorStop(1, "rgba(52,18,10,0)");
+  ctx.fillStyle = shadow;
+  ctx.beginPath();
+  ctx.arc(128, 136, 84, 0, Math.PI * 2);
+  ctx.fill();
+
+  const wax = ctx.createRadialGradient(102, 94, 10, 128, 126, 98);
+  wax.addColorStop(0, "#b63a2b");
+  wax.addColorStop(0.58, "#882118");
+  wax.addColorStop(1, "#5f140d");
+  ctx.fillStyle = wax;
+  ctx.beginPath();
+  const steps = 28;
+  for (let i = 0; i <= steps; i += 1) {
+    const angle = (i / steps) * Math.PI * 2;
+    const r = 72 + Math.sin(angle * 5.2) * 5 + Math.cos(angle * 3.1) * 3;
+    const x = 128 + Math.cos(angle) * r;
+    const y = 126 + Math.sin(angle) * r * 0.95;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,214,188,0.24)";
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(128, 126, 55, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(255,241,223,0.88)";
+  ctx.lineWidth = 16;
+  ctx.beginPath();
+  ctx.moveTo(100, 98);
+  ctx.lineTo(156, 154);
+  ctx.moveTo(156, 98);
+  ctx.lineTo(100, 154);
+  ctx.stroke();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.encoding = THREE.sRGBEncoding;
+  texture.anisotropy = 4;
+  return texture;
+}
+
 
 export function createCharacterScroll(scene, framing) {
   const group = new THREE.Group();
@@ -69,8 +128,8 @@ export function createCharacterScroll(scene, framing) {
   const bottomRod = buildRod();
   group.add(bottomRod);
 
-  // Rodapé: linha de assinatura à direita, nota de "voltar" à esquerda, ambas
-  // sobre as palavras já pintadas na textura. Acompanham a vara de baixo.
+  // Rodapé: a faixa da assinatura acompanha a vara de baixo. O fecho passa a viver
+  // no canto superior do pergaminho, como um selo vermelho explícito.
   const footer = new THREE.Group();
   group.add(footer);
 
@@ -97,34 +156,59 @@ export function createCharacterScroll(scene, framing) {
   footer.add(signaturePlane);
 
   let signatureName = "";
-  let signHover = 0;
   const redrawSignature = (progress, sealProgress) => {
     paintSignatureStrip(signatureCtx, {
       name: signatureName,
       progress,
       sealProgress,
-      hover: signHover,
     });
     signatureTexture.needsUpdate = true;
   };
 
   const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
+  /* O pergaminho inteiro confirma. O gesto certo continua a ser a assinatura,
+     mas o jogo deixa de exigir precisão: qualquer clique útil na folha ensina
+     imediatamente o que fazer. */
   const sealTarget = mesh(
-    new THREE.PlaneGeometry(SIGNATURE_STRIP.planeWidth, SIGNATURE_STRIP.planeHeight),
+    new THREE.PlaneGeometry(SIGNATURE_CONFIRM_HIT_AREA.width, SIGNATURE_CONFIRM_HIT_AREA.height),
     hitMaterial,
     false,
     false,
   );
-  sealTarget.position.set(SIGNATURE_STRIP.footerX, SIGNATURE_STRIP.footerY, 0.07);
+  sealTarget.position.set(SIGNATURE_CONFIRM_HIT_AREA.x, SIGNATURE_CONFIRM_HIT_AREA.y, 0.05);
   sealTarget.userData.action = "confirm";
   sealTarget.userData.tooltip = "Sign to seal your choice";
-  footer.add(sealTarget);
+  group.add(sealTarget);
 
-  const cancelTarget = mesh(new THREE.PlaneGeometry(0.62, 0.12), hitMaterial, false, false);
-  cancelTarget.position.set(-0.48, 0.178, 0.07);
+  const closeTexture = createCloseButtonTexture();
+  const closeButton = mesh(
+    new THREE.PlaneGeometry(0.23, 0.23),
+    new THREE.MeshStandardMaterial({
+      map: closeTexture,
+      transparent: true,
+      opacity: 0.98,
+      roughness: 0.66,
+      metalness: 0.04,
+      depthWrite: false,
+    }),
+    false,
+    false,
+  );
+  closeButton.position.set(SIGNATURE_CANCEL_HIT_AREA.x, SIGNATURE_CANCEL_HIT_AREA.y, 0.09);
+  closeButton.userData.action = "cancel";
+  closeButton.userData.tooltip = "Close and return to the wall";
+  group.add(closeButton);
+
+  const cancelTarget = mesh(
+    new THREE.PlaneGeometry(SIGNATURE_CANCEL_HIT_AREA.width, SIGNATURE_CANCEL_HIT_AREA.height),
+    hitMaterial,
+    false,
+    false,
+  );
+  cancelTarget.position.set(SIGNATURE_CANCEL_HIT_AREA.x, SIGNATURE_CANCEL_HIT_AREA.y, 0.1);
   cancelTarget.userData.action = "cancel";
-  cancelTarget.userData.tooltip = "Return to the wall";
-  footer.add(cancelTarget);
+  cancelTarget.userData.tooltip = "Close and return to the wall";
+  group.add(cancelTarget);
 
   // Luz própria: sem ela o pergaminho ficava à mercê das velas da parede, que
   // estão atrás dele.
@@ -166,6 +250,9 @@ export function createCharacterScroll(scene, framing) {
     bottomRod.position.y = TOP_Y - SCROLL_HEIGHT * k;
     footer.position.y = TOP_Y - SCROLL_HEIGHT * k;
     footer.visible = openness > READY_AT;
+    closeButton.visible = openness > READY_AT;
+    cancelTarget.visible = openness > READY_AT;
+    sealTarget.visible = openness > READY_AT;
     readingLight.intensity = 1.5 * openness;
   };
 
@@ -187,19 +274,12 @@ export function createCharacterScroll(scene, framing) {
     get isAnimating() {
       return signing || openness !== target;
     },
-    targets: [sealTarget, cancelTarget],
-    /* Passar o rato pela linha realça o convite a assinar. */
-    setSignHover(on) {
-      const next = on && !signing ? 1 : 0;
-      if (next === signHover) return;
-      signHover = next;
-      if (!signing) redrawSignature(0, 0);
-    },
+    targets: [cancelTarget, sealTarget],
+    setSignHover() {},
     sign(onComplete) {
       if (signing || !currentCharacter) return false;
       signing = true;
       signElapsed = 0;
-      signHover = 0;
       signDone = onComplete ?? null;
       redrawSignature(0, 0);
       return true;
@@ -219,7 +299,6 @@ export function createCharacterScroll(scene, framing) {
       signing = false;
       signElapsed = 0;
       signDone = null;
-      signHover = 0;
       // O nome assinado tem de ser o mesmo que o documento declara em cima,
       // senão a assinatura parece de outra pessoa.
       signatureName = scrollCopyFor(character).name;
@@ -258,6 +337,7 @@ export function createCharacterScroll(scene, framing) {
       textureCache.forEach((texture) => texture.dispose());
       textureCache.clear();
       signatureTexture.dispose();
+      closeTexture.dispose();
       signDone = null;
       signing = false;
     },

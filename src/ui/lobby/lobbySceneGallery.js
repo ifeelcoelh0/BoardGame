@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { mesh } from "./lobbyScenePrimitives.js";
 import { addWallTorch } from "./lobbySceneDecorations.js";
 import { createPortraitTexture } from "./lobbySceneTextures.js";
+import { paintCharacterSelectionGuide, SELECTION_GUIDE_CANVAS } from "./lobbySelectionGuideArt.js";
 import {
   POSTER_CANVAS,
   POSTER_NAILS,
@@ -75,6 +76,25 @@ function createPosterTexture(character, index) {
     id: character?.id ?? `slot${index}`,
     index,
   }));
+}
+
+function createSelectionGuideTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = SELECTION_GUIDE_CANVAS.width;
+  canvas.height = SELECTION_GUIDE_CANVAS.height;
+  const ctx = canvas.getContext("2d");
+  const repaint = () => paintCharacterSelectionGuide(ctx);
+  repaint();
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.encoding = THREE.sRGBEncoding;
+  texture.anisotropy = 4;
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      repaint();
+      texture.needsUpdate = true;
+    }).catch(() => {});
+  }
+  return texture;
 }
 
 let claimedTexture = null;
@@ -192,6 +212,28 @@ export function addCharacterSelectionWall(scene, characters, flames) {
   const windowY = POSTER_WINDOW.planeY;
   const shadowGeo = new THREE.PlaneGeometry(1.34, 1.78);
   const claimedGeo = new THREE.PlaneGeometry(1.1, 1.52);
+
+  /* Tutorial diegético de três gestos. Fica gravado no intervalo físico entre
+     as duas filas de cartazes: deve ler-se como marca na pedra, não como HUD. */
+  const selectionGuide = mesh(
+    new THREE.PlaneGeometry(4.5, 0.45),
+    new THREE.MeshStandardMaterial({
+      map: createSelectionGuideTexture(),
+      color: 0xffffff,
+      roughness: 1,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.58,
+      depthWrite: false,
+      emissive: new THREE.Color(0x120904),
+      emissiveIntensity: 0.012,
+    }),
+    false,
+    false,
+  );
+  selectionGuide.position.set(0, (ROW_YS[0] + ROW_YS[1]) / 2, 0.006);
+  selectionGuide.rotation.z = -0.008;
+  gallery.add(selectionGuide);
 
   (characters ?? []).slice(0, 8).forEach((character, index) => {
     const col = index % 4;
