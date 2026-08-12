@@ -44,7 +44,7 @@ import { createHostSocialController, createClientSocialController } from "../mul
 import { reduceLobbyToSetup } from "../game/gameSetupReducer.js";
 import { CHARACTERS as CHARS, characterById as charOf } from "../game/characterCatalog.js";
 import { emoteById as emoteOf } from "../presentation/emoteCatalog.js";
-import { PEER_CONFIG as PEERCFG, PEER_PREFIX as PREFIX } from "../multiplayer/config.js";
+import { PEER_PREFIX as PREFIX, resolvePeerConfig } from "../multiplayer/config.js";
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -727,17 +727,20 @@ export default function useRealmSession({ stage, navigate, book }) {
         onEmote: handleHostEmote,
         onChat: handleHostChat
     });
-    const startHostTransport = (hostGame, attemptId) => {
+    const startHostTransport = async (hostGame, attemptId) => {
         destroyMultiplayerRuntime(net.current);
         net.current = createMultiplayerRuntimeState();
         net.current.host = true;
         setConnSt("wait");
         let opened = false;
         try {
+            const runtime = net.current;
+            const peerConfig = await resolvePeerConfig();
+            if (net.current !== runtime || pendingIdentity.current?.requestId !== attemptId) return;
             createBrowserHostPeerRuntime({
-            runtime: net.current,
+            runtime,
             peerId: PREFIX + hostGame.code,
-            peerConfig: PEERCFG,
+            peerConfig,
             openTimeoutMs: 9e3,
             onOpen: ({ controller }) => {
                 if (pendingIdentity.current?.requestId !== attemptId) {
@@ -787,7 +790,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         catch (error) {
             pendingIdentity.current = null;
             setConnSt("off");
-            setErr("O reino foi criado localmente, mas o transporte multiplayer não arrancou. Podes continuar no salão e tentar ligar novamente.");
+            setErr("O reino foi criado localmente, mas a ligação multiplayer não arrancou. O serviço TURN/sinalização pode estar indisponível; tenta novamente dentro de alguns segundos.");
             recordDiagnostic("host-transport-start-error", normalizeDiagnosticError(error));
         }
     };
@@ -820,7 +823,7 @@ export default function useRealmSession({ stage, navigate, book }) {
             setLocalIdentity(prepared.session);
             setSeat(prepared.hostIndex);
             installHostGame(prepared.game, prepared.hostIndex);
-            startHostTransport(prepared.game, attemptId);
+            void startHostTransport(prepared.game, attemptId);
         }
         catch (e) {
             if (pendingIdentity.current?.requestId !== attemptId) return;
@@ -868,7 +871,7 @@ export default function useRealmSession({ stage, navigate, book }) {
             book.showRealm();
             navigate(APP_STAGE.CHARACTER_SELECTION);
 
-            startHostTransport(g, requestId);
+            void startHostTransport(g, requestId);
         }
         catch (e) {
             if (pendingIdentity.current?.requestId === requestId)
@@ -893,7 +896,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         pendingIdentity.current = { type: "host-resume", requestId };
         await startHost(g, requestId);
     };
-    const joinRealm = (roomCodeInput = codeIn) => {
+    const joinRealm = async (roomCodeInput = codeIn) => {
         setErr("");
         clearLocalIdentity();
         setSeat(null);
@@ -1044,10 +1047,23 @@ export default function useRealmSession({ stage, navigate, book }) {
             onChat: ({ message }) => socialController.current.receiveChat(message)
         });
         net.current = createMultiplayerRuntimeState();
+        const runtime = net.current;
+        let peerConfig;
+        try {
+            peerConfig = await resolvePeerConfig();
+        }
+        catch (error) {
+            if (net.current !== runtime) return;
+            recordDiagnostic("client-network-config-error", { roomCode: c, ...normalizeDiagnosticError(error) });
+            setConnSt("off");
+            setErr("Não foi possível preparar a ligação segura ao reino. O serviço TURN pode estar indisponível; tenta novamente dentro de alguns segundos.");
+            return;
+        }
+        if (net.current !== runtime) return;
         createBrowserClientPeerRuntime({
-            runtime: net.current,
+            runtime,
             hostPeerId: PREFIX + c,
-            peerConfig: PEERCFG,
+            peerConfig,
             connectionOptions: { reliable: true },
             peerOpenTimeoutMs: 9e3,
             welcomeTimeoutMs: 1e4,
