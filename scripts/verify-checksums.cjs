@@ -20,6 +20,23 @@ function walk(directory, relative = "") {
   return files;
 }
 
+// Git may expose the same text file as CRLF on Windows and LF on Linux.
+// Hash text in a canonical LF form so verification is identical on every OS.
+// Binary files are kept byte-for-byte unchanged.
+function bytesForChecksum(fullPath) {
+  const bytes = fs.readFileSync(fullPath);
+  if (bytes.includes(0)) return bytes;
+
+  const text = bytes.toString("utf8");
+  if (text.includes("\uFFFD")) return bytes;
+
+  return Buffer.from(text.replace(/\r\n/g, "\n"), "utf8");
+}
+
+function digestFile(fullPath) {
+  return crypto.createHash("sha256").update(bytesForChecksum(fullPath)).digest("hex");
+}
+
 const listed = new Map();
 for (const line of fs.readFileSync(checksumPath, "utf8").split(/\r?\n/)) {
   if (!line.trim()) continue;
@@ -32,6 +49,7 @@ for (const line of fs.readFileSync(checksumPath, "utf8").split(/\r?\n/)) {
 }
 
 const actualFiles = walk(root).sort();
+const actualSet = new Set(actualFiles);
 const failures = [];
 for (const rel of actualFiles) {
   const expected = listed.get(rel);
@@ -39,16 +57,18 @@ for (const rel of actualFiles) {
     failures.push(`Ficheiro não listado: ${rel}`);
     continue;
   }
-  const digest = crypto.createHash("sha256").update(fs.readFileSync(path.join(root, rel))).digest("hex");
+  const digest = digestFile(path.join(root, rel));
   if (digest !== expected) failures.push(`Checksum incorreto: ${rel}`);
 }
 for (const rel of listed.keys()) {
-  if (!actualFiles.includes(rel)) failures.push(`Entrada sem ficheiro: ${rel}`);
+  if (!actualSet.has(rel)) failures.push(`Entrada sem ficheiro: ${rel}`);
 }
+
 if (failures.length) {
   console.error("Falhas nos checksums:");
   failures.forEach((failure) => console.error(`- ${failure}`));
   console.error("\nSe estas alterações são intencionais, executa: npm run checksums:update");
   process.exit(1);
 }
-console.log(`Checksums verificados: ${actualFiles.length} ficheiros.`);
+
+console.log(`Checksums verificados: ${actualFiles.length} ficheiros (texto normalizado para LF).`);

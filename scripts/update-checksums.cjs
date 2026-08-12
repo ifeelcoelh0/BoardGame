@@ -20,14 +20,25 @@ function walk(directory, relative = "") {
   return files;
 }
 
+// Git may expose the same text file as CRLF on Windows and LF on Linux.
+// Hash text in a canonical LF form so SHA256SUMS.txt is portable across OSes.
+// Binary files are kept byte-for-byte unchanged.
+function bytesForChecksum(fullPath) {
+  const bytes = fs.readFileSync(fullPath);
+  if (bytes.includes(0)) return bytes;
+
+  const text = bytes.toString("utf8");
+  if (text.includes("\uFFFD")) return bytes;
+
+  return Buffer.from(text.replace(/\r\n/g, "\n"), "utf8");
+}
+
+function digestFile(fullPath) {
+  return crypto.createHash("sha256").update(bytesForChecksum(fullPath)).digest("hex");
+}
+
 const files = walk(root).sort();
-const lines = files.map((rel) => {
-  const digest = crypto
-    .createHash("sha256")
-    .update(fs.readFileSync(path.join(root, rel)))
-    .digest("hex");
-  return `${digest}  ${rel}`;
-});
+const lines = files.map((rel) => `${digestFile(path.join(root, rel))}  ${rel}`);
 
 fs.writeFileSync(checksumPath, `${lines.join("\n")}\n`, "utf8");
-console.log(`SHA256SUMS.txt atualizado: ${files.length} ficheiros.`);
+console.log(`SHA256SUMS.txt atualizado: ${files.length} ficheiros (texto normalizado para LF).`);
