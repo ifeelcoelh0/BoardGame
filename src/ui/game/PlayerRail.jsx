@@ -1,22 +1,13 @@
-import { useState } from "react";
 import "../../styles/player-rail.css";
 
 /**
- * Progressive disclosure for public player information.
- * Hover/focus expands every banner for comparison; each PlayerBanner owns its
- * explicit click-through detail state independently.
+ * Coluna fixa de estado dos jogadores. Cada casa fica sempre legível e os
+ * detalhes continuam disponíveis por clique no respetivo banner.
  */
 export default function PlayerRail({ children, embedded = false }) {
-  const [overview, setOverview] = useState(false);
   return (
     <div
-      className={`rd-player-rail${overview ? " is-overview" : ""}${embedded ? " rd-player-rail--embedded" : ""}`}
-      onPointerEnter={() => setOverview(true)}
-      onPointerLeave={() => setOverview(false)}
-      onFocusCapture={() => setOverview(true)}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOverview(false);
-      }}
+      className={`rd-player-rail${embedded ? " rd-player-rail--embedded" : ""}`}
       aria-label="Casas do reino"
     >
       {children}

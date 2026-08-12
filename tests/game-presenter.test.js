@@ -49,6 +49,25 @@ test("trade presentation writes only through the synchronized presentation slice
   assert.equal("ev" in game, false);
 });
 
+
+test("bank trade chronicle keeps explicit resource outflow and inflow", () => {
+  const game = twoPlayerGame();
+  const { presenter } = presenterHarness();
+
+  presenter.presentTradeEvent(game, {
+    type: "BANK_TRADE_COMPLETED",
+    actorIndex: 0,
+    give: "cavalos",
+    get: "tijolo",
+    ratio: 4,
+  });
+
+  assert.deepEqual(game.presentation.log[0].resources, [
+    { resource: "cavalos", amount: -4 },
+    { resource: "tijolo", amount: 1 },
+  ]);
+});
+
 test("scoring presentation synchronizes awards with a semantic voice cue", () => {
   const game = twoPlayerGame();
   const { presenter } = presenterHarness();
@@ -89,7 +108,9 @@ test("dice presentation keeps harvest animation metadata inside the story event"
   assert.equal(game.presentation.story.kind, "dados");
   assert.equal(game.presentation.story.n, 8);
   assert.match(game.presentation.log.at(-1).msg, /lançou 8/);
-  assert.equal(game.presentation.log.some((entry) => entry.msg.includes("colheu")), true);
+  const harvest = game.presentation.log.find((entry) => entry.msg.includes("colheu"));
+  assert.ok(harvest);
+  assert.deepEqual(harvest.resources, [{ resource: "madeira", amount: 1 }]);
 });
 
 test("palace presentation combines synchronized story state with a semantic audio cue", () => {

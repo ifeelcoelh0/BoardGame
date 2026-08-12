@@ -62,7 +62,7 @@ test("GameScreen consumes the canonical HUD and Action System instead of ad-hoc 
   const source = await readFile(new URL("../src/ui/game/GameScreen.jsx", import.meta.url), "utf8");
   const actionPanel = await readFile(new URL("../src/ui/game/GameActionPanel.jsx", import.meta.url), "utf8");
   assert.match(source, /<GameHud/);
-  assert.match(source, /<GameEconomyStrip/);
+  assert.match(source, /<GameBottomDock/);
   assert.match(source, /<GameUtilityRail/);
   assert.match(source, /<GameActionPanel/);
   assert.match(actionPanel, /<ResourceCost/);
@@ -70,4 +70,26 @@ test("GameScreen consumes the canonical HUD and Action System instead of ad-hoc 
   assert.doesNotMatch(source, /setShowLog\(/);
   assert.doesNotMatch(source, /setShowCosts\(/);
   assert.doesNotMatch(source, /constructionActions\./);
+  assert.doesNotMatch(source, /className=\{"handcol"\}/);
+});
+
+test("HUD v2 keeps development cards visible in the bottom hand and Chronicle entries out of legacy toasts", async () => {
+  const bottomDock = await readFile(new URL("../src/ui/game/hud/GameBottomDock.jsx", import.meta.url), "utf8");
+  const devHand = await readFile(new URL("../src/ui/game/hud/GameDevelopmentHand.jsx", import.meta.url), "utf8");
+  const session = await readFile(new URL("../src/app/useRealmSession.js", import.meta.url), "utf8");
+  assert.match(bottomDock, /<GameDevelopmentHand/);
+  assert.match(bottomDock, /<GameEconomyStrip/);
+  assert.match(devHand, /<DevelopmentCard/);
+  assert.match(devHand, /cards\.length === 0\) return null/);
+  assert.match(bottomDock, /showCosts=\{showCosts\}/);
+  assert.match(bottomDock, /<GameMatchStrip/);
+  assert.doesNotMatch(session, /setToast\(top\)/);
+  assert.match(session, /latestCurrentAudioCue/);
+});
+
+
+test("fullscreen icon is registered as a canonical Reinos asset", () => {
+  assert.ok(CUSTOM_GAME_ICONS.RDD_Fullscreen);
+  assert.equal(CUSTOM_GAME_ICONS.RDD_Fullscreen.width, 36);
+  assert.equal(CUSTOM_GAME_ICONS.RDD_Fullscreen.height, 36);
 });

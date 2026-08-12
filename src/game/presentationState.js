@@ -11,8 +11,20 @@ function normalizeLogEmphasis(value) {
   return GAME_LOG_EMPHASIS.includes(value) ? value : "ambient";
 }
 
+function normalizeLogResources(value) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const resource = typeof entry.resource === "string" ? entry.resource : "";
+    const amount = Number.isSafeInteger(entry.amount) ? entry.amount : 0;
+    if (!resource || amount === 0) return [];
+    return [{ resource, amount }];
+  });
+}
+
 function normalizeLogEntry(entry) {
   const source = entry && typeof entry === "object" && !Array.isArray(entry) ? entry : {};
+  const resources = normalizeLogResources(source.resources);
   return {
     id: source.id ?? createPresentationEventId(),
     msg: String(source.msg ?? ""),
@@ -20,6 +32,7 @@ function normalizeLogEntry(entry) {
     kind: normalizeLogKind(source.kind),
     emphasis: normalizeLogEmphasis(source.emphasis),
     ...(typeof source.icon === "string" && source.icon ? { icon: source.icon } : {}),
+    ...(resources.length ? { resources } : {}),
     ...(source.audio && typeof source.audio === "object" && !Array.isArray(source.audio) ? { audio: clone(source.audio) } : {}),
   };
 }
@@ -85,6 +98,7 @@ export function createPresentationEventId({ now = Date.now, random = Math.random
 
 export function appendGameLog(game, message, playerIndex = null, options = {}) {
   const presentation = gamePresentation(game);
+  const resources = normalizeLogResources(options.resources);
   const entry = {
     id: options.id ?? createPresentationEventId(options),
     msg: String(message ?? ""),
@@ -92,6 +106,7 @@ export function appendGameLog(game, message, playerIndex = null, options = {}) {
     kind: normalizeLogKind(options.kind),
     emphasis: normalizeLogEmphasis(options.emphasis),
     ...(typeof options.icon === "string" && options.icon ? { icon: options.icon } : {}),
+    ...(resources.length ? { resources } : {}),
     ...(options.audio && typeof options.audio === "object" && !Array.isArray(options.audio) ? { audio: clone(options.audio) } : {}),
   };
   presentation.log.unshift(entry);

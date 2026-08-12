@@ -8,12 +8,12 @@ function ActionIcon({ action, size = 28 }) {
   return <span className="rd-action-button__glyph">{action.glyph || "•"}</span>;
 }
 
-export function GameActionButton({ action, onAction, compact = false, square = false }) {
+export function GameActionButton({ action, onAction, compact = false, square = false, className = "" }) {
   const reasonId = `${action.id}-reason`;
   return (
     <button
       type="button"
-      className={`rd-action-button rd-action-button--${action.tone || "standard"}${action.active ? " is-active" : ""}${compact ? " rd-action-button--compact" : ""}${square ? " rd-action-button--square" : ""}`}
+      className={`rd-action-button rd-action-button--${action.tone || "standard"}${action.active ? " is-active" : ""}${compact ? " rd-action-button--compact" : ""}${square ? " rd-action-button--square" : ""}${className ? ` ${className}` : ""}`}
       disabled={!action.enabled}
       aria-pressed={action.active || undefined}
       aria-describedby={!action.enabled && action.reason ? reasonId : undefined}
@@ -89,8 +89,8 @@ export default function GameActionPanel({
     <div className={`rd-action-panel${embedded ? " rd-action-panel--embedded" : ""}`} aria-label="Ações do turno">
       <header className="rd-action-panel__toolbar">
         <span>As tuas ações</span>
-        <button type="button" onClick={onMinimize} aria-label="Recolher painel de ações">Recolher</button>
-        <GameActionButton action={model.endTurn} onAction={onAction} compact />
+        <GameActionButton action={{ ...model.endTurn, tone: "danger" }} onAction={onAction} compact className="rd-action-panel__end-turn" />
+        <button type="button" className="rd-action-panel__close" onClick={onMinimize} aria-label="Fechar painel de ações">×</button>
       </header>
       <div className="rd-action-panel__groups">
         {model.groups.map((group) => <ActionGroup key={group.id} group={group} onAction={onAction} />)}

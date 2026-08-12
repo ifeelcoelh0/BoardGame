@@ -116,6 +116,8 @@ test("primary production game surfaces do not render platform emoji literals", a
     "ui/game/PlayerBanner.jsx",
     "ui/game/hud/GameHud.jsx",
     "ui/game/hud/GameEconomyStrip.jsx",
+    "ui/game/hud/GameDevelopmentHand.jsx",
+    "ui/game/hud/GameBottomDock.jsx",
     "ui/game/hud/GameUtilityRail.jsx",
   ];
   const offenders = [];
