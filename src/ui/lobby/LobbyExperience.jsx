@@ -42,6 +42,7 @@ export default function LobbyExperience({
   onSwapCharacter,
   onTogglePerks,
   onLeave,
+  onAddBot,
   onKickPlayer,
   onCharacterSelect,
   onCharacterSelectionExit,
@@ -165,6 +166,7 @@ export default function LobbyExperience({
       presenceNow,
       onCopyCode: copyRoomCode,
       onTogglePerks,
+      onAddBot,
       onKickPlayer,
       onToggleReady,
       onStart,
@@ -258,6 +260,7 @@ export default function LobbyExperience({
           onSwapCharacter={onSwapCharacter}
           onTogglePerks={onTogglePerks}
           onLeave={onLeave}
+          onAddBot={onAddBot}
           onKickPlayer={onKickPlayer}
           onCharacterSelect={confirmCharacter}
           isSelectingCharacter={isSelectingCharacter}

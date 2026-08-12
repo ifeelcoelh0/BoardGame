@@ -38,6 +38,7 @@ import { createClientMessageController } from "../multiplayer/clientMessageContr
 import { createHostSessionPresenceController } from "../multiplayer/hostSessionPresenceController.js";
 import { createClientSessionPresenceController } from "../multiplayer/clientSessionPresenceController.js";
 import { createHostActionController } from "../multiplayer/hostActionController.js";
+import { scheduleHostBotAction } from "../multiplayer/hostBotController.js";
 import { createClientActionController, lobbyActionErrorText } from "../multiplayer/clientActionController.js";
 import { createStateSyncController } from "../multiplayer/stateSyncController.js";
 import { createHostSocialController, createClientSocialController } from "../multiplayer/socialEventController.js";
@@ -387,7 +388,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         const [removed] = next.players.splice(idx, 1);
         if (next.lobbyStarting)
             delete next.lobbyStarting;
-        next.players.forEach((candidate) => { candidate.ready = false; });
+        next.players.forEach((candidate) => { candidate.ready = candidate.controller === "bot"; });
         addLog(next, "⌛ O lugar de " + charOf(removed.ch).n + " foi libertado após terminar o tempo de reconexão.");
         clearLobbyPresenceTimer(playerId);
         await commit(next);
@@ -553,6 +554,8 @@ export default function useRealmSession({ stage, navigate, book }) {
             addLog(next, "🐉 O anfitrião abriu os portões do reino. A partida vai começar!", actorIndex);
         else if (event.type === "PLAYER_KICKED")
             addLog(next, "🚪 " + charOf(event.targetCharacterId).n + " foi removido do lobby pelo anfitrião.", actorIndex);
+        else if (event.type === "BOT_ADDED")
+            addLog(next, "🤖 " + charOf(event.characterId).n + " juntou-se à mesa como bot.", actorIndex);
     };
     const applyClientActionEvent = (event) => {
         if (event.type === "DUPLICATE_ACTION_PENDING") {
@@ -582,12 +585,25 @@ export default function useRealmSession({ stage, navigate, book }) {
         identityProtocolVersion: IDENTITY_PROTOCOL_VERSION,
         stateViewVersion: STATE_VIEW_VERSION,
         validCharacterIds: new Set(CHARS.map((character) => character.id)),
+        createPlayer,
         onLobbyApplied: (next, applied) => {
             addLobbyActionLog(next, applied);
             handleLobbyKickSideEffect(applied.event);
         },
         onGameApplied: (next, applied) => presentAppliedGameAction(next, applied)
     });
+    useEffect(() => {
+        if (!net.current.host || !game) return undefined;
+        return scheduleHostBotAction({
+            game,
+            getGame: () => gref.current,
+            enqueueAuthorityTask,
+            commit,
+            onGameApplied: (next, applied) => presentAppliedGameAction(next, applied),
+            onError: ({ reason }) => console.warn("Bot action rejected:", reason),
+        });
+    }, [game?.v, game?.phase, game?.winner]);
+
     const actionApplication = createClientActionController({
         getRuntime: () => net.current,
         getGame: () => gref.current,
@@ -612,7 +628,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         if (current.players.some((player) => player.connected === false || player.ready !== true || player.characterConfirmed !== true)) {
             const cancelled = clone(current);
             delete cancelled.lobbyStarting;
-            cancelled.players.forEach((player) => { player.ready = false; });
+            cancelled.players.forEach((player) => { player.ready = player.controller === "bot"; });
             addLog(cancelled, "↩ O início da partida foi cancelado porque a mesa deixou de estar pronta.");
             await commit(cancelled);
             return false;
@@ -654,6 +670,11 @@ export default function useRealmSession({ stage, navigate, book }) {
         prepared.players.forEach((player) => ensurePlayerPresence(player));
         markPlayerConnected(prepared.players[0]);
         prepared.players.slice(1).forEach((player) => {
+            if (player.controller === "bot") {
+                markPlayerConnected(player);
+                if (prepared.phase === "lobby") player.ready = true;
+                return;
+            }
             markPlayerDisconnected(player, {
                 now: presenceNow,
                 phase: prepared.phase,
@@ -663,9 +684,9 @@ export default function useRealmSession({ stage, navigate, book }) {
         if (prepared.phase === "lobby") {
             if (prepared.lobbyStarting)
                 delete prepared.lobbyStarting;
-            const legacyGuests = prepared.players.slice(1).filter((player) => !isSessionTokenHash(player.sessionTokenHash));
+            const legacyGuests = prepared.players.slice(1).filter((player) => player.controller !== "bot" && !isSessionTokenHash(player.sessionTokenHash));
             if (legacyGuests.length) {
-                prepared.players = [prepared.players[0], ...prepared.players.slice(1).filter((player) => isSessionTokenHash(player.sessionTokenHash))];
+                prepared.players = [prepared.players[0], ...prepared.players.slice(1).filter((player) => player.controller === "bot" || isSessionTokenHash(player.sessionTokenHash))];
                 addLog(prepared, `🔐 ${legacyGuests.length} lugar${legacyGuests.length > 1 ? "es antigos foram libertados" : " antigo foi libertado"}; esses jogadores ainda não tinham token de sessão.`);
             }
         }
@@ -1226,6 +1247,18 @@ export default function useRealmSession({ stage, navigate, book }) {
         void dispatchLobbyAction(LOBBY_ACTION.BEGIN_START);
     };
     const requestRematch = () => dispatchGameAction(GAME_ACTION.REMATCH_READY, {});
+    const addLobbyBot = () => {
+        const current = gref.current;
+        if (!current || current.phase !== "lobby" || seat !== 0) return false;
+        const used = new Set(current.players.map((player) => player.ch).filter(Boolean));
+        const character = CHARS.find((candidate) => !used.has(candidate.id));
+        if (!character) {
+            setErr("Não existem casas livres para outro bot.");
+            return false;
+        }
+        void dispatchLobbyAction(LOBBY_ACTION.ADD_BOT, { characterId: character.id });
+        return true;
+    };
     const kickLobbyPlayer = (targetPlayerId) => {
         const current = gref.current;
         const targetIndex = findPlayerIndexById(current, targetPlayerId);
@@ -1255,7 +1288,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         emotes, chat, testSel, setTestSel, savedRealms, refreshSavedRealms, deleteSavedRealm,
         isHost: net.current.host === true,
         createRealm, resumeRealm, joinRealm, takeSeat, leaveLobby, exitToTitle, reconnect,
-        swapCharacter, togglePerks, toggleReady, startGame, requestRematch, kickLobbyPlayer,
+        swapCharacter, togglePerks, toggleReady, startGame, requestRematch, addLobbyBot, kickLobbyPlayer,
         dispatchLobbyAction, dispatchGameAction, sendChat, sendEmote,
     };
 }

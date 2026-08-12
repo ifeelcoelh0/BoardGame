@@ -20,9 +20,9 @@ export function ensurePlayerPresence(player, { connected = true } = {}) {
   if (!player || typeof player !== "object") return player;
   if (typeof player.connected !== "boolean") player.connected = connected;
 
-  // Bots ainda não estão ativos nesta versão. Saves experimentais da Parte 6A.2
-  // são normalizados para controlo humano sem perder a identidade do jogador.
-  player.controller = PLAYER_CONTROLLER.HUMAN;
+  const validControllers = new Set(Object.values(PLAYER_CONTROLLER));
+  if (!validControllers.has(player.controller)) player.controller = PLAYER_CONTROLLER.HUMAN;
+  if (player.controller === PLAYER_CONTROLLER.BOT) player.connected = true;
   if (!Number.isFinite(player.disconnectedAt)) player.disconnectedAt = null;
   if (!Number.isFinite(player.reconnectDeadline)) player.reconnectDeadline = null;
   if (!Number.isFinite(player.turnReconnectDeadline)) player.turnReconnectDeadline = null;
@@ -30,8 +30,7 @@ export function ensurePlayerPresence(player, { connected = true } = {}) {
     player.afkSkipCount = 0;
   if (!Number.isFinite(player.lastAfkSkipAt)) player.lastAfkSkipAt = null;
 
-  // Campos antigos ficam neutralizados para permitir carregar saves transitórios.
-  player.botActivatedAt = null;
+  if (!Number.isFinite(player.botActivatedAt)) player.botActivatedAt = null;
   player.humanReconnectPending = false;
   player.botActionInProgress = false;
 
@@ -62,6 +61,7 @@ export function markPlayerDisconnected(player, {
   graceMs = LOBBY_RECONNECT_GRACE_MS,
 } = {}) {
   ensurePlayerPresence(player);
+  if (player.controller === PLAYER_CONTROLLER.BOT) return markPlayerConnected(player);
   player.connected = false;
   player.disconnectedAt = now;
   player.reconnectDeadline = phase === "lobby" ? now + Math.max(0, graceMs) : null;
@@ -115,9 +115,16 @@ export function markAfkActionSkipped(player, { now = Date.now() } = {}) {
   return player;
 }
 
-// Compatibilidade de importação com a fase anterior: bots já não são ativados.
 export function activateBotController(player, { now = Date.now() } = {}) {
-  return markAfkActionSkipped(player, { now });
+  ensurePlayerPresence(player);
+  player.controller = PLAYER_CONTROLLER.BOT;
+  player.connected = true;
+  player.disconnectedAt = null;
+  player.reconnectDeadline = null;
+  player.turnReconnectDeadline = null;
+  player.controlStatus = PLAYER_CONTROL_STATUS.ACTIVE;
+  player.botActivatedAt = now;
+  return player;
 }
 
 export function restoreHumanController(player) {

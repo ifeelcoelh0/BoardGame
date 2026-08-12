@@ -4,6 +4,7 @@ import {
   GAME_FIRST_AFK_GRACE_MS,
   GAME_REPEAT_AFK_GRACE_MS,
   PLAYER_CONTROL_STATUS,
+  activateBotController,
   beginGameTurnReconnectWindow,
   gameAfkGraceMs,
   gameTurnReconnectSeconds,
@@ -63,4 +64,15 @@ test("reconnection resets the AFK escalation", () => {
   assert.equal(player.lastAfkSkipAt, null);
   assert.equal(player.turnReconnectDeadline, null);
   assert.equal(player.controlStatus, PLAYER_CONTROL_STATUS.ACTIVE);
+});
+
+
+test("bots stay connected when presence code receives a disconnect signal", () => {
+  const player = { connected: true, ready: true };
+  activateBotController(player, { now: 100 });
+  markPlayerDisconnected(player, { now: 1000, phase: "lobby", graceMs: 30_000 });
+  assert.equal(player.controller, "bot");
+  assert.equal(player.connected, true);
+  assert.equal(player.ready, true);
+  assert.equal(player.reconnectDeadline, null);
 });

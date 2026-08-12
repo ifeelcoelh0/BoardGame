@@ -15,6 +15,7 @@ const RETRYABLE_LOBBY_ACTIONS = new Set([
   LOBBY_ACTION.SELECT_CHARACTER,
   LOBBY_ACTION.SET_READY,
   LOBBY_ACTION.SET_PERKS,
+  LOBBY_ACTION.ADD_BOT,
 ]);
 
 export const LOBBY_ACTION_ERRORS = Object.freeze({
@@ -29,6 +30,8 @@ export const LOBBY_ACTION_ERRORS = Object.freeze({
   INVALID_PERKS_VALUE: "A opção de poderes é inválida.",
   INVALID_PLAYER: "Esse jogador já não está no lobby.",
   CANNOT_KICK_HOST: "O anfitrião não pode ser expulso do próprio reino.",
+  LOBBY_FULL: "O reino já tem o número máximo de jogadores.",
+  BOT_UNAVAILABLE: "Não foi possível criar o bot neste momento.",
   PLAYER_DISCONNECTED: "Um jogador desligado não pode marcar-se como pronto.",
   PLAYERS_DISCONNECTED: "Ainda existem jogadores desligados no lobby.",
   INVALID_READY_VALUE: "O estado de preparação é inválido.",

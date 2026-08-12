@@ -42,6 +42,7 @@ export function createHostActionController(options = {}) {
     identityProtocolVersion = IDENTITY_PROTOCOL_VERSION,
     stateViewVersion = STATE_VIEW_VERSION,
     validCharacterIds = new Set(),
+    createPlayer = null,
     onLobbyApplied = () => {},
     onGameApplied = () => {},
     now = Date.now,
@@ -94,6 +95,7 @@ export function createHostActionController(options = {}) {
       now: now(),
       introDurationMs,
       validCharacterIds: characterIds,
+      createPlayer,
     });
     if (!applied.ok) {
       return {

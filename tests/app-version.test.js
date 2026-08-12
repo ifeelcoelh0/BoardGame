@@ -10,7 +10,7 @@ test("runtime, diagnostics, saves and package metadata share one application ver
   const packageLock = JSON.parse(await readFile(new URL("../package-lock.json", import.meta.url), "utf8"));
   assert.match(APP_VERSION, /^\d+\.\d+\.\d+$/);
   assert.equal(APP_BUILD_VERSION, APP_VERSION);
-  assert.equal(APP_BUILD_COMPATIBILITY_VERSION, 2);
+  assert.equal(APP_BUILD_COMPATIBILITY_VERSION, 3);
   assert.equal(SAVE_APP_VERSION, APP_VERSION);
   assert.equal(packageMetadata.version, APP_VERSION);
   assert.equal(packageLock.version, APP_VERSION);

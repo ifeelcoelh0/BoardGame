@@ -15,8 +15,13 @@ const hostSessionController = fs.readFileSync(path.join(root, "src/multiplayer/h
 const socialController = fs.readFileSync(path.join(root, "src/multiplayer/socialEventController.js"), "utf8");
 
 const errors = [];
+const normalizeEol = (value) => String(value ?? "").replace(/\r\n?/g, "\n");
 const requireText = (text, label, source = runtimeSource) => {
-    if (!source.includes(text))
+    if (!normalizeEol(source).includes(normalizeEol(text)))
+        errors.push(`Falta: ${label}`);
+};
+const requirePattern = (pattern, label, source = runtimeSource) => {
+    if (!pattern.test(normalizeEol(source)))
         errors.push(`Falta: ${label}`);
 };
 const rejectText = (text, label) => {
@@ -34,7 +39,7 @@ requireText('t: "claim-seat"', "pedido autoritativo para ocupar lugar");
 requireText('t: "session-auth"', "autenticação de reconexão");
 requireText('t: "leave-seat"', "saída autoritativa do lobby");
 requireText("findPlayerIndexById(nextGame, myPlayerId.current)", "resolução do índice por playerId");
-requireText("if (sourceConn)\n                return false;", "snapshots de convidados rejeitados pelo host");
+requirePattern(/if\s*\(sourceConn\)\s*return\s+false\s*;/, "snapshots de convidados rejeitados pelo host");
 requireText("g2.players[i].sessionTokenHash = cur.players[i].sessionTokenHash", "proteção dos hashes no estado recebido");
 requireText("identityVersion: IDENTITY_PROTOCOL_VERSION", "versão de identidade no estado novo", factory);
 requireText("playerId: auth.player.playerId", "atribuição estável de autoria no chat", socialController);

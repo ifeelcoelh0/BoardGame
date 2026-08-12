@@ -17,6 +17,7 @@ import {
   isLobbyReservationExpired,
   markPlayerConnected,
   markPlayerDisconnected,
+  PLAYER_CONTROLLER,
 } from "../game/playerPresence.js";
 import { gameModeConfig } from "../game/gameModes.js";
 import { reduceTradeForDisconnectedPlayer } from "../game/tradeReducer.js";
@@ -138,7 +139,7 @@ export function createHostSessionPresenceController(options = {}) {
         const next = copy(current);
         const [expired] = next.players.splice(playerIndex, 1);
         delete next.lobbyStarting;
-        next.players.forEach((candidate) => { candidate.ready = false; });
+        next.players.forEach((candidate) => { candidate.ready = candidate.controller === PLAYER_CONTROLLER.BOT; });
         log(next, `⌛ O lugar de ${nameOf(expired.ch)} expirou antes da reconexão.`);
         clearLobbyPresenceTimer(player.playerId);
         const committed = await commit(next);

@@ -171,6 +171,7 @@ export default function PlayerBanner({
         <span className="rdb-player-banner__name-line">
           <strong>{character.n.split(" ").pop()}</strong>
           {isLocal && <i>(tu)</i>}
+          {player.controller === "bot" && <i>(bot)</i>}
           {player.connected === false && (
             <em className="rdb-player-banner__presence is-offline">
               {reconnectSeconds != null ? `OFFLINE · ${reconnectSeconds}s` : "OFFLINE"}
