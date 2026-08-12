@@ -203,6 +203,7 @@ export default function App() {
             onSwapCharacter={() => { setBookOpen(false); navigate(APP_STAGE.CHARACTER_SELECTION); }}
             onTogglePerks={session.togglePerks}
             onLeave={leaveCurrentLobby}
+            onAddBot={session.addLobbyBot}
             onKickPlayer={session.kickLobbyPlayer}
             onCharacterSelect={(characterId) => {
               void (async () => {

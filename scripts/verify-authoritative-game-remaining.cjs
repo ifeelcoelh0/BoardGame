@@ -3,7 +3,7 @@ const path = require("node:path");
 const { readRuntimeSource } = require("./lib/runtime-source.cjs");
 
 const root = path.resolve(__dirname, "..");
-const source = readRuntimeSource(root);
+const source = readRuntimeSource(root).replace(/\r\n/g, "\n");
 const gameScreen = fs.readFileSync(path.join(root, "src/ui/game/GameScreen.jsx"), "utf8");
 const actionModel = fs.readFileSync(path.join(root, "src/ui/game/gameActionModel.js"), "utf8");
 const gameDecisionSystem = fs.readFileSync(path.join(root, "src/ui/game/decisions/GameDecisionSystem.jsx"), "utf8");

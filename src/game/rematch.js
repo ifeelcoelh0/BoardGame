@@ -1,5 +1,6 @@
 import { createInitialGame, createPlayer } from "./gameFactory.js";
 import { findPlayerIndexById } from "./playerIdentity.js";
+import { activateBotController, PLAYER_CONTROLLER } from "./playerPresence.js";
 
 export function markRematchReady(game, actorId) {
   if (!game || game.phase !== "ended" || !Array.isArray(game.players)) return { ok: false, reason: "NOT_ENDED" };
@@ -39,14 +40,18 @@ export function finalizeRematchIfReady(game, { rng = Math.random } = {}) {
     },
     rng,
   });
-  fresh.players = participants.map((player) => createPlayer(player.ch, {
-    playerId: player.playerId,
-    seatId: player.seatId,
-    sessionTokenHash: player.sessionTokenHash,
-    characterConfirmed: player.characterConfirmed === true,
-    connected: true,
-  }));
-  fresh.players.forEach((player) => { player.ready = false; });
+  fresh.players = participants.map((player) => {
+    const nextPlayer = createPlayer(player.ch, {
+      playerId: player.playerId,
+      seatId: player.seatId,
+      sessionTokenHash: player.sessionTokenHash,
+      characterConfirmed: player.characterConfirmed === true,
+      connected: true,
+    });
+    if (player.controller === PLAYER_CONTROLLER.BOT) activateBotController(nextPlayer);
+    nextPlayer.ready = nextPlayer.controller === PLAYER_CONTROLLER.BOT;
+    return nextPlayer;
+  });
   fresh.perksOn = game.perksOn !== false;
   if (game.test === true) fresh.test = true;
   fresh.v = game.v || 0;

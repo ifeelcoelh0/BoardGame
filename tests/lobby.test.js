@@ -129,3 +129,33 @@ test("begin start records an authoritative time window", () => {
     introEndsAt: 2850,
   });
 });
+
+test("host can add a ready bot with an available character", () => {
+  const game = makeLobby();
+  game.players = game.players.slice(0, 2);
+  const result = applyLobbyAction(game, IDS.host, {
+    type: LOBBY_ACTION.ADD_BOT,
+    characterId: "viseryon",
+  }, {
+    validCharacterIds: characterIds,
+    now: 1234,
+    createPlayer: (characterId, identity) => ({
+      ...identity,
+      playerId: "player_eeeeeeeeeeeeeeeeeeeeeeee",
+      seatId: "seat_eeeeeeeeeeeeeeeeeeeeeeee",
+      ch: characterId,
+      ready: false,
+      res: { madeira: 0, tijolo: 0, cavalos: 0, ouro: 0, obsidiana: 0 },
+      devNew: [],
+      devOld: [],
+    }),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.game.players.length, 3);
+  assert.equal(result.game.players[2].controller, "bot");
+  assert.equal(result.game.players[2].connected, true);
+  assert.equal(result.game.players[2].ready, true);
+  assert.equal(result.game.players[2].characterConfirmed, true);
+  assert.equal(result.game.players[0].ready, false, "humans re-confirm readiness after a bot joins");
+  assert.equal(result.event.type, "BOT_ADDED");
+});

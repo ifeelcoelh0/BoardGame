@@ -54,3 +54,16 @@ test("disconnected players do not block a rematch", () => {
   assert.equal(lobby.players.length, 1);
   assert.equal(lobby.players[0].playerId, IDS.p0);
 });
+
+test("rematch preserves bot controllers and keeps them ready in the reopened lobby", () => {
+  const game = endedGame();
+  game.players[1].controller = "bot";
+  game.players[0].ready = true;
+  game.players[1].ready = true;
+  const next = finalizeRematchIfReady(game, { rng: () => 0.25 });
+  assert.equal(next.phase, "lobby");
+  assert.equal(next.players[1].controller, "bot");
+  assert.equal(next.players[1].connected, true);
+  assert.equal(next.players[1].ready, true);
+  assert.equal(next.players[0].ready, false);
+});

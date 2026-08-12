@@ -44,19 +44,24 @@ function ReadyActions({ realm }) {
 
 function PlayerRow({ player, slot, realm, onRequestKick }) {
   if (!player) {
-    return <div className="rd-lobby-book-ui__player is-empty"><span>Lugar {slot + 1}</span><em>À espera de um reino</em></div>;
+    return (
+      <div className="rd-lobby-book-ui__player is-empty">
+        <span><strong>Lugar {slot + 1}</strong><em>À espera de um reino</em></span>
+        {realm.isHost && <button data-testid="add-bot" type="button" onClick={realm.onAddBot} disabled={realm.isStarting}>Adicionar bot</button>}
+      </div>
+    );
   }
   const disconnected = player.connected === false;
   const isLocal = player.index === realm.seat;
   return (
     <div className={`rd-lobby-book-ui__player${isLocal ? " is-local" : ""}${disconnected ? " is-disconnected" : ""}`}>
       <span>
-        <small>{player.index === 0 ? "ANFITRIÃO" : `JOGADOR ${player.index + 1}`}{isLocal ? " · TU" : ""}</small>
+        <small>{player.index === 0 ? "ANFITRIÃO" : player.controller === "bot" ? `BOT ${player.index}` : `JOGADOR ${player.index + 1}`}{isLocal ? " · TU" : ""}</small>
         <strong>{player.character?.n ?? "Casa por escolher"}</strong>
-        <em>{disconnected ? `Lugar reservado por ${lobbyReconnectSeconds(player, realm.presenceNow) ?? 0}s` : player.ready ? "Pronto" : "A preparar-se"}</em>
+        <em>{player.controller === "bot" ? "Controlado pelo reino" : disconnected ? `Lugar reservado por ${lobbyReconnectSeconds(player, realm.presenceNow) ?? 0}s` : player.ready ? "Pronto" : "A preparar-se"}</em>
       </span>
       {realm.isHost && player.index > 0 && (
-        <button type="button" onClick={() => onRequestKick(player.playerId)} disabled={realm.isStarting}>Expulsar</button>
+        <button type="button" onClick={() => onRequestKick(player.playerId)} disabled={realm.isStarting}>{player.controller === "bot" ? "Remover bot" : "Expulsar"}</button>
       )}
     </div>
   );
@@ -111,6 +116,7 @@ export function PlayersPage({ realm }) {
   useEffect(() => setPendingKickId(null), [realm.players.length]);
   const pendingPlayer = realm.players.find((player) => player.playerId === pendingKickId) ?? null;
   const pendingName = pendingPlayer?.character?.n ?? "este jogador";
+  const pendingIsBot = pendingPlayer?.controller === "bot";
   return (
     <>
       <Leaf page={BOOK_PAGE.PLAYERS} side="left" chapter="A MESA" title="Jogadores I">
@@ -129,11 +135,11 @@ export function PlayersPage({ realm }) {
         </div>
         {pendingPlayer && (
           <div className="rd-lobby-book-ui__confirm" role="alertdialog" aria-label={`Confirmar expulsão de ${pendingName}`}>
-            <p>Expulsar <strong>{pendingName}</strong> deste reino?</p>
+            <p>{pendingIsBot ? "Remover" : "Expulsar"} <strong>{pendingName}</strong> deste reino?</p>
             <div>
               <button type="button" onClick={() => setPendingKickId(null)}>Cancelar</button>
               <button data-testid={`kick-${pendingPlayer.playerId}`} type="button" onClick={() => { realm.onKickPlayer?.(pendingPlayer.playerId); setPendingKickId(null); }}>
-                Confirmar expulsão
+                {pendingIsBot ? "Confirmar remoção" : "Confirmar expulsão"}
               </button>
             </div>
           </div>

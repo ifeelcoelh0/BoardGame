@@ -1,7 +1,9 @@
 import { getLobbyStartStatus } from "./lobbyRules.js";
+import { gameModeConfig } from "./gameModes.js";
+import { activateBotController, PLAYER_CONTROLLER } from "./playerPresence.js";
 import { findPlayerIndexById } from "./playerIdentity.js";
 
-export const LOBBY_PROTOCOL_VERSION = 2;
+export const LOBBY_PROTOCOL_VERSION = 3;
 
 export const LOBBY_ACTION = Object.freeze({
   SELECT_CHARACTER: "SELECT_CHARACTER",
@@ -9,6 +11,7 @@ export const LOBBY_ACTION = Object.freeze({
   SET_PERKS: "SET_PERKS",
   BEGIN_START: "BEGIN_START",
   KICK_PLAYER: "KICK_PLAYER",
+  ADD_BOT: "ADD_BOT",
 });
 
 const ACTION_ID_PATTERN = /^action_[a-f0-9]{24}$/;
@@ -105,7 +108,7 @@ export function applyLobbyAction(game, actorId, action, options = {}) {
       if ((next.perksOn !== false) === action.enabled)
         return { ok: true, game: next, actorIndex, noChange: true, event: null };
       next.perksOn = action.enabled;
-      next.players.forEach((candidate) => { candidate.ready = false; });
+      next.players.forEach((candidate) => { candidate.ready = candidate.controller === PLAYER_CONTROLLER.BOT; });
       return {
         ok: true,
         game: next,
@@ -114,6 +117,38 @@ export function applyLobbyAction(game, actorId, action, options = {}) {
       };
     }
 
+    case LOBBY_ACTION.ADD_BOT: {
+      if (actorIndex !== 0)
+        return { ok: false, reason: "NOT_HOST" };
+      if (next.players.length >= gameModeConfig(next.mode).maxPlayers)
+        return { ok: false, reason: "LOBBY_FULL" };
+      const characterId = action.characterId;
+      const validCharacterIds = options.validCharacterIds instanceof Set
+        ? options.validCharacterIds
+        : new Set(options.validCharacterIds || []);
+      if (!CHARACTER_ID_PATTERN.test(characterId || "") || !validCharacterIds.has(characterId))
+        return { ok: false, reason: "INVALID_CHARACTER" };
+      if (next.players.some((candidate) => candidate.ch === characterId))
+        return { ok: false, reason: "CHARACTER_UNAVAILABLE" };
+      if (typeof options.createPlayer !== "function")
+        return { ok: false, reason: "BOT_UNAVAILABLE" };
+      const bot = options.createPlayer(characterId, {
+        characterConfirmed: true,
+        connected: true,
+      });
+      activateBotController(bot, { now: Number.isFinite(options.now) ? options.now : Date.now() });
+      bot.ready = true;
+      next.players.push(bot);
+      next.players.forEach((candidate) => {
+        candidate.ready = candidate.controller === PLAYER_CONTROLLER.BOT;
+      });
+      return {
+        ok: true,
+        game: next,
+        actorIndex,
+        event: { type: "BOT_ADDED", targetPlayerId: bot.playerId, characterId },
+      };
+    }
 
     case LOBBY_ACTION.KICK_PLAYER: {
       if (actorIndex !== 0)
@@ -125,7 +160,7 @@ export function applyLobbyAction(game, actorId, action, options = {}) {
         return { ok: false, reason: targetIndex === 0 ? "CANNOT_KICK_HOST" : "INVALID_PLAYER" };
       const [removedPlayer] = next.players.splice(targetIndex, 1);
       if (next.lobbyStarting) delete next.lobbyStarting;
-      next.players.forEach((candidate) => { candidate.ready = false; });
+      next.players.forEach((candidate) => { candidate.ready = candidate.controller === PLAYER_CONTROLLER.BOT; });
       return {
         ok: true,
         game: next,

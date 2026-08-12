@@ -18,6 +18,7 @@ export default function DragonLobby({
   onSwapCharacter,
   onTogglePerks,
   onLeave,
+  onAddBot,
   onKickPlayer,
   onCharacterSelect,
   isSelectingCharacter = false,
@@ -80,19 +81,22 @@ export default function DragonLobby({
             <li key={player ? player.playerId || player.index : `empty-${slot}`}>
               {player ? (
                 <span data-testid="lobby-player-row">
-                  {`${player.index === 0 ? "Anfitrião" : `Jogador ${player.index + 1}`}: ${player.character ? `${player.character.n}, ${player.character.t}` : "casa por escolher"}. ${player.connected === false ? `Desligado, lugar reservado ${lobbyReconnectSeconds(player, presenceNow) ?? 0} segundos.` : player.ready ? "Pronto." : "A preparar-se."}${player.index === seat ? " É o teu lugar." : ""}`}
+                  {`${player.index === 0 ? "Anfitrião" : player.controller === "bot" ? `Bot ${player.index}` : `Jogador ${player.index + 1}`}: ${player.character ? `${player.character.n}, ${player.character.t}` : "casa por escolher"}. ${player.connected === false ? `Desligado, lugar reservado ${lobbyReconnectSeconds(player, presenceNow) ?? 0} segundos.` : player.ready ? "Pronto." : "A preparar-se."}${player.index === seat ? " É o teu lugar." : ""}`}
                   {isHost && player.index > 0 && (
                     <button
                       type="button"
                       onClick={() => onKickPlayer?.(player.playerId)}
                       aria-label={`Remover ${player.character?.n ?? "jogador sem casa"} do lobby`}
                     >
-                      Expulsar
+                      {player.controller === "bot" ? "Remover bot" : "Expulsar"}
                     </button>
                   )}
                 </span>
               ) : (
-                "Lugar vazio."
+                <span>
+                  Lugar vazio.
+                  {isHost && <button type="button" onClick={onAddBot}>Adicionar bot</button>}
+                </span>
               )}
             </li>
           ))}
