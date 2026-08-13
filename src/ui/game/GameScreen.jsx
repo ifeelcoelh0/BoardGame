@@ -458,7 +458,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
             fundar: "Toca num canto do hexágono — a carruagem é desmantelada para erguer a aldeia",
             suborno: "Escolhe a unidade que queres subornar",
         }[mode];
-    return  <AppShell><div style={{ position: "fixed", inset: 0, zIndex: 0 }}><Suspense fallback={<SceneLoading label="A preparar o tabuleiro…" />}><Board3D g={g} gr={gr} spotsV={spotsV} spotsE={spotsE} spotsH={spotsH} onVert={onVert} onEdge={onEdge} onHex={onHex} graphicsQuality={graphicsQuality}/></Suspense></div>{toast &&  <div className={"toast"}>{toast.msg}</div>}<GameHud
+    return  <AppShell data-testid="game-screen" data-game-mode={g.mode} data-game-phase={g.phase}><div style={{ position: "fixed", inset: 0, zIndex: 0 }}><Suspense fallback={<SceneLoading label="A preparar o tabuleiro…" />}><Board3D g={g} gr={gr} spotsV={spotsV} spotsE={spotsE} spotsH={spotsH} onVert={onVert} onEdge={onEdge} onHex={onHex} graphicsQuality={graphicsQuality}/></Suspense></div>{toast &&  <div className={"toast"}>{toast.msg}</div>}<GameHud
         code={g.code}
         round={g.round}
         dice={g.turn.dice}

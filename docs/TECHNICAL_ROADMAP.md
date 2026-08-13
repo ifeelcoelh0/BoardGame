@@ -107,7 +107,7 @@ A camada `src/legacy/` foi eliminada em v0.99.20. Novas funcionalidades devem re
 ### Próximos bloqueios obrigatórios
 
 1. Validar manualmente o percurso `fundar → modo → personagem → assinatura → lobby` numa build real.
-2. Corrigir/reativar o Playwright E2E para validar transições visuais no browser.
+2. Manter Cypress E2E para validar as transições visuais dos modos-base no browser.
 3. Consolidar `STARTING_GAME` antes de trabalhar no livro visual final.
 4. Testar multiplayer em redes distintas e configurar TURN antes de distribuição pública.
 
