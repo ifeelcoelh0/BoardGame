@@ -3,7 +3,7 @@ import LobbyScene from "./LobbyScene.jsx";
 import DragonLobby from "./DragonLobby.jsx";
 import LobbyCodex from "./LobbyCodex.jsx";
 import { createEmptyLobbyViewModel, createLobbyViewModel } from "./lobbyViewModel.js";
-import { canStartLobby } from "../../game/lobbyRules.js";
+import { canStartLobby, LOBBY_START_INTRO_MS } from "../../game/lobbyRules.js";
 import { BOOK_SCOPE } from "./bookPages.js";
 import { CODEX_PHASE, codexLeaving, codexVisible, completeCodexRitual, initialCodexPhase, syncCodexPhase } from "./lobbyCodexFlow.js";
 import "../../styles/dragon-lobby.css";
@@ -105,6 +105,15 @@ export default function LobbyExperience({
     ? perks[previewCharacter.id] ?? null
     : null;
   const isStarting = Boolean(game?.lobbyStarting);
+  const startDurationMs = isStarting
+    ? Math.max(0, Number(game.lobbyStarting.introEndsAt) - Number(game.lobbyStarting.startedAt)) || LOBBY_START_INTRO_MS
+    : LOBBY_START_INTRO_MS;
+  useEffect(() => {
+    if (!isStarting || !bookOpen) return;
+    setCodexPhase(CODEX_PHASE.LEAVING);
+    onBookOpenChange?.(false);
+  }, [isStarting, bookOpen, onBookOpenChange]);
+
   const copyRoomCode = async () => {
     const value = game?.code || roomCode;
     if (!value) return;
@@ -180,6 +189,7 @@ export default function LobbyExperience({
       <LobbyScene
         seatCharacters={viewModel.seatCharacters}
         isStarting={isStarting}
+        startDurationMs={startDurationMs}
         isSelectingCharacter={isSelectingCharacter}
         characters={characters}
         onCharacterSelect={confirmCharacter}
@@ -264,6 +274,7 @@ export default function LobbyExperience({
           onKickPlayer={onKickPlayer}
           onCharacterSelect={confirmCharacter}
           isSelectingCharacter={isSelectingCharacter}
+          startDurationMs={startDurationMs}
           audioSystem={audioSystem}
           viewModel={viewModel}
           presenceNow={presenceNow}

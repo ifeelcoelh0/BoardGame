@@ -5,6 +5,7 @@ import { registerPerformanceProbe } from "../three/performanceProbeRegistry.js";
 export default function LobbyScene({
   seatCharacters,
   isStarting,
+  startDurationMs = 2800,
   isSelectingCharacter,
   characters,
   onCharacterSelect,
@@ -109,7 +110,7 @@ export default function LobbyScene({
     if (isStarting) {
       controller.setCodexActive(false);
       controller.setBookRitual("idle");
-      controller.focusTable({ reducedMotion: prefersReducedMotion, duration: 1850 });
+      controller.focusTable({ reducedMotion: prefersReducedMotion, duration: startDurationMs });
       return;
     }
 
@@ -157,7 +158,7 @@ export default function LobbyScene({
     controller.setCodexActive(false);
     controller.setBookRitual("idle");
     controller.resetCamera({ reducedMotion: prefersReducedMotion, duration: 760 });
-  }, [isStarting, isSelectingCharacter, codexPhase, reducedMotion]);
+  }, [isStarting, startDurationMs, isSelectingCharacter, codexPhase, reducedMotion]);
 
   return <div className={`rd-lobby-scene${isStarting ? " is-starting" : ""}`} ref={mountRef} aria-hidden="true" />;
 }

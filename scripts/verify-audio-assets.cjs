@@ -43,11 +43,16 @@ async function main() {
     problems.push(`Formato fora da política AAC/.m4a: ${file}`);
   }
 
-  if (!manifestModule.isStreamedSoundKey("music")) {
-    problems.push("A música principal deixou de estar classificada como streaming.");
+  for (const key of manifestModule.AUDIO_STREAMED_SOUND_KEYS) {
+    if (!manifestModule.isStreamedSoundKey(key)) {
+      problems.push(`Faixa longa deixou de estar classificada como streaming: ${key}.`);
+    }
+    if (manifestModule.shouldPrimeSoundKey(key)) {
+      problems.push(`Faixa longa voltou a entrar no prewarm de AudioBuffer: ${key}.`);
+    }
   }
-  if (manifestModule.shouldPrimeSoundKey("music")) {
-    problems.push("A música principal voltou a entrar no prewarm de AudioBuffer.");
+  if (manifestModule.AUDIO_STREAMED_SOUND_KEYS.length < 5) {
+    problems.push("O catálogo de soundtrack não contém lobby, shuffle e finale como streaming.");
   }
 
   if (problems.length) {
@@ -59,7 +64,7 @@ async function main() {
   const totalBytes = [...onDisk].reduce((sum, file) => sum + fs.statSync(path.join(audioDir, file)).size, 0);
   console.log(
     `Áudio verificado: ${onDisk.size} ficheiros, ${(totalBytes / 1048576).toFixed(2)} MB, ` +
-      `${referenced.size} referências resolvidas, música marcada para streaming.`,
+      `${referenced.size} referências resolvidas, ${manifestModule.AUDIO_STREAMED_SOUND_KEYS.length} faixas longas em streaming.`,
   );
 }
 

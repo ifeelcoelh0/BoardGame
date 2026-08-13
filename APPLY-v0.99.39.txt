@@ -1,0 +1,50 @@
+REINOS DO DRAGÃO — v0.99.39
+Session/GameScreen cleanup + transição Lobby→Jogo + soundtrack
+
+IMPORTANTE
+Este pacote usa um patch Git em vez de substituir ficheiros inteiros. É deliberado:
+protege alterações que já existam na tua branch atual.
+
+1) Na main atualizada, cria a branch:
+   feat/session-game-transition-v0.99.39
+
+2) Copia o ficheiro .patch para:
+   C:\Users\plc39\BoardGame
+
+3) Na raiz do projeto, valida SEM alterar nada:
+   git apply --check reinos-do-dragao-v0.99.39-session-game-transition.patch
+
+   - Se não aparecer qualquer mensagem, está tudo bem: continua.
+   - Se aparecer um erro, NÃO forces e NÃO uses --reject. Pára e envia o erro.
+
+4) Aplica:
+   git apply --binary reinos-do-dragao-v0.99.39-session-game-transition.patch
+
+5) Sincroniza o package-lock real da tua branch (o patch não o substitui):
+   npm install --package-lock-only
+
+6) Regenera checksums:
+   npm run checksums:update
+
+7) Valida:
+   npm run check
+
+8) Testa no browser:
+   npm run dev
+
+9) Depois corre os E2E Cypress com o servidor disponível:
+   npm run test:e2e
+
+NÃO FAÇAS COMMIT antes de check + teste manual + Cypress passarem.
+
+CHECKLIST MANUAL
+- Lobby mantém sempre o tema atual.
+- Começar partida: UI desaparece devagar, câmara aproxima ~2.8 s, fade cobre a troca de cena e o tabuleiro revela suavemente.
+- A música baixa durante a entrada e faz crossfade para a banda sonora de jogo.
+- Shuffle do jogo: tema atual + Bleeding Iron and Velvet + Dust and Lute + Velvet Lute and Fuzz; sem repetição imediata.
+- As novas músicas estão AAC-LC ~96 kbps, 48 kHz e normalizadas para ~-16 LUFS.
+- Aos 9 PV PÚBLICOS, Finale 9VP entra por crossfade e fica em loop até ao fim.
+- PV secretos não disparam a música de 9 PV.
+- Voltar ao lobby restaura por crossfade o tema fixo do lobby.
+- Mute e volume de música continuam funcionais.
+- Regras de Clássico / Relâmpago / Dragão não mudaram.

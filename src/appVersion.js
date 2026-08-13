@@ -6,4 +6,4 @@
  * package.json é metadata de distribuição; um teste garante que permanece
  * sincronizado com esta constante.
  */
-export const APP_VERSION = "0.99.37";
+export const APP_VERSION = "0.99.39";

@@ -1,4 +1,4 @@
-import { getLobbyStartStatus } from "./lobbyRules.js";
+import { getLobbyStartStatus, LOBBY_START_INTRO_MS } from "./lobbyRules.js";
 import { gameModeConfig } from "./gameModes.js";
 import { activateBotController, PLAYER_CONTROLLER } from "./playerPresence.js";
 import { findPlayerIndexById } from "./playerIdentity.js";
@@ -181,7 +181,7 @@ export function applyLobbyAction(game, actorId, action, options = {}) {
       const startedAt = Number.isFinite(options.now) ? options.now : Date.now();
       const introDurationMs = Number.isFinite(options.introDurationMs)
         ? Math.max(0, options.introDurationMs)
-        : 1850;
+        : LOBBY_START_INTRO_MS;
       next.lobbyStarting = {
         actionId: options.actionId || null,
         startedAt,

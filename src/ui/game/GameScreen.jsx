@@ -18,14 +18,10 @@ import AppShell, { SceneLoading } from "../app/AppShell.jsx";
 import CharacterSprite from "../assets/CharacterSprite.jsx";
 import GameIcon from "../assets/GameIcon.jsx";
 import { preloadBoardModule } from "../../loading/modulePreload.js";
-import { AudioSys } from "../../audio/audioSystem.js";
-import { localTurnNotificationKey } from "../../audio/gameAudioSelectors.js";
 import { awardImportantEventModel, disasterImportantEventModel, storyImportantEventModel } from "../../presentation/gameEventCatalog.js";
 import { CHARACTER_PERKS } from "../../presentation/perkCatalog.js";
 import { CHARACTER_GLOW_COLORS as GLOW, shadeColor as shade } from "../board/boardVisualConfig.js";
-import { stableBoardGeometryKey } from "../board/boardUpdateSignature.js";
 import { GAME_ACTION } from "../../game/gameProtocol.js";
-import { gameTurnReconnectSeconds } from "../../game/playerPresence.js";
 import { PIECE_LIMITS as LIMITS, RESOURCE_DEFINITIONS as RES, RESOURCE_KEYS as RKEYS, BUILD_COSTS as COSTS, handSize } from "../../game/resources.js";
 import { validPalaces, validRoads, validVillages } from "../../game/buildingRules.js";
 import { DISASTER_DEFINITIONS as DISASTERS } from "../../game/disasterReducer.js";
@@ -34,11 +30,14 @@ import { ICE_DRAGON_WAKE_TURNS as GELO_TURNS, roundsForTurns as roundAtTurns } f
 import { validDragonHexes } from "../../game/mandatoryDecisionReducer.js";
 import { calculateVictoryPoints as calcVP, longestRoadLength as longestRoadLen, rankPlayers, troopTotal } from "../../game/scoringReducer.js";
 import { MAX_WAGONS_PER_GAME as WMAX, WAGON_COST as WCOST, homeHexes, remoteVillageSpots as farSpots } from "../../game/explorationReducer.js";
-import { makeBoardGraph as makeGraph } from "../../game/boardGeometry.js";
 import { VICTORY_POINT_ATTRIBUTES as VPATTR } from "../../game/gameFactory.js";
 import { isClassicMode as CLASSICO, isExplorationMode, isRapidMode, isWarMode as GUERRA } from "../../game/gameModes.js";
 import { characterById as charOf } from "../../game/characterCatalog.js";
 import { createInitialGameUiState, gameUiCloseDecision, gameUiOpenDecision, gameUiReducer, gameUiSet } from "./gameUiState.js";
+import useGameScreenRuntime from "./useGameScreenRuntime.js";
+import { formatReconnectClock } from "./gameScreenRuntimeModel.js";
+import useGameScreenAudio from "./useGameScreenAudio.js";
+import { deriveGameOverlayVisibility } from "./gameOverlayVisibility.js";
 import { deriveActionPresentation } from "./gameUiComposition.js";
 import { buildGameActionModel, GAME_ACTION_COMMAND } from "./gameActionModel.js";
 import { boardInteractionBlockReason, developmentCardPlayReason } from "./gameInteractionGuards.js";
@@ -59,7 +58,6 @@ const RAPIDO = (game) => isRapidMode(game?.mode);
 const hexOf = (game, key) => game.board.hexes.find((hex) => hex.k === key);
 const isHid = (game, key) => !!hexOf(game, key)?.hid;
 const pname = (game, index) => charOf(game.players[index].ch).n;
-const curIdx = (game) => game.phase === "setup" ? game.setup.seq[game.setup.i] : game.order[game.turn.pos];
 const milLeft = militaryActionsLeft;
 const hasPerk = (game, playerIndex, characterId) => GUERRA(game.mode) && game.perksOn !== false && game.gelo?.active && game.players?.[playerIndex]?.ch === characterId;
 function Modal({ children, onClose, center }) {
@@ -103,52 +101,20 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
     const setPerkView = (value) => setUi("perkView", value);
     const setSel = (value) => setUi("selection", value);
     const setOffer = (value) => setUi("tradeOffer", value);
-    const boardGeometryKey = stableBoardGeometryKey(g.board);
-    const gr = useMemo(() => makeGraph(g.board.hexes), [boardGeometryKey]);
+    const {
+        graph: gr,
+        currentActor: cur,
+        localPlayer: me,
+        queueItem: qItem,
+        requiredActor,
+        requiredPlayer,
+        canHumanAct,
+        myTurn,
+        requiredReconnectSeconds,
+        reconnectSecondsByPlayer,
+    } = useGameScreenRuntime(g, seat);
     const [, force] = useState(0);
-    const [presenceNow, setPresenceNow] = useState(() => Date.now());
-    const cur = curIdx(g);
-    const me = g.players[seat];
-    const qItem = g.queue[0] || null;
-    const requiredActor = Number.isSafeInteger(qItem?.p) ? qItem.p : cur;
-    const requiredPlayer = g.players[requiredActor] || null;
-    const canHumanAct = me?.connected !== false;
-    const myTurn = cur === seat && canHumanAct;
-    const turnAudioKeyRef = useRef(null);
-    const turnAudioKey = localTurnNotificationKey(g, seat);
-    useEffect(() => {
-        if (!turnAudioKey) {
-            turnAudioKeyRef.current = null;
-            return;
-        }
-        if (turnAudioKeyRef.current === turnAudioKey) return;
-        turnAudioKeyRef.current = turnAudioKey;
-        AudioSys.play("yourTurn");
-    }, [turnAudioKey]);
     const setupMode = g.phase === "setup";
-    const presenceSignature = g.players.map((player) => [
-        player.playerId,
-        player.connected,
-        player.turnReconnectDeadline,
-        player.afkSkipCount
-    ].join(":" )).join("|");
-    useEffect(() => {
-        const hasCountdown = g.players.some((player) => player.connected === false && Number.isFinite(player.turnReconnectDeadline));
-        if (!hasCountdown)
-            return undefined;
-        setPresenceNow(Date.now());
-        const timer = setInterval(() => setPresenceNow(Date.now()), 1000);
-        return () => clearInterval(timer);
-    }, [presenceSignature]);
-    const requiredReconnectSeconds = requiredPlayer
-        ? gameTurnReconnectSeconds(requiredPlayer, presenceNow)
-        : null;
-    const formatReconnectClock = (seconds) => {
-        if (!Number.isFinite(seconds))
-            return null;
-        const safe = Math.max(0, seconds);
-        return Math.floor(safe / 60) + ":" + String(safe % 60).padStart(2, "0");
-    };
     useEffect(() => {
         dispatchUi({ type: "reset-turn-interaction" });
     }, [cur, g.phase]);
@@ -156,24 +122,14 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
     useEffect(() => {
         if (hardInteractionBlock) dispatchUi({ type: "reset-turn-interaction" });
     }, [hardInteractionBlock, qItem?.t, qItem?.p, g.trade?.id, g.turn.steal?.at, g.turn.deploy, g.turn.mustDragon]);
-    const nowEv = Date.now();
-    const cardVisible = !!(cardEvent && cardEvent.pi !== seat && !dismissed.current.has(cardEvent.id));
-    const disasterVisible = !!(disasterEvent && !cardVisible && !dismissed.current.has(disasterEvent.id));
-    const awardVisible = !!(awardEvent && !cardVisible && !disasterVisible && !dismissed.current.has(awardEvent.id));
-    const dragonStoryVisible = !!(storyEvent && storyEvent.kind === "dragao" && !cardVisible && !disasterVisible && !awardVisible && !dismissed.current.has(storyEvent.id) && nowEv - storyEvent.id < 3e4);
-    const storyVisible = !!(storyEvent && storyEvent.kind !== "dragao" && !cardVisible && !disasterVisible && !awardVisible && !dismissed.current.has(storyEvent.id) && nowEv - storyEvent.id < 3e4 && (storyEvent.kind !== "gelo" || nowEv - storyEvent.id > 1450));
-    const soundedAwards = useRef( new Set());
-    useEffect(() => {
-        if (!awardEvent || !awardVisible || soundedAwards.current.has(awardEvent.id))
-            return;
-        soundedAwards.current.add(awardEvent.id);
-        AudioSys.play("award");
-        const voiceEvent = awardEvent.kind === "road" ? "longest_road" : awardEvent.kind === "army" ? "largest_army" : null;
-        const voiceTimer = voiceEvent && awardEvent.pi != null
-            ? window.setTimeout(() => AudioSys.playVoice(g.players[awardEvent.pi]?.ch, voiceEvent), 320)
-            : null;
-        return () => { if (voiceTimer != null) window.clearTimeout(voiceTimer); };
-    }, [awardEvent ? awardEvent.id : null, awardVisible]);
+    const {
+        cardVisible,
+        disasterVisible,
+        awardVisible,
+        dragonStoryVisible,
+        storyVisible,
+    } = deriveGameOverlayVisibility(presentation, seat, dismissed.current, Date.now());
+    useGameScreenAudio({ game: g, seat, awardEvent, awardVisible });
     useEffect(() => {
         if (storyEvent && (storyVisible || dragonStoryVisible)) {
             const dur = storyEvent.kind === "dados" ? 9500 + (storyEvent.lines ? storyEvent.lines.length * 1800 : 0) : storyEvent.kind === "dragao" || storyEvent.kind === "gelo" ? 7e3 : 5500;
@@ -402,7 +358,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
             hasLargestArmy={hasLA}
             isLocal={i === seat}
             isActive={on}
-            reconnectSeconds={gameTurnReconnectSeconds(p, presenceNow)}
+            reconnectSeconds={reconnectSecondsByPlayer[i]}
             isExpanded={perkView === i}
             onToggle={() => setPerkView((open) => open === i ? null : i)}
             perk={PERKS[p.ch]}

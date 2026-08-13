@@ -22,6 +22,10 @@ export function createAudioManifest(baseUrl = import.meta.env?.BASE_URL || "/") 
         coinDrop: [AUDIO_ASSET_BASE + "coinDrop.m4a"],
         fanfareWin: [AUDIO_ASSET_BASE + "fanfareWin.m4a"],
         music: [AUDIO_ASSET_BASE + "main-theme.m4a"],
+        musicBleedingIronVelvet: [AUDIO_ASSET_BASE + "soundtrack/bleeding-iron-and-velvet.m4a"],
+        musicDustLute: [AUDIO_ASSET_BASE + "soundtrack/dust-and-lute.m4a"],
+        musicVelvetLuteFuzz: [AUDIO_ASSET_BASE + "soundtrack/velvet-lute-and-fuzz.m4a"],
+        musicFinale9vp: [AUDIO_ASSET_BASE + "soundtrack/finale-9vp.m4a"],
         lobbyFireplace: [AUDIO_ASSET_BASE + "lobby-fireplace.m4a"],
         tsunami: [AUDIO_ASSET_BASE + "disaster-tsunami.m4a"],
         lobbyStart: [AUDIO_ASSET_BASE + "lobby-start-medieval.m4a"],
@@ -84,7 +88,13 @@ export const AUDIO_SOUNDS = createAudioManifest();
 export const AUDIO_SOUND_ALIASES = Object.freeze({ em_bones_feliz: "em_bones_rir", em_bones_gozar: "em_bones_rir" });
 
 /* Public policy is exposed as immutable value lists, not mutable Set instances. */
-export const AUDIO_STREAMED_SOUND_KEYS = Object.freeze(["music"]);
+export const AUDIO_STREAMED_SOUND_KEYS = Object.freeze([
+  "music",
+  "musicBleedingIronVelvet",
+  "musicDustLute",
+  "musicVelvetLuteFuzz",
+  "musicFinale9vp",
+]);
 
 /* These sounds are loaded on demand. Long/looping assets should not compete with
    the lobby render during startup. */

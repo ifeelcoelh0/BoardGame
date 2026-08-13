@@ -1,6 +1,8 @@
 import { normalizeDiagnosticError, recordDiagnostic } from "../diagnostics/diagnostics.js";
 import { emoteVoiceEvent, voiceSoundKey } from "./characterAudio.js";
 import { AudioBufferCache } from "./audioBufferCache.js";
+import { MusicPlaybackController } from "./musicPlaybackController.js";
+import { MUSIC_SCENE } from "./musicCatalog.js";
 import { AUDIO_GROUP, audioPolicyForEffect, createAudioTriggerGate, normalizeAudioCue } from "./audioPlaybackPolicy.js";
 import {
   AUDIO_SOUND_ALIASES as SND_ALIAS,
@@ -56,7 +58,10 @@ export const AudioSys = (() => {
             const volume = channel === "voices" ? S.voicesVolume : S.effectsVolume;
             gain.gain.value = S.muted ? 0 : volume;
         }
-        if (musicGain) musicGain.gain.value = S.muted ? 0 : 0.38 * S.musicVolume;
+        if (musicPlayback) {
+            musicPlayback.setVolume(S.musicVolume);
+            musicPlayback.setMuted(S.muted || S.musicVolume <= 0);
+        }
     };
     function tone(f, dur, type, vol, delay, slideTo) {
         if (S.muted)
@@ -326,39 +331,27 @@ export const AudioSys = (() => {
         if (subtype === "catapulta") return playSample("troopCardCatapult", 1, 0, null, { ttlMs: 1800 });
         return false;
     }
-    let musicGain = null;
-    let musicSource = null;
-    let musicElement = null;
-    /* A música NUNCA passa por decodeAudioData. O tema tem 423 segundos, o que
-       descomprimido em float32 estéreo a 48 kHz dá cerca de 162 MB de RAM, e
-       chegava a ser decodificado duas vezes (aqui e em primeSamples). Um
-       MediaElementAudioSourceNode faz streaming e usa alguns MB, mantendo o
-       áudio no mesmo grafo Web Audio, portanto o bus de compressão continua a
-       aplicar-se. */
-    function startMusic() {
-        const c = ac();
-        if (!c || musicGain || typeof SND === "undefined" || !SND.music)
-            return;
-        musicGain = c.createGain();
-        musicGain.gain.value = S.muted ? 0 : 0.38 * S.musicVolume;
-        musicGain.connect(bus(c));
+    let musicPlayback = null;
+    let desiredMusicScene = MUSIC_SCENE.LOBBY;
+    function ensureMusicPlayback(c) {
+        if (musicPlayback) return musicPlayback;
         try {
-            musicElement = new Audio();
-            musicElement.src = SND.music[0];
-            musicElement.loop = true;
-            musicElement.preload = "auto";
-            musicElement.crossOrigin = "anonymous";
-            musicSource = c.createMediaElementSource(musicElement);
-            musicSource.connect(musicGain);
-            /* O play() pode ser rejeitado pela política de autoplay. Não é erro
-               recuperável aqui: o start() já vem de um gesto do utilizador, e se
-               falhar a música fica em silêncio sem afetar o resto. */
-            musicElement.play().catch((error) => {
-                recordDiagnostic("music-autoplay-blocked", normalizeDiagnosticError(error));
-            });
+            musicPlayback = new MusicPlaybackController({ audioContext: c, destination: bus(c) });
+            musicPlayback.setVolume(S.musicVolume);
+            musicPlayback.setMuted(S.muted || S.musicVolume <= 0);
+            musicPlayback.setScene(desiredMusicScene, { immediate: true });
+            return musicPlayback;
         } catch (error) {
             recordDiagnostic("music-start-failed", normalizeDiagnosticError(error));
+            return null;
         }
+    }
+    function startMusic() {
+        const c = ac();
+        const player = c ? ensureMusicPlayback(c) : null;
+        if (!player) return;
+        player.setScene(desiredMusicScene, { immediate: true });
+        player.start();
     }
     /* Loops de ambiente são longos e só um está ativo de cada vez. O
        syncAmbient carrega-os quando são precisos, portanto não vale a pena
@@ -553,10 +546,6 @@ export const AudioSys = (() => {
             S.effectsVolume = clamp(values.effectsVolume, S.effectsVolume);
             S.voicesVolume = clamp(values.voicesVolume, S.voicesVolume);
             updateChannelVolumes();
-            if (musicElement) {
-                if (S.muted || S.musicVolume <= 0) musicElement.pause();
-                else if (started) musicElement.play().catch(() => {});
-            }
             return this.volumes;
         },
         setMuted(value) {
@@ -565,10 +554,7 @@ export const AudioSys = (() => {
             S.muted = next;
             if (!S.muted) ac();
             updateChannelVolumes();
-            if (musicElement) {
-                if (S.muted || S.musicVolume <= 0) musicElement.pause();
-                else musicElement.play().catch(() => {});
-            }
+            musicPlayback?.setMuted(S.muted || S.musicVolume <= 0);
             syncAmbient();
             return S.muted;
         },
@@ -580,10 +566,7 @@ export const AudioSys = (() => {
             /* Silenciar tem de parar o elemento, não só baixar o ganho: em
                streaming, ganho 0 continua a descarregar o ficheiro inteiro e a
                descodificar em contínuo. */
-            if (musicElement) {
-                if (S.muted || S.musicVolume <= 0) musicElement.pause();
-                else musicElement.play().catch(() => {});
-            }
+            musicPlayback?.setMuted(S.muted || S.musicVolume <= 0);
             syncAmbient();
             return S.muted;
         },
@@ -625,6 +608,14 @@ export const AudioSys = (() => {
             return !!(key && playSample(key, 0.95, 0, null, { group: AUDIO_GROUP.VOICE, replace: true, ttlMs: 2200 }));
         },
         playTroopCard,
+        setMusicScene(scene) {
+            if (!Object.values(MUSIC_SCENE).includes(scene)) return false;
+            desiredMusicScene = scene;
+            return musicPlayback ? musicPlayback.setScene(scene) : true;
+        },
+        beginGameEntryMusic() { musicPlayback?.beginGameEntry(); },
+        cancelGameEntryMusic() { musicPlayback?.cancelGameEntry(); },
+        getMusicSnapshot() { return musicPlayback?.snapshot?.() || { scene: desiredMusicScene, started: false }; },
         setAmbient(name) { ambientName = name || null; syncAmbient(); },
         clearAmbient(name) { if (name && ambientName !== name) return; ambientName = null; stopAmbientSource(); },
         start() {
@@ -647,20 +638,9 @@ export const AudioSys = (() => {
                 clearInterval(proceduralTimer);
                 proceduralTimer = null;
             }
-            if (musicElement) {
-                musicElement.pause();
-                musicElement.removeAttribute("src");
-                musicElement.load();
-                musicElement = null;
-            }
-            if (musicSource) {
-                musicSource.disconnect();
-                musicSource = null;
-            }
-            if (musicGain) {
-                musicGain.disconnect();
-                musicGain = null;
-            }
+            musicPlayback?.stop();
+            musicPlayback = null;
+            desiredMusicScene = MUSIC_SCENE.LOBBY;
             stopAmbientSource();
             for (const gain of channelGains.values()) { try { gain.disconnect(); } catch {} }
             channelGains.clear();

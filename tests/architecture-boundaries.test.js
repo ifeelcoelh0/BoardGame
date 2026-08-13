@@ -85,11 +85,14 @@ test("session controller stays outside visual composition", async () => {
 });
 
 test("game audio is semantic instead of reconstructed from Chronicle text", async () => {
+  const app = await readFile(path.join(root, "app/App.jsx"), "utf8");
   const session = await readFile(path.join(root, "app/useRealmSession.js"), "utf8");
+  const audioLifecycle = await readFile(path.join(root, "app/useAppAudioLifecycle.js"), "utf8");
   const presenter = await readFile(path.join(root, "presentation/gamePresenter.js"), "utf8");
-  assert.doesNotMatch(session, /function sfxForLog|delayedAudioTimers/);
-  assert.match(session, /latestCurrentAudioCue/);
-  assert.match(session, /AudioSys\.playCue/);
+  assert.doesNotMatch(session, /function sfxForLog|delayedAudioTimers|latestCurrentAudioCue|AudioSys\.playCue/);
+  assert.match(app, /useAppAudioLifecycle/);
+  assert.match(audioLifecycle, /latestCurrentAudioCue/);
+  assert.match(audioLifecycle, /audioSystem\.playCue/);
   assert.doesNotMatch(presenter, /audio\?\.|playCharacterVoice/);
   assert.match(presenter, /audio: sfxCue|voiceCue\(/);
 });
