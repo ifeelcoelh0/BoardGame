@@ -22,6 +22,7 @@ export default function DragonLobby({
   onKickPlayer,
   onCharacterSelect,
   isSelectingCharacter = false,
+  startDurationMs = 2800,
   audioSystem = null,
   viewModel = null,
   presenceNow: controlledPresenceNow = null,
@@ -63,7 +64,7 @@ export default function DragonLobby({
   };
 
   return (
-    <div data-testid="lobby-root" className={`rd-lobby${isStarting ? " is-starting" : ""}${isSelectingCharacter ? " is-selecting" : ""}`}>
+    <div data-testid="lobby-root" className={`rd-lobby${isStarting ? " is-starting" : ""}${isSelectingCharacter ? " is-selecting" : ""}`} style={{ "--rd-lobby-start-ms": `${startDurationMs}ms` }}>
       {/* Espelho acessível de tudo o que passou para a cena. A cena está
           aria-hidden, por isso os cartões da mesa, as fichas de pronto e o
           pergaminho têm de existir aqui em texto e em botões reais. */}

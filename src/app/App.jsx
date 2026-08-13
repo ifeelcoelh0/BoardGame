@@ -18,6 +18,9 @@ import {
 } from "../ui/lobby/bookState.js";
 import { preloadBoardModule, scheduleModulePreload } from "../loading/modulePreload.js";
 import { AudioSys } from "../audio/audioSystem.js";
+import useAppAudioLifecycle from "./useAppAudioLifecycle.js";
+import useGameEntryTransition from "./useGameEntryTransition.js";
+import GameEntryTransition from "../ui/app/GameEntryTransition.jsx";
 import useGameSettings from "../settings/useGameSettings.js";
 import { CHARACTERS as CHARS } from "../game/characterCatalog.js";
 import useRealmSession from "./useRealmSession.js";
@@ -61,6 +64,9 @@ export default function App() {
     game, seat, code, codeIn, setCodeIn, err, setErr, toast, connSt,
     emotes, chat, sendEmote, sendChat, testSel, setTestSel, savedRealms,
   } = session;
+
+  useAppAudioLifecycle({ game, emotes, chat, seat, audioSystem: AudioSys });
+  const gameEntryTransition = useGameEntryTransition(game);
 
   const diagnosticsPageOpen = bookState.open && bookState.page === BOOK_PAGE.DIAGNOSTICS;
   const diagnosticReport = useMemo(
@@ -220,6 +226,7 @@ export default function App() {
             reducedMotion={settings.reducedMotion}
           />
         </Suspense>
+        <GameEntryTransition transition={gameEntryTransition} />
       </AppShell>
     );
   }
@@ -245,6 +252,7 @@ export default function App() {
         onRematch={session.requestRematch}
       />
       {connSt === "err" && <ConnectionLostOverlay isHost={session.isHost} onReconnect={session.reconnect} />}
+      <GameEntryTransition transition={gameEntryTransition} />
     </>
   );
 }

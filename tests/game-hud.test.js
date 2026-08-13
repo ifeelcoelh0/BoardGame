@@ -77,14 +77,15 @@ test("HUD v2 keeps development cards visible in the bottom hand and Chronicle en
   const bottomDock = await readFile(new URL("../src/ui/game/hud/GameBottomDock.jsx", import.meta.url), "utf8");
   const devHand = await readFile(new URL("../src/ui/game/hud/GameDevelopmentHand.jsx", import.meta.url), "utf8");
   const session = await readFile(new URL("../src/app/useRealmSession.js", import.meta.url), "utf8");
+  const audioLifecycle = await readFile(new URL("../src/app/useAppAudioLifecycle.js", import.meta.url), "utf8");
   assert.match(bottomDock, /<GameDevelopmentHand/);
   assert.match(bottomDock, /<GameEconomyStrip/);
   assert.match(devHand, /<DevelopmentCard/);
   assert.match(devHand, /cards\.length === 0\) return null/);
   assert.match(bottomDock, /showCosts=\{showCosts\}/);
   assert.match(bottomDock, /<GameMatchStrip/);
-  assert.doesNotMatch(session, /setToast\(top\)/);
-  assert.match(session, /latestCurrentAudioCue/);
+  assert.doesNotMatch(session, /setToast\(top\)|latestCurrentAudioCue/);
+  assert.match(audioLifecycle, /latestCurrentAudioCue/);
 });
 
 

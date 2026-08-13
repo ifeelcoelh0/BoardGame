@@ -9,6 +9,7 @@ export const MODE_MAX_PLAYERS = Object.freeze(Object.fromEntries(
 ));
 
 export const TEST_REALM_MIN_PLAYERS = 2;
+export const LOBBY_START_INTRO_MS = 2800;
 
 export function getLobbyRequiredPlayers(game) {
   if (game?.test === true) return TEST_REALM_MIN_PLAYERS;

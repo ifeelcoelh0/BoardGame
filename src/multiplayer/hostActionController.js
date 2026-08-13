@@ -1,3 +1,4 @@
+import { LOBBY_START_INTRO_MS } from "../game/lobbyRules.js";
 import {
   LOBBY_PROTOCOL_VERSION,
   applyLobbyAction,
@@ -46,7 +47,7 @@ export function createHostActionController(options = {}) {
     onLobbyApplied = () => {},
     onGameApplied = () => {},
     now = Date.now,
-    introDurationMs = 1850,
+    introDurationMs = LOBBY_START_INTRO_MS,
     applyLobby = applyLobbyAction,
     applyGame = applyGameAction,
   } = options;

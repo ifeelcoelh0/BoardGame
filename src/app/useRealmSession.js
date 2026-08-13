@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { AudioSys } from "../audio/audioSystem.js";
-import { freshLogEntries, latestCurrentAudioCue } from "../audio/audioPlaybackPolicy.js";
 import { APP_BUILD_VERSION, APP_BUILD_COMPATIBILITY_VERSION } from "../appBuild.js";
 import { normalizeDiagnosticError, recordDiagnostic } from "../diagnostics/diagnostics.js";
 import { APP_STAGE, stageForAuthenticatedGame } from "../ui/appFlow.js";
@@ -114,7 +112,6 @@ export default function useRealmSession({ stage, navigate, book }) {
             setSeat(event.seat);
         }
     });
-    const seenLog = useRef(null);
     const dismissed = useRef( new Set());
     const net = useRef(createMultiplayerRuntimeState());
     const emoteTimers = useRef({});
@@ -122,8 +119,6 @@ export default function useRealmSession({ stage, navigate, book }) {
         if (i == null || !emoteOf(k))
             return;
         setEmotes((old) => ({ ...old, [i]: { k, id } }));
-        const ech = gref.current && gref.current.players[i] ? gref.current.players[i].ch : null;
-        AudioSys.play(ech ? "emv:" + ech + ":" + k : "card");
         if (emoteTimers.current[i])
             clearTimeout(emoteTimers.current[i]);
         emoteTimers.current[i] = setTimeout(() => {
@@ -188,8 +183,6 @@ export default function useRealmSession({ stage, navigate, book }) {
                 }
                 if (event.type === "CHAT_RECEIVED") {
                     const m = event.message;
-                    if (!event.isOwn)
-                        AudioSys.play("chatpop");
                     setChat((old) => [...old.slice(-49), m]);
                 }
             }
@@ -297,35 +290,6 @@ export default function useRealmSession({ stage, navigate, book }) {
         }
         return false;
     };
-    useEffect(() => {
-        const gameLog = game?.presentation?.log || [];
-        if (!gameLog.length) return;
-        const top = gameLog[0];
-        if (seenLog.current !== null && seenLog.current !== top.id) {
-            // As Crónicas são histórico, não HUD transitório. Mantemos apenas
-            // as pistas de áudio sem transformar cada linha do registo num toast.
-            const fresh = freshLogEntries(gameLog, seenLog.current);
-            const cue = latestCurrentAudioCue(fresh);
-            if (cue) AudioSys.playCue(cue);
-            seenLog.current = top.id;
-            return;
-        }
-        seenLog.current = top.id;
-    }, [game]);
-    useEffect(() => {
-        const startAudio = () => AudioSys.start();
-        const playUiClick = (event) => {
-            const control = event.target?.closest?.("button,[role=button]");
-            if (!control || control.matches?.(":disabled,[aria-disabled=true]") || control.dataset?.audioClick === "off") return;
-            AudioSys.play("uiClick");
-        };
-        document.addEventListener("pointerdown", startAudio);
-        document.addEventListener("click", playUiClick, true);
-        return () => {
-            document.removeEventListener("pointerdown", startAudio);
-            document.removeEventListener("click", playUiClick, true);
-        };
-    }, []);
     const normalizeGameTurnPresence = (state, now = Date.now()) => {
         if (!state || !Array.isArray(state.players))
             return -1;
@@ -1158,8 +1122,6 @@ export default function useRealmSession({ stage, navigate, book }) {
         void dispatchLobbyAction(LOBBY_ACTION.SET_READY, { ready: current.players[idx].ready !== true });
     };
     const startGame = () => {
-        AudioSys.play("lobbyStart");
-        AudioSys.clearAmbient("lobbyFireplace");
         void dispatchLobbyAction(LOBBY_ACTION.BEGIN_START);
     };
     const requestRematch = () => dispatchGameAction(GAME_ACTION.REMATCH_READY, {});
