@@ -1,0 +1,48 @@
+REINOS DO DRAGÃO — v0.99.40
+Accessibility + Localization + Profiling
+
+PREREQUISITE
+- v0.99.39 must already be merged into main.
+- Start from a clean working tree.
+
+SUGGESTED BRANCH
+  feat/accessibility-localization-v0.99.40
+
+APPLY
+1. Copy reinos-do-dragao-v0.99.40-accessibility-localization.patch to C:\Users\plc39\BoardGame
+2. From that folder run:
+
+   git apply --check reinos-do-dragao-v0.99.40-accessibility-localization.patch
+
+   If this prints nothing, continue. If it prints an error, stop and do not force it.
+
+3. Apply:
+
+   git apply --binary reinos-do-dragao-v0.99.40-accessibility-localization.patch
+
+4. Synchronize package-lock metadata (no new runtime dependency is added):
+
+   npm install --package-lock-only
+
+5. Regenerate checksums and validate:
+
+   npm run checksums:update
+   npm run check
+
+6. E2E (two terminals):
+
+   Terminal 1: npm run e2e:serve
+   Terminal 2: npm run test:e2e
+
+MANUAL QA
+- Fresh/default load is English.
+- Add ?lang=pt-PT and confirm Portuguese is preserved.
+- Your own secret VP: e.g. 8 (9); rivals only see 8; ranking stays public.
+- Trigger an action voice line and a reaction: subtitle appears below the correct player banner and fades.
+- Keyboard: Tab shows the skip link; modal/card dialog closes with Escape and restores focus.
+- Reduced motion remains respected.
+- Profiling: open with ?perf=1 and run window.__RDD_PERF__.report() in DevTools.
+
+NOTES
+- Existing synchronized/save presentation prose remains compatible. Legacy PT prose is localized at render time.
+- English is the default product language from this version onward; PT-PT remains in the repository for future language selection.

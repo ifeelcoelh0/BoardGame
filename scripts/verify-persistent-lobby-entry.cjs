@@ -13,7 +13,7 @@ assert.doesNotMatch(runtimeSource, /LobbyEntryShell/);
 assert.match(experience, /<LobbyScene/);
 assert.match(experience, /<LobbyCodex/);
 assert.match(experience, /createLobbyViewModel/);
-assert.match(experience, /Abrir o códice/);
+assert.match(experience, /t\("lobby\.openCodex"\)/);
 assert.match(experience, /CODEX_PHASE/);
 assert.doesNotMatch(experience, /entryContent|bookContent|bookViewport/);
 assert.doesNotMatch(dragonLobby, /<LobbyScene|<LobbyCodex/);

@@ -10,7 +10,7 @@ describe("Lobby base", () => {
     openApp();
     cy.get('[data-testid="lobby-experience"]').should("have.attr", "data-stage", "title");
     cy.get('[data-testid="create-realm"]').click();
-    cy.contains("h1, h2, h3", "Modo de jogo").should("be.visible");
+    cy.contains("h1, h2, h3", "Game mode").should("be.visible");
     cy.get('[data-testid="create-realm-submit"]').should("be.disabled");
   });
 

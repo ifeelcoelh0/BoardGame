@@ -32,6 +32,7 @@ import {
 import { isExplorationMode, isWarMode } from "../../game/gameModes.js";
 import { GAME_ACTION_ICONS } from "../../assets/gameUiIcons.js";
 import { playTurnBlockReason, rollTurnBlockReason } from "./gameInteractionGuards.js";
+import { t } from "../../locales/i18n.js";
 
 export const GAME_ACTION_COMMAND = Object.freeze({
   DISPATCH: "dispatch",
@@ -50,10 +51,10 @@ export const GAME_ACTION_GROUP = Object.freeze({
 });
 
 const GROUP_LABELS = Object.freeze({
-  [GAME_ACTION_GROUP.CONSTRUCTION]: "Construir",
-  [GAME_ACTION_GROUP.REALM]: "Reino",
-  [GAME_ACTION_GROUP.WAR]: "Forças",
-  [GAME_ACTION_GROUP.EXPLORATION]: "Expedição",
+  [GAME_ACTION_GROUP.CONSTRUCTION]: "action.group.construction",
+  [GAME_ACTION_GROUP.REALM]: "action.group.realm",
+  [GAME_ACTION_GROUP.WAR]: "action.group.war",
+  [GAME_ACTION_GROUP.EXPLORATION]: "action.group.exploration",
 });
 
 function freezeAction(action) {
@@ -73,7 +74,7 @@ function freezeAction(action) {
 function group(id, actions) {
   return Object.freeze({
     id,
-    label: GROUP_LABELS[id],
+    label: t(GROUP_LABELS[id]),
     actions: Object.freeze(actions.filter(Boolean)),
   });
 }
@@ -90,9 +91,7 @@ function missingResources(player, cost) {
 export function affordabilityReason(player, cost) {
   const missing = missingResources(player, cost);
   if (!missing.length) return null;
-  return `Falta ${missing
-    .map(({ resource, missing: amount }) => `${amount} ${RESOURCE_DEFINITIONS[resource]?.n || resource}`)
-    .join(", ")}.`;
+  return t("action.missing", { items: missing.map(({ resource, missing: amount }) => `${amount} ${RESOURCE_DEFINITIONS[resource]?.n || resource}`).join(", ") });
 }
 
 function constructionAction({
@@ -114,9 +113,9 @@ function constructionAction({
   const reason = commonReason
     || (!free && !canPay(player, cost) ? affordabilityReason(player, cost) : null)
     || (pieceCount(game, seat, pieceType) >= pieceLimit
-      ? `Atingiste o limite de ${pieceLimit} ${label.toLowerCase()}.`
+      ? t("action.limit", { limit: pieceLimit, piece: label.toLowerCase() })
       : null)
-    || (validCount <= 0 ? `Não existe nenhuma posição válida para ${label.toLowerCase()}.` : null);
+    || (validCount <= 0 ? t("action.noValid", { piece: label.toLowerCase() }) : null);
   return freezeAction({
     id,
     label,
@@ -126,8 +125,8 @@ function constructionAction({
     cost,
     free,
     active: activeMode === mode,
-    badge: free ? "GRÁTIS" : null,
-    meta: free && player.freeRoads > 0 ? `${player.freeRoads} restante${player.freeRoads === 1 ? "" : "s"}` : null,
+    badge: free ? t("action.free") : null,
+    meta: free && player.freeRoads > 0 ? t("action.remaining", { count: player.freeRoads }) : null,
     command: { type: GAME_ACTION_COMMAND.TOGGLE_MODE, mode },
   });
 }
@@ -140,7 +139,7 @@ export function buildConstructionActionModel(game, graph, seat, { myTurn, intera
   return Object.freeze({
     road: constructionAction({
       id: "road",
-      label: "Estrada",
+      label: t("build.road"),
       icon: GAME_ACTION_ICONS.road,
       cost: freeRoad ? Object.freeze({}) : BUILD_COSTS.estrada,
       free: freeRoad,
@@ -156,7 +155,7 @@ export function buildConstructionActionModel(game, graph, seat, { myTurn, intera
     }),
     village: constructionAction({
       id: "village",
-      label: "Aldeia",
+      label: t("build.village"),
       icon: GAME_ACTION_ICONS.village,
       cost: BUILD_COSTS.aldeia,
       pieceLimit: PIECE_LIMITS.aldeia,
@@ -171,7 +170,7 @@ export function buildConstructionActionModel(game, graph, seat, { myTurn, intera
     }),
     palace: constructionAction({
       id: "palace",
-      label: "Palácio",
+      label: t("build.palace"),
       icon: GAME_ACTION_ICONS.palace,
       cost: BUILD_COSTS.palacio,
       pieceLimit: PIECE_LIMITS.palacio,
@@ -189,39 +188,39 @@ export function buildConstructionActionModel(game, graph, seat, { myTurn, intera
 
 function buildRealmActions(game, seat, player, commonReason) {
   const cardReason = commonReason
-    || (!game.deck?.length ? "O baralho de desenvolvimento está vazio." : null)
+    || (!game.deck?.length ? t("action.deckEmpty") : null)
     || (!canPay(player, BUILD_COSTS.carta) ? affordabilityReason(player, BUILD_COSTS.carta) : null);
 
   const connectedOpponent = (game.players || []).some((candidate, index) => index !== seat && candidate?.connected !== false);
-  const tradeReason = commonReason || (!connectedOpponent ? "Não há outro jogador ligado para negociar." : null);
+  const tradeReason = commonReason || (!connectedOpponent ? t("action.noTradePlayer") : null);
 
   return [
     freezeAction({
       id: "development-card",
-      label: "Carta",
+      label: t("action.card"),
       icon: GAME_ACTION_ICONS.card,
       enabled: !cardReason,
       reason: cardReason,
       cost: BUILD_COSTS.carta,
-      meta: game.deck?.length != null ? `${game.deck.length} no baralho` : null,
+      meta: game.deck?.length != null ? t("action.deckCount", { count: game.deck.length }) : null,
       command: { type: GAME_ACTION_COMMAND.DISPATCH, actionType: GAME_ACTION.BUY_DEV_CARD },
     }),
     freezeAction({
       id: "bank",
-      label: "Banco",
+      label: t("action.bank"),
       icon: GAME_ACTION_ICONS.bank,
       enabled: !commonReason,
       reason: commonReason,
-      meta: "Troca com o reino",
+      meta: t("action.bankMeta"),
       command: { type: GAME_ACTION_COMMAND.OPEN_BANK },
     }),
     freezeAction({
       id: "trade",
-      label: "Trocar",
+      label: t("action.trade"),
       icon: GAME_ACTION_ICONS.trade,
       enabled: !tradeReason,
       reason: tradeReason,
-      meta: "Negociar com jogadores",
+      meta: t("action.tradeMeta"),
       command: { type: GAME_ACTION_COMMAND.OPEN_TRADE },
     }),
   ];
@@ -232,17 +231,17 @@ function buildWarActions(game, graph, seat, player, commonReason, interactionMod
   const actions = ["cavaleiro", "catapulta", "arqueiro"].map((subtype) => {
     const cost = troopCost(game, seat, subtype);
     const reason = commonReason
-      || (militaryActionsLeft(game) <= 0 ? "Já gastaste as ações militares deste turno." : null)
+      || (militaryActionsLeft(game) <= 0 ? t("action.militarySpent") : null)
       || (!canPay(player, cost) ? affordabilityReason(player, cost) : null)
-      || (!validDeployHexes(game, graph, seat, subtype).length ? "Não há espaço livre junto ao teu Bastião." : null);
+      || (!validDeployHexes(game, graph, seat, subtype).length ? t("action.noBastionSpace") : null);
     return freezeAction({
       id: `recruit-${subtype}`,
-      label: subtype === "cavaleiro" ? "Cavaleiro" : subtype === "catapulta" ? "Catapulta" : "Arqueiro",
+      label: subtype === "cavaleiro" ? t("action.knight") : subtype === "catapulta" ? t("action.catapult") : t("action.archer"),
       icon: GAME_ACTION_ICONS[subtype],
       enabled: !reason,
       reason,
       cost,
-      meta: `${militaryActionsLeft(game)}/2 ações`,
+      meta: t("action.militaryMeta", { left: militaryActionsLeft(game) }),
       command: {
         type: GAME_ACTION_COMMAND.DISPATCH,
         actionType: GAME_ACTION.RECRUIT_TROOP,
@@ -254,12 +253,12 @@ function buildWarActions(game, graph, seat, player, commonReason, interactionMod
   if (hasWarPerk(game, seat, "romeo")) {
     const bribeCost = Object.freeze({ ouro: 2 });
     const reason = commonReason
-      || (game.turn?.bribed ? "Já usaste Suborno neste turno." : null)
+      || (game.turn?.bribed ? t("action.bribeUsed") : null)
       || ((player.res?.ouro || 0) < 2 ? affordabilityReason(player, bribeCost) : null)
-      || (!bribeTargets(game, seat).size ? "Não existe nenhuma tropa inimiga que possas subornar." : null);
+      || (!bribeTargets(game, seat).size ? t("action.noBribeTarget") : null);
     actions.push(freezeAction({
       id: "bribe",
-      label: "Suborno",
+      label: t("action.bribe"),
       icon: GAME_ACTION_ICONS.bribe,
       enabled: !reason,
       reason,
@@ -274,10 +273,10 @@ function buildWarActions(game, graph, seat, player, commonReason, interactionMod
 
 function wagonBuildReason(game, graph, seat, player, commonReason) {
   if (commonReason) return commonReason;
-  if (playerWagons(game, seat).length >= 1) return "Já tens uma carruagem ativa.";
-  if (wagonBuildCount(game, seat) >= MAX_WAGONS_PER_GAME) return `Já construíste as ${MAX_WAGONS_PER_GAME} carruagens disponíveis nesta partida.`;
+  if (playerWagons(game, seat).length >= 1) return t("action.wagonActive");
+  if (wagonBuildCount(game, seat) >= MAX_WAGONS_PER_GAME) return t("action.wagonLimit", { max: MAX_WAGONS_PER_GAME });
   if (!canPay(player, WAGON_COST)) return affordabilityReason(player, WAGON_COST);
-  if (!validWagonBuildHexes(game, graph, seat).length) return "Não há um hexágono válido junto às tuas construções.";
+  if (!validWagonBuildHexes(game, graph, seat).length) return t("action.noWagonHex");
   return null;
 }
 
@@ -287,7 +286,7 @@ function buildExplorationActions(game, graph, seat, player, commonReason, intera
   const buildReason = wagonBuildReason(game, graph, seat, player, commonReason);
   actions.push(freezeAction({
     id: "build-wagon",
-    label: "Carruagem",
+    label: t("action.wagon"),
     icon: GAME_ACTION_ICONS.wagon,
     enabled: !buildReason,
     reason: buildReason,
@@ -301,13 +300,13 @@ function buildExplorationActions(game, graph, seat, player, commonReason, intera
     const reason = commonReason;
     actions.push(freezeAction({
       id: `wagon-${wagonId}`,
-      label: wagon.cargo ? "Colonos" : "Carruagem",
+      label: wagon.cargo ? t("action.colonists") : t("action.wagon"),
       icon: wagon.cargo ? GAME_ACTION_ICONS.colonists : GAME_ACTION_ICONS.wagon,
       enabled: !reason,
       reason,
       active: selectedWagon === wagonId,
       badge: `${wagon.mv}/${wagonMoves(wagon)}`,
-      meta: wagon.cargo ? "Com colonos" : "Selecionar para mover",
+      meta: wagon.cargo ? t("action.withColonists") : t("action.selectMove"),
       command: { type: GAME_ACTION_COMMAND.SELECT_WAGON, wagonId },
     }));
   }
@@ -315,12 +314,12 @@ function buildExplorationActions(game, graph, seat, player, commonReason, intera
   const wagon = selectedWagon ? game.wagons?.[selectedWagon] : null;
   if (wagon && wagon.p === seat && !wagon.cargo) {
     const colonistReason = commonReason
-      || (!homeHexes(game, graph, seat).has(wagon.at) ? "A carruagem tem de estar junto a uma construção tua." : null)
-      || (pieceCount(game, seat, "aldeia") >= PIECE_LIMITS.aldeia ? `Atingiste o limite de ${PIECE_LIMITS.aldeia} aldeias.` : null)
+      || (!homeHexes(game, graph, seat).has(wagon.at) ? t("action.wagonNeedHome") : null)
+      || (pieceCount(game, seat, "aldeia") >= PIECE_LIMITS.aldeia ? t("action.limit", { limit: PIECE_LIMITS.aldeia, piece: t("action.villagePlural") }) : null)
       || (!canPay(player, BUILD_COSTS.aldeia) ? affordabilityReason(player, BUILD_COSTS.aldeia) : null);
     actions.push(freezeAction({
       id: "load-colonists",
-      label: "Carregar colonos",
+      label: t("action.loadColonists"),
       icon: GAME_ACTION_ICONS.colonists,
       enabled: !colonistReason,
       reason: colonistReason,
@@ -335,15 +334,15 @@ function buildExplorationActions(game, graph, seat, player, commonReason, intera
 
   if (wagon && wagon.p === seat && wagon.cargo) {
     const foundReason = commonReason
-      || (!remoteVillageSpots(game, graph, selectedWagon).length ? "Não existe um local válido para fundar uma aldeia aqui." : null);
+      || (!remoteVillageSpots(game, graph, selectedWagon).length ? t("action.noRemoteVillage") : null);
     actions.push(freezeAction({
       id: "found-village",
-      label: "Fundar aldeia",
+      label: t("action.foundVillage"),
       icon: GAME_ACTION_ICONS.village,
       enabled: !foundReason,
       reason: foundReason,
       active: interactionMode === "fundar",
-      meta: "Consome a carruagem",
+      meta: t("action.consumeWagon"),
       command: { type: GAME_ACTION_COMMAND.TOGGLE_FOUND, wagonId: selectedWagon },
     }));
   }
@@ -368,7 +367,7 @@ export function buildGameActionModel(game, graph, seat, {
   const rollReason = rollTurnBlockReason(game, seat, { myTurn: !!myTurn });
   const roll = freezeAction({
     id: "roll-dice",
-    label: "Lançar os Dados",
+    label: t("action.rollDice"),
     icon: GAME_ACTION_ICONS.rollDice,
     tone: "primary",
     enabled: !rollReason,
@@ -395,7 +394,7 @@ export function buildGameActionModel(game, graph, seat, {
 
   const endTurn = freezeAction({
     id: "end-turn",
-    label: "Terminar Turno",
+    label: t("action.endTurn"),
     icon: GAME_ACTION_ICONS.endTurn,
     tone: "danger",
     enabled: !commonReason,

@@ -6,6 +6,7 @@ import { GAME_ACTION } from "../../../game/gameProtocol.js";
 import { RESOURCE_DEFINITIONS, RESOURCE_KEYS } from "../../../game/resources.js";
 import { RESOURCE_ICON_BY_KEY } from "../../../assets/gameUiIcons.js";
 import { buildGameDecisionModel, GAME_DECISION_TYPE } from "../gameDecisionModel.js";
+import { t } from "../../../locales/i18n.js";
 import "../../../styles/game-decisions.css";
 
 function ResourceIcon({ resource, size = 28 }) {
@@ -14,7 +15,7 @@ function ResourceIcon({ resource, size = 28 }) {
 
 function ResourceInventory({ resources, compact = false }) {
   return (
-    <div className={`rd-decision-inventory${compact ? " is-compact" : ""}`} aria-label="Recursos na mão">
+    <div className={`rd-decision-inventory${compact ? " is-compact" : ""}`} aria-label={t("decision.resourcesInHand")}>
       {RESOURCE_KEYS.map((resource) => (
         <div className="rd-decision-inventory__item" key={resource} title={RESOURCE_DEFINITIONS[resource].n}>
           <ResourceIcon resource={resource} size={compact ? 22 : 28} />
@@ -43,7 +44,7 @@ function DecisionShell({ model, onClose, children, footer = null }) {
       <section className="rd-decision" role="dialog" aria-modal="true" aria-labelledby="rd-decision-title">
         <div className="rd-decision__ornament" aria-hidden="true"><i /><span>✦</span><i /></div>
         {dismissible && (
-          <button className="rd-decision__close" type="button" onClick={onClose} aria-label="Fechar">×</button>
+          <button className="rd-decision__close" type="button" onClick={onClose} aria-label={t("decision.close")}>×</button>
         )}
         <header className="rd-decision__header">
           <small>{model.eyebrow}</small>
@@ -109,8 +110,8 @@ function PlayerChoices({ players, onPick, selectedIndex = null, allowAll = false
       {allowAll && (
         <button type="button" className={`rd-decision-player rd-decision-player--all${selectedIndex === "all" ? " is-selected" : ""}`} onClick={onPickAll}>
           <span className="rd-decision-player__all" aria-hidden="true"><GameIcon name="RDD_AllPlayers" size={34} alt="" /></span>
-          <strong>Todos</strong>
-          <small>Reino aberto</small>
+          <strong>{t("decision.allPlayers")}</strong>
+          <small>{t("decision.openRealm")}</small>
         </button>
       )}
       {players.map((player) => (
@@ -120,11 +121,11 @@ function PlayerChoices({ players, onPick, selectedIndex = null, allowAll = false
           className={`rd-decision-player${selectedIndex === player.index ? " is-selected" : ""}`}
           onClick={() => onPick(player)}
           disabled={disableDisconnected && player.connected === false}
-          title={disableDisconnected && player.connected === false ? "Jogador desligado" : undefined}
+          title={disableDisconnected && player.connected === false ? t("decision.disconnectedPlayer") : undefined}
         >
           <span className="rd-decision-player__portrait"><CharacterSprite character={player.characterId} size={64} /></span>
           <strong>{player.name}</strong>
-          <small>{player.connected === false ? "Desligado" : `${player.handSize} recursos`}</small>
+          <small>{player.connected === false ? t("common.offline") : t("decision.resourceCount", { count: player.handSize })}</small>
         </button>
       ))}
     </div>
@@ -149,15 +150,15 @@ function DiscardDecision({ model, selection, onSelectionChange, onSubmit }) {
     <>
       <ResourceInventory resources={model.inventory} />
       <ResourceCounters
-        label="Escolhe o sacrifício"
+        label={t("decision.chooseSacrifice")}
         values={selection}
         inventory={model.inventory}
         onChange={(resource, amount) => onSelectionChange({ ...selection, [resource]: amount })}
       />
       <div className={`rd-decision-progress${total === model.need ? " is-complete" : ""}`}>
-        <span>Selecionados</span><strong>{total} / {model.need}</strong>
+        <span>{t("decision.selected")}</span><strong>{total} / {model.need}</strong>
       </div>
-      <GameButton variant="primary" size="lg" disabled={total !== model.need} onClick={onSubmit}>Sacrificar</GameButton>
+      <GameButton variant="primary" size="lg" disabled={total !== model.need} onClick={onSubmit}>{t("decision.sacrifice")}</GameButton>
     </>
   );
 }
@@ -170,7 +171,7 @@ function TsunamiDecision({ model, onPick }) {
         return (
           <button className="rd-decision-option" type="button" key={port.edge} onClick={() => onPick(port.edge)}>
             <span className="rd-decision-option__sigil"><GameIcon name="RDD_Port" size={34} alt="" /></span>
-            <span><strong>Porto {specific ? "2:1" : "3:1"}</strong><small>{specific ? RESOURCE_DEFINITIONS[port.portType]?.n : "Qualquer recurso"}</small></span>
+            <span><strong>{t("decision.port", { ratio: specific ? "2:1" : "3:1" })}</strong><small>{specific ? RESOURCE_DEFINITIONS[port.portType]?.n : t("decision.anyResource")}</small></span>
             {specific && <ResourceIcon resource={port.portType} />}
           </button>
         );
@@ -183,8 +184,8 @@ function SpyReport({ model, onClose }) {
   return (
     <>
       <ResourceInventory resources={model.resources} />
-      <p className="rd-decision-note">Só tu vês este relatório. Usa-o bem.</p>
-      <GameButton variant="primary" size="md" onClick={onClose}>Fechar relatório</GameButton>
+      <p className="rd-decision-note">{t("decision.privateReport")}</p>
+      <GameButton variant="primary" size="md" onClick={onClose}>{t("decision.closeReport")}</GameButton>
     </>
   );
 }
@@ -198,12 +199,12 @@ function BankDecision({ model, onTrade }) {
           <div className="rd-decision-exchange" key={exchange.give}>
             <div className="rd-decision-exchange__give">
               <ResourceIcon resource={exchange.give} />
-              <span>Dar <strong>{exchange.ratio}</strong> {RESOURCE_DEFINITIONS[exchange.give].n}</span>
+              <span>{t("decision.give", { count: exchange.ratio, resource: RESOURCE_DEFINITIONS[exchange.give].n })}</span>
             </div>
             <div className="rd-decision-exchange__arrow">→</div>
             <div className="rd-decision-exchange__receives">
               {exchange.receives.map((get) => (
-                <button type="button" key={get} title={`Receber 1 ${RESOURCE_DEFINITIONS[get].n}`} onClick={() => onTrade(exchange.give, get)}>
+                <button type="button" key={get} title={t("decision.receiveOne", { resource: RESOURCE_DEFINITIONS[get].n })} onClick={() => onTrade(exchange.give, get)}>
                   <ResourceIcon resource={get} /><span>+1</span>
                 </button>
               ))}
@@ -211,7 +212,7 @@ function BankDecision({ model, onTrade }) {
           </div>
         ))}
       </div>
-      {!model.hasAffordableExchange && <p className="rd-decision-note">Ainda não tens recursos suficientes para uma troca bancária.</p>}
+      {!model.hasAffordableExchange && <p className="rd-decision-note">{t("decision.notEnoughBank")}</p>}
     </>
   );
 }
@@ -229,11 +230,11 @@ function TradeProposalDecision({ model, offer, onOfferChange, onSubmit }) {
     <>
       <ResourceInventory resources={model.inventory} compact />
       <div className="rd-decision-trade-columns">
-        <ResourceCounters label="Eu dou" values={offer.give} inventory={model.inventory} onChange={(resource, amount) => changeBundle("give", resource, amount)} />
-        <ResourceCounters label="Eu quero" values={offer.get} onChange={(resource, amount) => changeBundle("get", resource, amount)} />
+        <ResourceCounters label={t("decision.iGive")} values={offer.give} inventory={model.inventory} onChange={(resource, amount) => changeBundle("give", resource, amount)} />
+        <ResourceCounters label={t("decision.iWant")} values={offer.get} onChange={(resource, amount) => changeBundle("get", resource, amount)} />
       </div>
       <div className="rd-decision-section">
-        <div className="rd-decision-section__label">Propor a</div>
+        <div className="rd-decision-section__label">{t("decision.proposeTo")}</div>
         <PlayerChoices
           players={model.players}
           selectedIndex={offer.to}
@@ -243,7 +244,7 @@ function TradeProposalDecision({ model, offer, onOfferChange, onSubmit }) {
           disableDisconnected
         />
       </div>
-      <GameButton variant="primary" size="lg" disabled={!validTarget || !hasBundle} onClick={onSubmit}>Enviar proposta</GameButton>
+      <GameButton variant="primary" size="lg" disabled={!validTarget || !hasBundle} onClick={onSubmit}>{t("decision.sendProposal")}</GameButton>
     </>
   );
 }
@@ -252,18 +253,18 @@ function TradeResponseDecision({ model, onAccept, onDecline }) {
   return (
     <>
       <div className="rd-decision-trade-summary">
-        <div><small>Recebes</small><BundleSummary bundle={model.give} /></div>
+        <div><small>{t("decision.receive")}</small><BundleSummary bundle={model.give} /></div>
         <span className="rd-decision-trade-summary__swap">⇄</span>
-        <div><small>Entregas</small><BundleSummary bundle={model.get} /></div>
+        <div><small>{t("decision.deliver")}</small><BundleSummary bundle={model.get} /></div>
       </div>
       <div className="rd-decision-section">
-        <div className="rd-decision-section__label">A tua mão</div>
+        <div className="rd-decision-section__label">{t("decision.yourHand")}</div>
         <ResourceInventory resources={model.inventory} compact />
       </div>
-      {!model.canAccept && <p className="rd-decision-note is-warning">Já não tens todos os recursos pedidos para aceitar esta proposta.</p>}
+      {!model.canAccept && <p className="rd-decision-note is-warning">{t("decision.cannotAccept")}</p>}
       <div className="rd-decision-actions">
-        <GameButton variant="primary" size="lg" disabled={!model.canAccept} onClick={onAccept}>Aceitar</GameButton>
-        <GameButton variant="danger" size="lg" onClick={onDecline}>Recusar</GameButton>
+        <GameButton variant="primary" size="lg" disabled={!model.canAccept} onClick={onAccept}>{t("decision.accept")}</GameButton>
+        <GameButton variant="danger" size="lg" onClick={onDecline}>{t("decision.decline")}</GameButton>
       </div>
     </>
   );
@@ -304,7 +305,7 @@ export default function GameDecisionSystem({
   } else if (model.type === GAME_DECISION_TYPE.TSUNAMI) {
     body = <TsunamiDecision model={model} onPick={(edge) => void dispatchGameAction(GAME_ACTION.RESOLVE_TSUNAMI, { edge })} />;
   } else if (model.type === GAME_DECISION_TYPE.QUEUE_RESOURCE) {
-    body = <><ResourceInventory resources={model.inventory} /><ResourceChoice label={`Recebe (${model.remaining} restante${model.remaining === 1 ? "" : "s"})`} onPick={(resource) => void dispatchGameAction(GAME_ACTION.RESOLVE_QUEUE_RESOURCE, { resource })} /></>;
+    body = <><ResourceInventory resources={model.inventory} /><ResourceChoice label={t("decision.receiveRemaining", { count: model.remaining })} onPick={(resource) => void dispatchGameAction(GAME_ACTION.RESOLVE_QUEUE_RESOURCE, { resource })} /></>;
   } else if (model.type === GAME_DECISION_TYPE.STEAL) {
     body = <PlayerChoices players={model.players} onPick={(player) => { if (Date.now() - model.openedAt < 350) return; void dispatchGameAction(GAME_ACTION.STEAL_RESOURCE, { victimIndex: player.index }); }} />;
   } else if (model.type === GAME_DECISION_TYPE.SPY_TARGET) {
@@ -318,13 +319,13 @@ export default function GameDecisionSystem({
   } else if (model.type === GAME_DECISION_TYPE.SPY_REPORT) {
     body = <SpyReport model={model} onClose={onCloseLocalDecision} />;
   } else if (model.type === GAME_DECISION_TYPE.MONOPOLY) {
-    body = <ResourceChoice label="Confiscar todo o…" onPick={(resource) => {
+    body = <ResourceChoice label={t("decision.confiscate")} onPick={(resource) => {
       void dispatchGameAction(GAME_ACTION.PLAY_DEV_CARD, { cardId: model.cardId, resource }).then((result) => {
         if (result) onCloseLocalDecision();
       });
     }} />;
   } else if (model.type === GAME_DECISION_TYPE.DISCOVERY) {
-    body = <ResourceChoice label={model.first ? "Escolhe o 2.º recurso" : "Escolhe o 1.º recurso"} selected={model.first} onPick={(resource) => {
+    body = <ResourceChoice label={model.first ? t("decision.secondResource") : t("decision.firstResource")} selected={model.first} onPick={(resource) => {
       if (!model.first) onChangeLocalDecision({ type: "descoberta", cardId: model.cardId, first: resource });
       else {
         void dispatchGameAction(GAME_ACTION.PLAY_DEV_CARD, { cardId: model.cardId, firstResource: model.first, secondResource: resource }).then((result) => {

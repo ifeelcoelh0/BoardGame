@@ -1,12 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { WAR_UNIT_LABELS, WAR_UNIT_NAMES, warUnitName } from "../src/presentation/gameLabels.js";
+import { setLocale } from "../src/locales/i18n.js";
+import { TERRAIN_LABELS, WAR_UNIT_LABELS, WAR_UNIT_NAMES, terrainLabel, warUnitName } from "../src/presentation/gameLabels.js";
 
-test("war unit names and labels share one canonical vocabulary", () => {
-  assert.deepEqual(WAR_UNIT_NAMES, { cavaleiro: "Cavaleiro", catapulta: "Catapulta", arqueiro: "Arqueiro" });
-  assert.equal(WAR_UNIT_LABELS.cavaleiro, "⚔️ Cavaleiro");
-  assert.equal(WAR_UNIT_LABELS.catapulta, "🪨 Catapulta");
-  assert.equal(WAR_UNIT_LABELS.arqueiro, "🏹 Arqueiro");
-  assert.equal(warUnitName("arqueiro"), "Arqueiro");
+test("war and terrain labels follow the active locale without changing domain ids", () => {
+  setLocale("en", { persist: false });
+  assert.deepEqual({ ...WAR_UNIT_NAMES }, { cavaleiro: "Knight", catapulta: "Catapult", arqueiro: "Archer" });
+  assert.equal(WAR_UNIT_LABELS.cavaleiro, "⚔️ Knight");
+  assert.equal(warUnitName("arqueiro"), "Archer");
+  assert.equal(TERRAIN_LABELS.floresta, "Shadow Forest");
+  assert.equal(terrainLabel("gelo"), "Eternal Glacier");
+
+  assert.equal(warUnitName("arqueiro", null, "pt-PT"), "Arqueiro");
+  assert.equal(terrainLabel("floresta", null, "pt-PT"), "Floresta Sombria");
   assert.equal(warUnitName("desconhecido"), "desconhecido");
 });

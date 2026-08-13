@@ -1,5 +1,6 @@
 import GameButton from "../system/GameButton.jsx";
 import { GRAPHICS_QUALITY } from "../three/graphicsQualityProfiles.js";
+import { t } from "../../locales/i18n.js";
 import "../../styles/game-settings.css";
 
 function PercentSlider({ label, description, value, onChange }) {
@@ -29,33 +30,33 @@ export default function GameSettingsControls({ settings, setSetting, fullscreen 
   return (
     <div className={`rd-settings${compact ? " is-compact" : ""}`}>
       <section>
-        <header><small>ÁUDIO</small><strong>Mistura</strong></header>
-        <ToggleRow label="Som do reino" description="Silencia tudo sem alterar os volumes guardados." checked={!settings.muted} onChange={(value) => setSetting("muted", !value)} />
-        <PercentSlider label="Música" description="Tema e futura banda sonora." value={settings.musicVolume} onChange={(value) => setSetting("musicVolume", value)} />
-        <PercentSlider label="Efeitos" description="UI, dados, construção, eventos e ambiente." value={settings.effectsVolume} onChange={(value) => setSetting("effectsVolume", value)} />
-        <PercentSlider label="Vozes" description="Falas e reações das personagens." value={settings.voicesVolume} onChange={(value) => setSetting("voicesVolume", value)} />
+        <header><small>{t("settings.audio")}</small><strong>{t("settings.mix")}</strong></header>
+        <ToggleRow label={t("settings.realmSound")} description={t("settings.realmSoundDesc")} checked={!settings.muted} onChange={(value) => setSetting("muted", !value)} />
+        <PercentSlider label={t("settings.music")} description={t("settings.musicDesc")} value={settings.musicVolume} onChange={(value) => setSetting("musicVolume", value)} />
+        <PercentSlider label={t("settings.effects")} description={t("settings.effectsDesc")} value={settings.effectsVolume} onChange={(value) => setSetting("effectsVolume", value)} />
+        <PercentSlider label={t("settings.voices")} description={t("settings.voicesDesc")} value={settings.voicesVolume} onChange={(value) => setSetting("voicesVolume", value)} />
       </section>
       <section>
-        <header><small>GRÁFICOS</small><strong>Qualidade</strong></header>
-        <div className="rd-settings__quality" role="group" aria-label="Qualidade gráfica">
+        <header><small>{t("settings.graphics")}</small><strong>{t("settings.quality")}</strong></header>
+        <div className="rd-settings__quality" role="group" aria-label={t("settings.graphicsQuality")}>
           {[GRAPHICS_QUALITY.LOW, GRAPHICS_QUALITY.MEDIUM, GRAPHICS_QUALITY.HIGH].map((quality) => (
             <button key={quality} type="button" className={settings.graphicsQuality === quality ? "is-active" : ""} onClick={() => setSetting("graphicsQuality", quality)}>
-              {quality === "low" ? "Baixa" : quality === "medium" ? "Média" : "Alta"}
+              {quality === "low" ? t("settings.low") : quality === "medium" ? t("settings.medium") : t("settings.high")}
             </button>
           ))}
         </div>
         <label className="rd-settings__row rd-settings__row--select">
-          <span><strong>Escala da interface</strong><small>Aumenta texto e controlos sem mudar o tabuleiro.</small></span>
+          <span><strong>{t("settings.uiScale")}</strong><small>{t("settings.uiScaleDesc")}</small></span>
           <select value={String(settings.uiScale)} onChange={(event) => setSetting("uiScale", Number(event.target.value))}>
             <option value="0.85">85%</option><option value="0.9">90%</option><option value="0.95">95%</option><option value="1">100%</option><option value="1.05">105%</option><option value="1.1">110%</option><option value="1.15">115%</option><option value="1.2">120%</option>
           </select>
         </label>
       </section>
       <section>
-        <header><small>CONFORTO</small><strong>Experiência</strong></header>
-        <ToggleRow label="Movimento reduzido" description="Encurta ou remove animações não essenciais." checked={settings.reducedMotion} onChange={(value) => setSetting("reducedMotion", value)} />
-        <ToggleRow label="Ecrã inteiro ao jogar" description="É pedido num clique teu antes de a partida começar." checked={settings.fullscreenOnPlay} onChange={(value) => setSetting("fullscreenOnPlay", value)} />
-        {onToggleFullscreen && <GameButton variant="secondary" size="sm" onClick={onToggleFullscreen}>{fullscreen ? "Sair do ecrã inteiro" : "Entrar em ecrã inteiro"}</GameButton>}
+        <header><small>{t("settings.comfort")}</small><strong>{t("settings.experience")}</strong></header>
+        <ToggleRow label={t("settings.reducedMotion")} description={t("settings.reducedMotionDesc")} checked={settings.reducedMotion} onChange={(value) => setSetting("reducedMotion", value)} />
+        <ToggleRow label={t("settings.fullscreenOnPlay")} description={t("settings.fullscreenOnPlayDesc")} checked={settings.fullscreenOnPlay} onChange={(value) => setSetting("fullscreenOnPlay", value)} />
+        {onToggleFullscreen && <GameButton variant="secondary" size="sm" onClick={onToggleFullscreen}>{fullscreen ? t("settings.exitFullscreen") : t("settings.enterFullscreen")}</GameButton>}
       </section>
     </div>
   );

@@ -1,6 +1,7 @@
 import GameEconomyStrip from "./GameEconomyStrip.jsx";
 import GameDevelopmentHand from "./GameDevelopmentHand.jsx";
 import GameMatchStrip from "./GameMatchStrip.jsx";
+import { t } from "../../../locales/i18n.js";
 import "../../../styles/game-bottom-dock.css";
 
 export default function GameBottomDock({
@@ -20,7 +21,7 @@ export default function GameBottomDock({
   embedded = false,
 }) {
   return (
-    <div className={`rd-game-bottom-dock${embedded ? " rd-game-bottom-dock--embedded" : ""}`} aria-label="Mão do jogador">
+    <div className={`rd-game-bottom-dock${embedded ? " rd-game-bottom-dock--embedded" : ""}`} aria-label={t("hud.hand")}>
       <div className="rd-game-bottom-dock__match"><GameMatchStrip code={code} round={round} dice={dice} diceAnimationKey={diceAnimationKey} /></div>
       <div className="rd-game-bottom-dock__hand">
         <div className="rd-game-bottom-dock__economy">

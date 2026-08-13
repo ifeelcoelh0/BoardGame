@@ -14,7 +14,7 @@ test("action presentation exposes only the UI needed for the current board inter
   assert.equal(deriveActionPresentation({ myTurn: true, phase: "play", actionModel, minimized: true }).mode, ACTION_PRESENTATION.MINIMIZED);
   const placement = deriveActionPresentation({ myTurn: true, phase: "play", actionModel, interactionMode: "aldeia" });
   assert.equal(placement.mode, ACTION_PRESENTATION.PLACEMENT);
-  assert.match(placement.label, /Aldeia/);
+  assert.match(placement.label, /Village/);
   assert.equal(mapSelectionPresentation("unknown"), null);
 });
 

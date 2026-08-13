@@ -25,6 +25,7 @@ import useGameSettings from "../settings/useGameSettings.js";
 import { CHARACTERS as CHARS } from "../game/characterCatalog.js";
 import useRealmSession from "./useRealmSession.js";
 import { classifyCharacterSelectionEntry, shouldAutoExitCharacterSelection } from "../ui/lobby/characterSelectionJourney.js";
+import { t } from "../locales/i18n.js";
 
 const LobbyExperience = lazy(() => import("../ui/lobby/LobbyExperience.jsx"));
 
@@ -116,14 +117,14 @@ export default function App() {
     onResume: (savedCode) => void session.resumeRealm(savedCode),
     onRefreshSaved: session.refreshSavedRealms,
     onDeleteSave: (savedCode) => {
-      if (!window.confirm(`Apagar o reino ${savedCode} deste navegador?`)) return;
+      if (!window.confirm(t("app.deleteRealmConfirm", { code: savedCode }))) return;
       session.deleteSavedRealm(savedCode);
     },
   };
 
   const diagnostics = {
     report: diagnosticReport,
-    connectionLabel: connSt === "on" ? "ligado" : connSt === "wait" ? "a ligar" : connSt === "err" ? "com erro" : "desligado",
+    connectionLabel: connSt === "on" ? t("app.connected") : connSt === "wait" ? t("app.connecting") : connSt === "err" ? t("app.connectionError") : t("app.disconnected"),
     reportCopied,
     onCopyReport: () => {
       void (async () => {
@@ -142,26 +143,26 @@ export default function App() {
   if (!hasActiveLocalSeat) {
     if (stage === APP_STAGE.JOINING_ROOM || stage === APP_STAGE.RECONNECTING) {
       bookStatus = {
-        chapter: "A CAMINHO",
-        title: stage === APP_STAGE.RECONNECTING ? "A recuperar o teu lugar" : "A entrar no reino",
-        message: stage === APP_STAGE.RECONNECTING ? "A restabelecer a sessão…" : "A preparar a tua sessão…",
+        chapter: t("app.onTheWay"),
+        title: stage === APP_STAGE.RECONNECTING ? t("app.recoverSeat") : t("app.enterRealm"),
+        message: stage === APP_STAGE.RECONNECTING ? t("app.restoreSession") : t("app.prepareSession"),
         error: err || null,
         actions: [
           ...(connSt === "on" && game?.phase === "lobby"
-            ? [{ label: "Tentar novamente", primary: true, onSelect: () => void session.takeSeat() }]
+            ? [{ label: t("app.tryAgain"), primary: true, onSelect: () => void session.takeSeat() }]
             : []),
-          { label: "Cancelar", onSelect: session.exitToTitle },
+          { label: t("app.cancel"), onSelect: session.exitToTitle },
         ],
       };
     } else if (stage === APP_STAGE.SESSION_REQUIRED) {
       bookStatus = {
-        chapter: "SESSÃO",
-        title: game?.phase === "lobby" ? "Não foi possível entrar" : "Sessão necessária",
+        chapter: t("app.session"),
+        title: game?.phase === "lobby" ? t("app.couldNotEnter") : t("app.sessionRequired"),
         message: game?.phase === "lobby"
-          ? `O reino ${code} continua no lobby, mas não foi possível reservar ou recuperar um lugar.`
-          : `A sessão do reino ${code || codeIn} não pode ser retomada neste navegador. A identidade de outro jogador nunca pode ser escolhida manualmente.`,
+          ? t("app.lobbySeatFailed", { code })
+          : t("app.sessionCannotResume", { code: code || codeIn }),
         error: err || null,
-        actions: [{ label: "← Voltar", onSelect: session.exitToTitle }],
+        actions: [{ label: t("app.back"), onSelect: session.exitToTitle }],
       };
     }
   }
@@ -169,7 +170,7 @@ export default function App() {
   if (!game || game.phase === "lobby") {
     const leaveCurrentLobby = () => {
       if (!game) return session.exitToTitle();
-      const message = seat === 0 ? "Desfazer o reino? Os convidados serão desligados." : "Sair deste reino?";
+      const message = seat === 0 ? t("app.dissolveConfirm") : t("app.leaveConfirm");
       if (!window.confirm(message)) return;
       if (seat === 0) session.exitToTitle();
       else session.leaveLobby();
@@ -177,7 +178,7 @@ export default function App() {
 
     return (
       <AppShell>
-        <Suspense fallback={<SceneLoading label="A preparar o salão…" />}>
+        <Suspense fallback={<SceneLoading label={t("app.preparingHall")} />}>
           <LobbyExperience
             stage={stage}
             bookPage={bookState.page}

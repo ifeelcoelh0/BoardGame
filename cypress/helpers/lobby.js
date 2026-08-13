@@ -3,7 +3,7 @@ export const appUrl = "/?transport=mock";
 export function openApp() {
   cy.visit(appUrl);
   cy.get('[data-testid="lobby-experience"]').should("be.visible");
-  cy.contains("button", "Abrir o códice").should("be.visible").click();
+  cy.contains("button", "Open codex").should("be.visible").click();
   cy.get('[data-testid="lobby-codex"]').should("be.visible");
   cy.get('[data-testid="create-realm"]').should("be.visible");
 }
@@ -19,34 +19,34 @@ export function createRealm(mode = "classico") {
 }
 
 export function chooseFirstAvailableCharacter() {
-  cy.contains("button", /^Ver /).first().then(($button) => {
+  cy.contains("button", /^View /).first().then(($button) => {
     $button[0].focus();
     cy.wrap($button).should("be.visible").click();
   });
 
-  cy.contains("button", /^Selar o pacto com /).then(($button) => {
+  cy.contains("button", /^Seal the pact with /).then(($button) => {
     $button[0].focus();
     cy.wrap($button).should("be.visible").click();
   });
 
   cy.get('[data-testid="lobby-experience"]').should("have.attr", "data-stage", "lobby");
-  cy.contains("button", "Abrir o códice").should("be.visible");
+  cy.contains("button", "Open codex").should("be.visible");
 }
 
 export function openCodex() {
-  cy.contains("button", "Abrir o códice").should("be.visible").click();
+  cy.contains("button", "Open codex").should("be.visible").click();
   cy.get('[data-testid="lobby-codex"]').should("be.visible");
 }
 
 export function goToRealmSection(label) {
   openCodex();
   cy.contains("button", label).should("be.visible").click();
-  const expectedPage = label === "Jogadores" ? "players" : label === "Partida" ? "realm" : null;
+  const expectedPage = label === "Players" ? "players" : label === "Match" ? "realm" : null;
   if (expectedPage) cy.get('[data-testid="lobby-codex"]').should("have.attr", "data-book-page", expectedPage);
 }
 
 export function addBots(count) {
-  goToRealmSection("Jogadores");
+  goToRealmSection("Players");
   for (let index = 0; index < count; index += 1) {
     cy.get('[data-testid="add-bot"]').first().should("be.visible").click();
   }

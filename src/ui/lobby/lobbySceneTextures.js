@@ -1,3 +1,4 @@
+import { t } from "../../locales/i18n.js";
 import * as THREE from "three";
 import { SCROLL_CANVAS, paintWritOfSelection } from "./lobbyScrollArt.js";
 import { CHARACTERS } from "../../assets/characterManifest.js";
@@ -1309,7 +1310,7 @@ export function createRoomCodeTexture(code = "----", copied = false) {
     ctx.textAlign = "center";
     ctx.fillStyle = copied ? "#8cd684" : "#c79a4e";
     ctx.font = "600 30px serif";
-    ctx.fillText(copied ? "COPIADO" : "CÓDIGO DO REINO", width / 2, 84);
+    ctx.fillText(copied ? t("lobby.copiedTexture") : t("lobby.realmCodeTexture"), width / 2, 84);
 
     ctx.fillStyle = "#fbeecb";
     ctx.font = "bold 128px serif";

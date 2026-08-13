@@ -4,6 +4,7 @@ import ResourceIcon from "./hud/ResourceIcon.jsx";
 import { GAME_ACTION_ICONS } from "../../assets/gameUiIcons.js";
 import { cleanGameUiText } from "./gameTextPresentation.js";
 import GameRichText from "./GameRichText.jsx";
+import { t } from "../../locales/i18n.js";
 import "../../styles/game-story-toast.css";
 
 function DiceGainRow({ gain, game }) {
@@ -39,7 +40,7 @@ export default function GameStoryToast({ event, game, onDismiss }) {
         </div>
       )}
       <div className="rd-story-toast__copy">
-        <small>{isDice ? "Resultado dos dados" : "Acontecimento"}</small>
+        <small>{isDice ? t("story.diceResult") : t("story.event")}</small>
         <h3>{cleanGameUiText(event.title)}</h3>
         {!isDice && event.text && <p><GameRichText>{event.text}</GameRichText></p>}
         {isDice && Array.isArray(event.gains) && event.gains.length > 0 && (

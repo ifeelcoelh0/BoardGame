@@ -7,6 +7,7 @@ import { canStartLobby, LOBBY_START_INTRO_MS } from "../../game/lobbyRules.js";
 import { BOOK_SCOPE } from "./bookPages.js";
 import { CODEX_PHASE, codexLeaving, codexVisible, completeCodexRitual, initialCodexPhase, syncCodexPhase } from "./lobbyCodexFlow.js";
 import "../../styles/dragon-lobby.css";
+import { t } from "../../locales/i18n.js";
 import "../../styles/lobby-codex.css";
 
 /**
@@ -228,9 +229,9 @@ export default function LobbyExperience({
       />
 
       {codexPhase === CODEX_PHASE.SALON && !isSelectingCharacter && !isStarting && (
-        <div className="rd-entry-book-access" aria-label="Ações rápidas do salão">
+        <div className="rd-entry-book-access" aria-label={t("lobby.quickActions")}>
           <div className="rd-entry-book-access__actions">
-            <button type="button" className="is-codex" onClick={() => openBook(true)}>Abrir o códice</button>
+            <button type="button" className="is-codex" onClick={() => openBook(true)}>{t("lobby.openCodex")}</button>
             {realm && (
               <button
                 type="button"
@@ -238,7 +239,7 @@ export default function LobbyExperience({
                 onClick={realm.onToggleReady}
                 disabled={!realm.hasConfirmedCharacter}
               >
-                {realm.localPlayer?.ready ? "Pronto ✓" : "Estou pronto"}
+                {realm.localPlayer?.ready ? t("lobby.readyCheck") : t("lobby.iAmReady")}
               </button>
             )}
             {realm?.isHost && (
@@ -248,11 +249,11 @@ export default function LobbyExperience({
                 onClick={realm.onStart}
                 disabled={!realm.allReady}
               >
-                Começar partida
+                {t("lobby.startGame")}
               </button>
             )}
           </div>
-          <small>{realm?.localPlayer?.ready ? "A tua casa está pronta para a partida." : "O códice guarda os caminhos do salão."}</small>
+          <small>{realm?.localPlayer?.ready ? t("lobby.houseReady") : t("lobby.codexPaths")}</small>
         </div>
       )}
 

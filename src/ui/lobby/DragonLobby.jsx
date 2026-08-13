@@ -3,6 +3,7 @@ import { canStartLobby } from "../../game/lobbyRules.js";
 import { lobbyReconnectSeconds } from "../../game/playerPresence.js";
 import { LobbyChat } from "./LobbyPanels.jsx";
 import { createLobbyViewModel } from "./lobbyViewModel.js";
+import { t } from "../../locales/i18n.js";
 import "../../styles/dragon-lobby.css";
 
 export default function DragonLobby({
@@ -69,34 +70,34 @@ export default function DragonLobby({
           aria-hidden, por isso os cartões da mesa, as fichas de pronto e o
           pergaminho têm de existir aqui em texto e em botões reais. */}
       <div className="rd-lobby-sr" aria-live="polite">
-        <h2>Estado da sala</h2>
-        <p>Modo {mode.name}. Duração estimada {mode.duration}.{game.test ? " Reino de teste: 99 recursos para todos." : ""}</p>
-        {perk && <p>Poder da tua casa: {perk.n}. {perk.d}</p>}
+        <h2>{t("lobby.roomState")}</h2>
+        <p>{t("lobby.modeDuration", { mode: mode.name, duration: mode.duration })}{game.test ? t("lobby.testResources") : ""}</p>
+        {perk && <p>{t("lobby.yourHousePowerSr", { name: perk.n, description: perk.d })}</p>}
         {/* O <strong> não é decorativo: o lobby-flow.spec.js lê o código por
             getByTestId("room-code").locator("strong"). */}
         <button type="button" onClick={onCopyCode}>
-          {codeCopied ? "Código copiado do reino" : "Copiar código do reino"} <strong>{game.code}</strong>
+          {codeCopied ? t("lobby.codeCopiedSr") : t("lobby.copyCodeSr")} <strong>{game.code}</strong>
         </button>
         <ul>
           {slots.map((player, slot) => (
             <li key={player ? player.playerId || player.index : `empty-${slot}`}>
               {player ? (
                 <span data-testid="lobby-player-row">
-                  {`${player.index === 0 ? "Anfitrião" : player.controller === "bot" ? `Bot ${player.index}` : `Jogador ${player.index + 1}`}: ${player.character ? `${player.character.n}, ${player.character.t}` : "casa por escolher"}. ${player.connected === false ? `Desligado, lugar reservado ${lobbyReconnectSeconds(player, presenceNow) ?? 0} segundos.` : player.ready ? "Pronto." : "A preparar-se."}${player.index === seat ? " É o teu lugar." : ""}`}
+                  {`${player.index === 0 ? t("lobby.hostSr") : player.controller === "bot" ? t("lobby.botSr", { number: player.index }) : t("lobby.playerSr", { number: player.index + 1 })}: ${player.character ? `${player.character.n}, ${player.character.t}` : t("lobby.houseToChoose")}. ${player.connected === false ? t("lobby.disconnectedReserved", { seconds: lobbyReconnectSeconds(player, presenceNow) ?? 0 }) : player.ready ? t("lobby.readySentence") : t("lobby.preparingSentence")}${player.index === seat ? t("lobby.yourSeatSentence") : ""}`}
                   {isHost && player.index > 0 && (
                     <button
                       type="button"
                       onClick={() => onKickPlayer?.(player.playerId)}
-                      aria-label={`Remover ${player.character?.n ?? "jogador sem casa"} do lobby`}
+                      aria-label={t("lobby.removePlayerAria", { name: player.character?.n ?? t("lobby.playerWithoutHouse") })}
                     >
-                      {player.controller === "bot" ? "Remover bot" : "Expulsar"}
+                      {player.controller === "bot" ? t("lobby.removeBot") : t("lobby.kick")}
                     </button>
                   )}
                 </span>
               ) : (
                 <span>
-                  Lugar vazio.
-                  {isHost && <button type="button" onClick={onAddBot}>Adicionar bot</button>}
+                  {t("lobby.emptySeat")}
+                  {isHost && <button type="button" onClick={onAddBot}>{t("lobby.addBot")}</button>}
                 </span>
               )}
             </li>
@@ -104,27 +105,27 @@ export default function DragonLobby({
         </ul>
         {game.mode === "guerra" && (
           <button type="button" onClick={onTogglePerks} disabled={!isHost || isStarting}>
-            Poderes de casa {game.perksOn === false ? "desligados" : "ativos"} — alternar
+            {t("lobby.housePowersState", { state: game.perksOn === false ? t("lobby.disabledState") : t("lobby.activeState") })}
           </button>
         )}
         {isSelectingCharacter && (
           <>
-            <h3>Galeria das casas</h3>
+            <h3>{t("lobby.houseGallery")}</h3>
             {previewCharacter ? (
               <>
-                <p>{previewCharacter.n} — {previewCharacter.t}. {previewPerk ? `Poder da casa: ${previewPerk.n}. ${previewPerk.d}` : ""}</p>
-                <button type="button" onClick={() => confirmCharacter(previewCharacter.id)}>Selar o pacto com {previewCharacter.n}</button>
-                <button type="button" onClick={() => setPreviewCharacterId(null)}>Voltar à galeria</button>
+                <p>{previewCharacter.n} — {previewCharacter.t}. {previewPerk ? t("lobby.housePowerSentence", { name: previewPerk.n, description: previewPerk.d }) : ""}</p>
+                <button type="button" onClick={() => confirmCharacter(previewCharacter.id)}>{t("lobby.sealPact", { name: previewCharacter.n })}</button>
+                <button type="button" onClick={() => setPreviewCharacterId(null)}>{t("lobby.backGallery")}</button>
               </>
             ) : (
               characters.map((character) => {
                 const state = characterStates[character.id];
                 if (state?.status === "taken") {
-                  return <p key={character.id}>{character.n} já foi tomada por outro jogador.</p>;
+                  return <p key={character.id}>{t("lobby.houseTaken", { name: character.n })}</p>;
                 }
                 return (
                   <button key={character.id} type="button" onClick={() => setPreviewCharacterId(character.id)}>
-                    Ver {character.n}, {character.t}{state?.status === "local" ? " (a tua casa)" : ""}
+                    {t("lobby.viewHouse", { name: character.n, title: character.t, local: state?.status === "local" ? t("lobby.localHouseSuffix") : "" })}
                   </button>
                 );
               })
@@ -136,15 +137,15 @@ export default function DragonLobby({
       {isStarting && (
         <div className="rd-lobby-transition" aria-live="polite">
           <span className="rd-lobby-transition__sigil" aria-hidden="true">◆</span>
-          <small>OS REINOS ESTÃO REUNIDOS</small>
-          <strong>A mesa revela o vosso destino</strong>
+          <small>{t("lobby.realmsGathered")}</small>
+          <strong>{t("lobby.tableReveals")}</strong>
         </div>
       )}
       {toast && <div className="toast rd-lobby-toast">{toast.msg}</div>}
 
       <header className="rd-lobby-header">
-        <small>SALÃO DE PREPARAÇÃO</small>
-        <h1>REINOS DO DRAGÃO</h1>
+        <small>{t("lobby.preparationHall")}</small>
+        <h1>{t("lobby.gameTitle").toUpperCase()}</h1>
       </header>
 
 

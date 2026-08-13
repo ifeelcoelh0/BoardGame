@@ -5,6 +5,7 @@ import { CODEX_KEY_ACTION, codexKeyboardAction } from "./lobbyCodexFlow.js";
 import BookPager from "./BookPager.jsx";
 import { HomePage, ModePage, JoinPage, SavedRealmsPage } from "./pages/FoyerPages.jsx";
 import { RealmPage, PlayersPage, SettingsPage, RulesPage, DiagnosticsPage } from "./pages/RealmPages.jsx";
+import { t } from "../../locales/i18n.js";
 
 /*
    Códice do salão.
@@ -40,7 +41,7 @@ function CodexStatus({ status }) {
         </div>
       </article>
       <article className="rd-lobby-book-ui__page is-right">
-        <header className="rd-leaf__head"><small>AÇÕES</small><h2>O que podes fazer</h2></header>
+        <header className="rd-leaf__head"><small>{t("book.actions")}</small><h2>{t("book.whatCanDo")}</h2></header>
         <div className="rd-leaf__body">
           <div className="rd-lobby-book-ui__actions is-single-column">
             {status.actions?.map((action) => (
@@ -143,7 +144,7 @@ export default function LobbyCodex({
         className="rd-lobby-codex"
         role="dialog"
         aria-modal="true"
-        aria-label={scope === "realm" ? "Códice do reino" : "Códice dos reinos"}
+        aria-label={scope === "realm" ? t("book.realmCodex") : t("book.realmsCodex")}
         data-book-page={showStatus ? "status" : meta.id}
         data-book-scope={scope ?? "status"}
         data-testid="lobby-codex"
@@ -152,7 +153,7 @@ export default function LobbyCodex({
         <span className="rd-lobby-codex__binding" aria-hidden="true" />
 
         {showStatus ? (
-          <CodexStatus status={status ?? { chapter: "O SALÃO", title: "Um momento", message: "A preparar o salão…", actions: [] }} />
+          <CodexStatus status={status ?? { chapter: t("book.hall"), title: t("book.oneMoment"), message: t("book.preparingHall"), actions: [] }} />
         ) : (
           <div className="rd-lobby-book-ui__spread">
             <PageComponent
@@ -179,8 +180,8 @@ export default function LobbyCodex({
         )}
 
         {onClose && (
-          <button className="rd-lobby-book-ui__close" type="button" onClick={onClose} disabled={leaving} aria-label="Fechar o códice">
-            Fechar <span aria-hidden="true">×</span>
+          <button className="rd-lobby-book-ui__close" type="button" onClick={onClose} disabled={leaving} aria-label={t("book.closeCodex")}>
+            {t("common.close")} <span aria-hidden="true">×</span>
           </button>
         )}
       </section>

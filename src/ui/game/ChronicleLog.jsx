@@ -6,14 +6,15 @@ import { cleanGameUiText } from "./gameTextPresentation.js";
 import GameRichText from "./GameRichText.jsx";
 import ResourceIcon from "./hud/ResourceIcon.jsx";
 import { RESOURCE_DEFINITIONS } from "../../game/resources.js";
+import { t } from "../../locales/i18n.js";
 import "../../styles/chronicle-log.css";
 
 const FILTERS = Object.freeze([
-  ["all", "Todas"],
-  ["event", "Grandes eventos"],
-  ["war", "Guerra"],
-  ["trade", "Trocas"],
-  ["exploration", "Exploração"],
+  ["all", "chronicle.all"],
+  ["event", "chronicle.majorEvents"],
+  ["war", "chronicle.war"],
+  ["trade", "chronicle.trades"],
+  ["exploration", "chronicle.exploration"],
 ]);
 
 const CHRONICLE_ICON_BY_KIND = Object.freeze({
@@ -36,26 +37,26 @@ function chroniclePresentation(entry) {
 function resourceFlowLabel(resources = []) {
   const gain = resources.some((entry) => entry.amount > 0);
   const loss = resources.some((entry) => entry.amount < 0);
-  if (gain && loss) return "TROCA";
-  if (gain) return "RECEBEU";
-  if (loss) return "PAGOU";
+  if (gain && loss) return t("chronicle.trade");
+  if (gain) return t("chronicle.received");
+  if (loss) return t("chronicle.paid");
   return "";
 }
 
 function ChronicleResourceFlow({ resources = [] }) {
   if (!resources.length) return null;
   return (
-    <div className="rd-chronicle__resource-flow" aria-label="Movimento de recursos">
+    <div className="rd-chronicle__resource-flow" aria-label={t("chronicle.resourceMovement")}>
       <small>{resourceFlowLabel(resources)}</small>
       <div>
         {resources.map((entry, index) => {
           const positive = entry.amount > 0;
           const label = RESOURCE_DEFINITIONS[entry.resource]?.n || entry.resource;
           return (
-            <span key={`${entry.resource}-${index}`} className={positive ? "is-gain" : "is-loss"} title={`${positive ? "+" : ""}${entry.amount} ${label}`}>
+            <span key={`${entry.resource}-${index}`} className={positive ? "is-gain" : "is-loss"} title={`${positive ? "+" : ""}${entry.amount} ${t(label)}`}>
               <b>{positive ? "+" : "−"}{Math.abs(entry.amount)}</b>
               <ResourceIcon resource={entry.resource} size={22} />
-              <em>{label}</em>
+              <em>{t(label)}</em>
             </span>
           );
         })}
@@ -86,27 +87,27 @@ export default function ChronicleLog({ game, entries = [], onClose = null, embed
     <section className={`rd-chronicle${embedded ? " rd-chronicle--embedded" : ""}`} onClick={(event) => event.stopPropagation()}>
       <header className="rd-chronicle__header">
         <div>
-          <span className="rd-chronicle__kicker">Arquivo da partida</span>
-          <h3>Crónicas do Reino</h3>
+          <span className="rd-chronicle__kicker">{t("chronicle.archive")}</span>
+          <h3>{t("chronicle.title")}</h3>
         </div>
         <div className="rd-chronicle__header-actions">
-          <span className="rd-chronicle__count">{entries.length} registos</span>
-          {onClose && <button type="button" className="rd-chronicle__close" onClick={onClose} aria-label="Fechar crónicas">×</button>}
+          <span className="rd-chronicle__count">{t("chronicle.records", { count: entries.length })}</span>
+          {onClose && <button type="button" className="rd-chronicle__close" onClick={onClose} aria-label={t("chronicle.close")}>×</button>}
         </div>
       </header>
 
       {availableFilters.length > 1 && (
-        <nav className="rd-chronicle__filters" aria-label="Filtrar crónicas">
+        <nav className="rd-chronicle__filters" aria-label={t("chronicle.filter")}>
           {availableFilters.map(([key, label]) => (
             <button key={key} type="button" className={filter === key ? "is-active" : ""} onClick={() => setFilter(key)}>
-              {label}
+              {t(label)}
             </button>
           ))}
         </nav>
       )}
 
       <div className="rd-chronicle__scroll">
-        {visibleEntries.length === 0 && <p className="rd-chronicle__empty">Ainda não há acontecimentos registados.</p>}
+        {visibleEntries.length === 0 && <p className="rd-chronicle__empty">{t("chronicle.empty")}</p>}
         {visibleEntries.map((entry, index) => {
           const player = entryPlayer(game, entry);
           const message = chroniclePresentation(entry);
@@ -119,7 +120,7 @@ export default function ChronicleLog({ game, entries = [], onClose = null, embed
               <div className="rd-chronicle__sigil" aria-hidden="true"><GameIcon name={message.icon} size={22} alt="" /></div>
               <div className="rd-chronicle__body">
                 <div className="rd-chronicle__meta">
-                  <span>{player?.name || (entry.kind === "event" ? "Anais do Reino" : "Cronista")}</span>
+                  <span>{player?.name || (entry.kind === "event" ? t("chronicle.annals") : t("chronicle.chronicler"))}</span>
                   <i aria-hidden="true" />
                 </div>
                 <p><GameRichText>{message.text}</GameRichText></p>
@@ -134,7 +135,7 @@ export default function ChronicleLog({ game, entries = [], onClose = null, embed
 
   if (embedded) return chronicle;
   return (
-    <div className="rd-chronicle-overlay" role="dialog" aria-modal="true" aria-label="Crónicas do Reino" onClick={onClose || undefined}>
+    <div className="rd-chronicle-overlay" role="dialog" aria-modal="true" aria-label={t("chronicle.title")} onClick={onClose || undefined}>
       {chronicle}
     </div>
   );

@@ -1,3 +1,4 @@
+import { t } from "../../locales/i18n.js";
 import "../../styles/player-rail.css";
 
 /**
@@ -8,7 +9,7 @@ export default function PlayerRail({ children, embedded = false }) {
   return (
     <div
       className={`rd-player-rail${embedded ? " rd-player-rail--embedded" : ""}`}
-      aria-label="Casas do reino"
+      aria-label={t("hud.houses")}
     >
       {children}
     </div>

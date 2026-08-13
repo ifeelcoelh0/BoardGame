@@ -1,9 +1,9 @@
 import { startRealmWithBots } from "../helpers/lobby.js";
 
 const CORE_MODES = [
-  ["classico", "Modo Clássico"],
-  ["rapido", "Cerco Relâmpago"],
-  ["dragao", "Modo Dragão"],
+  ["classico", "Classic Mode"],
+  ["rapido", "Lightning Siege"],
+  ["dragao", "Dragon Mode"],
 ];
 
 describe("Modos-base", () => {

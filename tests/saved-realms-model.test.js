@@ -3,19 +3,20 @@ import assert from "node:assert/strict";
 import { formatSavedRealmDate, phaseLabel, savedRealmStatus, savedRealmSummary } from "../src/ui/lobby/savedRealmsModel.js";
 
 test("etapas guardadas recebem etiquetas legíveis", () => {
-  assert.equal(phaseLabel("lobby"), "No salão");
-  assert.equal(phaseLabel("play"), "Em partida");
-  assert.equal(phaseLabel("future"), "Estado desconhecido");
+  assert.equal(phaseLabel("lobby"), "In the hall");
+  assert.equal(phaseLabel("play"), "In match");
+  assert.equal(phaseLabel("future"), "Unknown state");
 });
 
 test("save inválido nunca pode ser retomado", () => {
-  assert.deepEqual(savedRealmStatus({ valid: false }), { label: "Save inválido", recoverable: false });
-  assert.deepEqual(savedRealmStatus({ valid: true, game: { phase: "setup" } }), { label: "A preparar o reino", recoverable: true });
+  assert.deepEqual(savedRealmStatus({ valid: false }), { label: "Invalid save", recoverable: false });
+  assert.deepEqual(savedRealmStatus({ valid: true, game: { phase: "setup" } }), { label: "Preparing the realm", recoverable: true });
 });
 
 test("datas inválidas têm fallback legível", () => {
-  assert.equal(formatSavedRealmDate("not-a-date"), "Data desconhecida");
-  assert.match(formatSavedRealmDate("2026-08-06T20:00:00.000Z"), /06/);
+  assert.equal(formatSavedRealmDate("not-a-date"), "Unknown date");
+  assert.match(formatSavedRealmDate("2026-08-06T20:00:00.000Z"), /6|8/);
+  assert.match(formatSavedRealmDate("2026-08-06T20:00:00.000Z", "pt-PT"), /06/);
 });
 
 test("arquivos recebem uma ficha editorial sem expor o schema à página", () => {
@@ -32,8 +33,8 @@ test("arquivos recebem uma ficha editorial sem expor o schema à página", () =>
     },
   });
   assert.equal(summary.code, "ABCDEF");
-  assert.equal(summary.statusLabel, "Em partida");
-  assert.equal(summary.modeLabel, "Guerra dos Reinos");
+  assert.equal(summary.statusLabel, "In match");
+  assert.equal(summary.modeLabel, "War of the Realms");
   assert.equal(summary.playerCount, 3);
   assert.equal(summary.round, 7);
   assert.equal(summary.appVersion, "0.99.34");
@@ -44,5 +45,6 @@ test("arquivos recebem uma ficha editorial sem expor o schema à página", () =>
 test("partidas terminadas são contadas como concluídas", () => {
   const summary = savedRealmSummary({ valid: true, phase: "ended", game: { phase: "ended", mode: "dragao", players: [] } });
   assert.equal(summary.concluded, true);
-  assert.equal(summary.statusLabel, "Partida terminada");
+  assert.equal(summary.statusLabel, "Completed");
 });
+
