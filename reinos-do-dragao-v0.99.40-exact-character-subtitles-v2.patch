@@ -1,0 +1,1929 @@
+diff --git a/src/audio/audioSystem.js b/src/audio/audioSystem.js
+index 79b7a17..f65cf0c 100644
+--- a/src/audio/audioSystem.js
++++ b/src/audio/audioSystem.js
+@@ -1,654 +1,688 @@
+-import { normalizeDiagnosticError, recordDiagnostic } from "../diagnostics/diagnostics.js";
+-import { emoteVoiceEvent, voiceSoundKey } from "./characterAudio.js";
+-import { AudioBufferCache } from "./audioBufferCache.js";
+-import { MusicPlaybackController } from "./musicPlaybackController.js";
+-import { MUSIC_SCENE } from "./musicCatalog.js";
+-import { AUDIO_GROUP, audioPolicyForEffect, createAudioTriggerGate, normalizeAudioCue } from "./audioPlaybackPolicy.js";
+-import {
+-  AUDIO_SOUND_ALIASES as SND_ALIAS,
+-  AUDIO_SOUNDS as SND,
+-  shouldPrimeSoundKey,
+-} from "./audioManifest.js";
+-
+-export const AudioSys = (() => {
+-    let ctx = null, started = false, step = 0, proceduralTimer = null;
+-    const S = { muted: false, musicVolume: 1, effectsVolume: 1, voicesVolume: 1 };
+-    const channelGains = new Map();
+-    const triggerGate = createAudioTriggerGate();
+-    const activeSampleGroups = new Map();
+-    let troopSequenceToken = 0;
+-    const ac = () => {
+-        if (!ctx) {
+-            const C = window.AudioContext || window.webkitAudioContext;
+-            if (!C)
+-                return null;
+-            ctx = new C();
+-        }
+-        if (ctx && ctx.state === "suspended")
+-            ctx.resume();
+-        return ctx;
+-    };
+-    const bus = (c) => {
+-        if (!c.__bus) {
+-            const b = c.createDynamicsCompressor();
+-            b.threshold.value = -16;
+-            b.knee.value = 18;
+-            b.ratio.value = 5;
+-            b.attack.value = 4e-3;
+-            b.release.value = 0.18;
+-            b.connect(c.destination);
+-            c.__bus = b;
+-        }
+-        return c.__bus;
+-    };
+-    const channelBus = (c, channel = "effects") => {
+-        const key = `${channel}`;
+-        let gain = channelGains.get(key);
+-        if (!gain) {
+-            gain = c.createGain();
+-            gain.connect(bus(c));
+-            channelGains.set(key, gain);
+-        }
+-        const volume = channel === "voices" ? S.voicesVolume : S.effectsVolume;
+-        gain.gain.value = S.muted ? 0 : volume;
+-        return gain;
+-    };
+-    const updateChannelVolumes = () => {
+-        for (const [channel, gain] of channelGains.entries()) {
+-            const volume = channel === "voices" ? S.voicesVolume : S.effectsVolume;
+-            gain.gain.value = S.muted ? 0 : volume;
+-        }
+-        if (musicPlayback) {
+-            musicPlayback.setVolume(S.musicVolume);
+-            musicPlayback.setMuted(S.muted || S.musicVolume <= 0);
+-        }
+-    };
+-    function tone(f, dur, type, vol, delay, slideTo) {
+-        if (S.muted)
+-            return;
+-        const c = ac();
+-        if (!c)
+-            return;
+-        const t0 = c.currentTime + (delay || 0);
+-        const o = c.createOscillator();
+-        o.type = type;
+-        o.frequency.setValueAtTime(f, t0);
+-        if (slideTo)
+-            o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+-        const g = c.createGain();
+-        g.gain.setValueAtTime(1e-4, t0);
+-        g.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+-        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
+-        o.connect(g);
+-        g.connect(channelBus(c, "effects"));
+-        o.start(t0);
+-        o.stop(t0 + dur + 0.06);
+-    }
+-    function noise(dur, vol, freq, delay) {
+-        if (S.muted)
+-            return;
+-        const c = ac();
+-        if (!c)
+-            return;
+-        const t0 = c.currentTime + (delay || 0);
+-        const len = Math.max(1, Math.floor(c.sampleRate * dur));
+-        const buf = c.createBuffer(1, len, c.sampleRate);
+-        const d = buf.getChannelData(0);
+-        for (let i = 0; i < len; i++)
+-            d[i] = Math.random() * 2 - 1;
+-        const srcN = c.createBufferSource();
+-        srcN.buffer = buf;
+-        const fl = c.createBiquadFilter();
+-        fl.type = "lowpass";
+-        fl.frequency.value = freq;
+-        const g = c.createGain();
+-        g.gain.setValueAtTime(vol, t0);
+-        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
+-        srcN.connect(fl);
+-        fl.connect(g);
+-        g.connect(channelBus(c, "effects"));
+-        srcN.start(t0);
+-    }
+-    function swoosh(dur, vol, f0, f1, q, delay) {
+-        if (S.muted)
+-            return;
+-        const c = ac();
+-        if (!c)
+-            return;
+-        const t0 = c.currentTime + (delay || 0);
+-        const len = Math.max(1, Math.floor(c.sampleRate * dur));
+-        const buf = c.createBuffer(1, len, c.sampleRate);
+-        const d = buf.getChannelData(0);
+-        for (let i = 0; i < len; i++)
+-            d[i] = Math.random() * 2 - 1;
+-        const srcN = c.createBufferSource();
+-        srcN.buffer = buf;
+-        const fl = c.createBiquadFilter();
+-        fl.type = "bandpass";
+-        fl.Q.value = q || 1.2;
+-        fl.frequency.setValueAtTime(Math.max(40, f0), t0);
+-        fl.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t0 + dur);
+-        const g = c.createGain();
+-        g.gain.setValueAtTime(1e-4, t0);
+-        g.gain.exponentialRampToValueAtTime(vol, t0 + Math.min(0.03, dur * 0.25));
+-        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
+-        srcN.connect(fl);
+-        fl.connect(g);
+-        g.connect(channelBus(c, "effects"));
+-        srcN.start(t0);
+-    }
+-    function growl(dur, vol, fStart, fPeak, fEnd, delay) {
+-        if (S.muted)
+-            return;
+-        const c = ac();
+-        if (!c)
+-            return;
+-        const t0 = c.currentTime + (delay || 0);
+-        const sh = c.createWaveShaper();
+-        const curve = new Float32Array(256);
+-        for (let i = 0; i < 256; i++)
+-            curve[i] = Math.tanh(3.2 * (i / 128 - 1));
+-        sh.curve = curve;
+-        const g = c.createGain();
+-        g.gain.setValueAtTime(1e-4, t0);
+-        g.gain.exponentialRampToValueAtTime(vol, t0 + 0.09);
+-        g.gain.setValueAtTime(vol, t0 + dur * 0.6);
+-        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
+-        const trem = c.createGain();
+-        trem.gain.value = 1;
+-        const lfo = c.createOscillator();
+-        lfo.frequency.value = 12 + Math.random() * 5;
+-        const lfoG = c.createGain();
+-        lfoG.gain.value = 0.35;
+-        lfo.connect(lfoG);
+-        lfoG.connect(trem.gain);
+-        [0, 7.3].forEach((det) => {
+-            const o = c.createOscillator();
+-            o.type = "sawtooth";
+-            o.frequency.setValueAtTime(Math.max(20, fStart + det), t0);
+-            o.frequency.exponentialRampToValueAtTime(Math.max(20, fPeak + det), t0 + 0.16);
+-            o.frequency.exponentialRampToValueAtTime(Math.max(20, fEnd + det), t0 + dur);
+-            o.connect(sh);
+-            o.start(t0);
+-            o.stop(t0 + dur + 0.05);
+-        });
+-        sh.connect(trem);
+-        trem.connect(g);
+-        g.connect(channelBus(c, "effects"));
+-        lfo.start(t0);
+-        lfo.stop(t0 + dur + 0.05);
+-    }
+-    const bufferCache = new AudioBufferCache();
+-    async function loadDecodedBuffer(uri, audioContext) {
+-        return bufferCache.getOrLoad(uri, async () => {
+-            const response = await fetch(uri);
+-            if (!response.ok)
+-                throw new Error(`Falha HTTP ${response.status} ao carregar áudio.`);
+-            const encoded = await response.arrayBuffer();
+-            return audioContext.decodeAudioData(encoded);
+-        });
+-    }
+-    let ambientName = null;
+-    let ambientSource = null;
+-    let ambientGain = null;
+-    let ambientToken = 0;
+-    function stopAmbientSource() {
+-        ambientToken += 1;
+-        if (ambientSource) {
+-            try {
+-                ambientSource.stop();
+-            }
+-            catch {
+-            }
+-            ambientSource.disconnect();
+-            ambientSource = null;
+-        }
+-        if (ambientGain) {
+-            ambientGain.disconnect();
+-            ambientGain = null;
+-        }
+-    }
+-    function syncAmbient() {
+-        stopAmbientSource();
+-        if (!ambientName || S.muted)
+-            return;
+-        const list = typeof SND !== "undefined" && SND[ambientName];
+-        const c = ac();
+-        if (!c || !list?.length)
+-            return;
+-        const name = ambientName;
+-        const uri = list[0];
+-        const token = ambientToken;
+-        const startBuffer = (buf) => {
+-            if (token !== ambientToken || ambientName !== name || S.muted)
+-                return;
+-            const source = c.createBufferSource();
+-            const gain = c.createGain();
+-            source.buffer = buf;
+-            source.loop = true;
+-            gain.gain.value = name === "lobbyFireplace" ? 0.24 : 0.3;
+-            source.connect(gain);
+-            gain.connect(channelBus(c, "effects"));
+-            source.start();
+-            ambientSource = source;
+-            ambientGain = gain;
+-        };
+-        const cached = bufferCache.get(uri);
+-        if (cached) {
+-            startBuffer(cached);
+-            return;
+-        }
+-        loadDecodedBuffer(uri, c)
+-            .then(startBuffer)
+-            .catch((error) => reportDecodeFailure(uri, error));
+-    }
+-    function stopSampleGroup(group) {
+-        const active = activeSampleGroups.get(group);
+-        if (!active) return;
+-        for (const source of [...active]) {
+-            try { source.stop(); } catch {}
+-            try { source.disconnect(); } catch {}
+-        }
+-        active.clear();
+-        activeSampleGroups.delete(group);
+-    }
+-    function playSample(name, vol, delay, onDur, options = {}) {
+-        if (S.muted)
+-            return true;
+-        const list = typeof SND !== "undefined" && (SND[name] || SND[SND_ALIAS[name]]);
+-        if (!list || !list.length)
+-            return false;
+-        const c = ac();
+-        if (!c)
+-            return false;
+-        const idx = Math.floor(Math.random() * list.length);
+-        const uri = list[idx];
+-        const requestedAt = performance.now();
+-        const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : 1400;
+-        const group = options.group || null;
+-        const replace = options.replace === true;
+-        const maxVoices = Number.isFinite(options.maxVoices) ? Math.max(1, options.maxVoices) : Infinity;
+-        const go = (buf) => {
+-            if (performance.now() - requestedAt > ttlMs) return;
+-            if (group && replace) stopSampleGroup(group);
+-            const active = group ? (activeSampleGroups.get(group) || new Set()) : null;
+-            if (active && active.size >= maxVoices) return;
+-            const srcS = c.createBufferSource();
+-            srcS.buffer = buf;
+-            const g = c.createGain();
+-            g.gain.value = vol || 1;
+-            srcS.connect(g);
+-            g.connect(channelBus(c, group === AUDIO_GROUP.VOICE ? "voices" : "effects"));
+-            if (active) {
+-                active.add(srcS);
+-                activeSampleGroups.set(group, active);
+-                srcS.onended = () => {
+-                    active.delete(srcS);
+-                    if (!active.size) activeSampleGroups.delete(group);
+-                    try { srcS.disconnect(); } catch {}
+-                    try { g.disconnect(); } catch {}
+-                };
+-            }
+-            srcS.start(c.currentTime + (delay || 0));
+-            if (onDur)
+-                onDur(buf.duration);
+-        };
+-        const cached = bufferCache.get(uri);
+-        if (cached) {
+-            go(cached);
+-            return true;
+-        }
+-        loadDecodedBuffer(uri, c)
+-            .then(go)
+-            .catch((error) => reportDecodeFailure(uri, error));
+-        return true;
+-    }
+-    function playSampleSeries(names, vol = 1, token = troopSequenceToken) {
+-        const queue = [...names];
+-        const next = () => {
+-            if (token !== troopSequenceToken) return;
+-            const name = queue.shift();
+-            if (!name) return;
+-            if (!playSample(name, vol, 0, (duration) => {
+-                const delayMs = Math.max(0, duration * 1000 - 35);
+-                window.setTimeout(next, delayMs);
+-            }, { ttlMs: 1800 })) next();
+-        };
+-        next();
+-    }
+-    function playTroopCard(subtype) {
+-        if (!triggerGate.allow("card")) return false;
+-        troopSequenceToken += 1;
+-        const token = troopSequenceToken;
+-        if (subtype === "cavaleiro") {
+-            playSample("troopCardKnightHorse", 0.9, 0, null, { ttlMs: 1600 });
+-            playSampleSeries(["troopCardKnightSword1", "troopCardKnightSword2", "troopCardKnightSword3"], 1, token);
+-            return true;
+-        }
+-        if (subtype === "arqueiro") {
+-            return playSample("troopCardArcher", 1, 0, null, { ttlMs: 1800 });
+-        }
+-        if (subtype === "catapulta") return playSample("troopCardCatapult", 1, 0, null, { ttlMs: 1800 });
+-        return false;
+-    }
+-    let musicPlayback = null;
+-    let desiredMusicScene = MUSIC_SCENE.LOBBY;
+-    function ensureMusicPlayback(c) {
+-        if (musicPlayback) return musicPlayback;
+-        try {
+-            musicPlayback = new MusicPlaybackController({ audioContext: c, destination: bus(c) });
+-            musicPlayback.setVolume(S.musicVolume);
+-            musicPlayback.setMuted(S.muted || S.musicVolume <= 0);
+-            musicPlayback.setScene(desiredMusicScene, { immediate: true });
+-            return musicPlayback;
+-        } catch (error) {
+-            recordDiagnostic("music-start-failed", normalizeDiagnosticError(error));
+-            return null;
+-        }
+-    }
+-    function startMusic() {
+-        const c = ac();
+-        const player = c ? ensureMusicPlayback(c) : null;
+-        if (!player) return;
+-        player.setScene(desiredMusicScene, { immediate: true });
+-        player.start();
+-    }
+-    /* Loops de ambiente são longos e só um está ativo de cada vez. O
+-       syncAmbient carrega-os quando são precisos, portanto não vale a pena
+-       aquecê-los no arranque. */
+-    let decodeFailureReported = false;
+-    function reportDecodeFailure(uri, error) {
+-        /* O `.catch(() => {})` que aqui estava é a razão pela qual ninguém
+-           reparou que os 67 ficheiros Ogg Vorbis eram silenciosos em Safari.
+-           Uma falha de descodificação é um problema de formato, não de rede, e
+-           tem de ser visível. Reporta-se uma vez por sessão para não encher o
+-           localStorage quando falham dezenas de ficheiros pela mesma razão. */
+-        if (decodeFailureReported)
+-            return;
+-        decodeFailureReported = true;
+-        recordDiagnostic("audio-decode-failed", { uri, ...normalizeDiagnosticError(error) });
+-    }
+-    function primeSamples() {
+-        if (typeof SND === "undefined")
+-            return;
+-        const c = ac();
+-        if (!c)
+-            return;
+-        const queue = [];
+-        const queued = new Set();
+-        for (const name of Object.keys(SND)) {
+-            if (name.startsWith("voice_event_") || !shouldPrimeSoundKey(name))
+-                continue;
+-            for (const uri of SND[name]) {
+-                if (!queued.has(uri) && !bufferCache.has(uri) && !bufferCache.isLoading(uri)) {
+-                    queued.add(uri);
+-                    queue.push(uri);
+-                }
+-            }
+-        }
+-        /* Antes eram cerca de 90 fetch simultâneos no arranque, o que satura a
+-           fila de pedidos do browser e compete com o carregamento do lobby 3D.
+-           Quatro em paralelo enche a cache sem bloquear o resto. */
+-        let active = 0;
+-        const pump = () => {
+-            while (active < 4 && queue.length) {
+-                const uri = queue.shift();
+-                active += 1;
+-                loadDecodedBuffer(uri, c)
+-                    .catch((error) => reportDecodeFailure(uri, error))
+-                    .finally(() => {
+-                        active -= 1;
+-                        pump();
+-                    });
+-            }
+-        };
+-        pump();
+-    }
+-    function metal(fs, dur, vol, delay) {
+-        fs.forEach((f, i) => tone(f, dur * (1 - i * 0.12), "triangle", vol * Math.pow(0.72, i), delay || 0));
+-    }
+-    const FX = {
+-        tap: () => tone(700, 0.05, "square", 0.06),
+-        dice: () => {
+-            playSample("diceShake", 0.95, 0, (d) => playSample("diceThrow", 1, Math.max(0.1, d - 0.22)));
+-        },
+-        coin: () => {
+-            playSample("coinDrop", 0.85);
+-        },
+-        build: () => {
+-            playSample("buildHit", 0.85);
+-        },
+-        card: () => {
+-            playSample("cardSlide", 0.8);
+-        },
+-        bad: () => {
+-            tone(311, 0.22, "sawtooth", 0.13, 0, 196);
+-            tone(155, 0.3, "sawtooth", 0.11, 0.05);
+-        },
+-        dragon: () => {
+-            playSample("dragonRoar", 0.72);
+-        },
+-        disaster: () => {
+-            growl(1.5, 0.26, 70, 90, 30, 0);
+-            swoosh(1.4, 0.2, 500, 60, 0.6, 0.05);
+-            tone(49, 1.3, "sine", 0.22, 0.1, 30);
+-        },
+-        tsunami: () => { playSample("tsunami", 0.92); },
+-        lobbyStart: () => { playSample("lobbyStart", 0.9); },
+-        lobbySignature: () => { playSample("lobbySignature", 0.82, 0, null, { group: AUDIO_GROUP.UI, replace: true, ttlMs: 1400 }); },
+-        uiClick: () => { playSample("uiClick", 0.5, 0, null, { group: AUDIO_GROUP.UI, replace: true, ttlMs: 550 }); },
+-        yourTurn: () => { playSample("yourTurn", 1, 0, null, { group: AUDIO_GROUP.CEREMONIAL, replace: true, ttlMs: 1700 }); },
+-        tradeOffer: () => { playSample("tradeOffer", 1, 0, null, { group: AUDIO_GROUP.GAME, maxVoices: 1, ttlMs: 1300 }); },
+-        disasterGreed: () => { playSample("disasterGreed", 0.72, 0, null, { group: AUDIO_GROUP.CEREMONIAL, replace: true, ttlMs: 3400 }); },
+-        disasterPlague: () => { playSample("disasterPlague", 0.76, 0, null, { group: AUDIO_GROUP.CEREMONIAL, replace: true, ttlMs: 2400 }); },
+-        disasterTribute: () => { playSample("disasterTribute", 0.74, 0, null, { group: AUDIO_GROUP.CEREMONIAL, replace: true, ttlMs: 2600 }); },
+-        lobbyBook: () => { playSample("lobbyBook", 0.72, 0, null, { group: AUDIO_GROUP.UI, replace: true, ttlMs: 900 }); },
+-        swordP: () => {
+-            playSample("swordHit", 1.25);
+-        },
+-        bowP: () => {
+-            playSample("arrowHit", 1.25);
+-        },
+-        catP: () => {
+-            playSample("catCreak", 1.1);
+-        },
+-        award: () => {
+-            playSample("harp", 0.95);
+-        },
+-        flap: () => {
+-            playSample("dragonFlap", 0.85);
+-        },
+-        swoop: () => {
+-            playSample("swoop", 0.95);
+-        },
+-        chatpop: () => {
+-            tone(880, 0.06, "sine", 0.1);
+-            tone(1174, 0.09, "sine", 0.09, 0.06);
+-        },
+-        deal: () => {
+-            tone(659, 0.09, "sine", 0.13);
+-            tone(987, 0.16, "sine", 0.11, 0.09);
+-            playSample("coinDrop", 0.45, 0.16);
+-        },
+-        clash: () => {
+-            metal([2489, 3729, 5274, 6270], 0.34, 0.16);
+-            swoosh(0.07, 0.3, 5e3, 2e3, 1, 0);
+-            noise(0.12, 0.22, 200, 0.02);
+-            metal([1975, 2960], 0.22, 0.08, 0.1);
+-        },
+-        arrow: () => {
+-            swoosh(0.22, 0.26, 3400, 700, 2.2, 0);
+-            tone(210, 0.05, "square", 0.14, 0.2);
+-            noise(0.06, 0.18, 400, 0.2);
+-        },
+-        catapult: () => {
+-            growl(0.28, 0.16, 120, 80, 55, 0);
+-            swoosh(0.4, 0.24, 500, 2200, 1, 0.22);
+-            noise(0.18, 0.34, 130, 0.62);
+-            tone(55, 0.3, "sine", 0.24, 0.62, 34);
+-        },
+-        horn: () => {
+-            [130.8, 155.6].forEach((f, i) => {
+-                tone(f, 1.1, "sawtooth", 0.12, i * 0.05);
+-                tone(f * 2, 1, "sawtooth", 0.06, i * 0.05);
+-            });
+-            swoosh(0.9, 0.06, 700, 300, 0.8, 0.1);
+-        },
+-        bell: () => {
+-            metal([659, 1318, 1975, 2637], 0.9, 0.14);
+-            metal([880, 1760], 0.7, 0.08, 0.28);
+-        },
+-        march: () => {
+-            noise(0.05, 0.2, 900, 0);
+-            noise(0.05, 0.16, 900, 0.14);
+-            tone(98, 0.12, "triangle", 0.16, 0.14);
+-            noise(0.07, 0.22, 700, 0.3);
+-        },
+-        fanfare: () => {
+-            playSample("fanfareWin", 0.9);
+-        }
+-    };
+-    const ROOTS = [110, 98, 87.31, 82.41];
+-    const MODE = [0, 2, 3, 5, 7, 8, 10, 12];
+-    const PAT = [0, 4, 2, 5, 4, 7, 5, 2, 0, 4, 2, 6, 7, 5, 4, 2];
+-    function tick() {
+-        if (S.muted || document.hidden || typeof SND !== "undefined" && SND.music) {
+-            step++;
+-            return;
+-        }
+-        const bar = Math.floor(step / 16) % 4;
+-        if (step % 16 === 0) {
+-            tone(ROOTS[bar], 4.4, "sine", 0.038);
+-            tone(ROOTS[bar] * 1.5, 4.4, "sine", 0.024);
+-            noise(0.09, 0.09, 140);
+-        }
+-        if (step % 16 === 8)
+-            noise(0.06, 0.055, 200);
+-        const deg = PAT[step % 16];
+-        if (step % 2 === 0 || Math.random() < 0.35) {
+-            const f = 220 * Math.pow(2, MODE[deg % 8] / 12) * (deg >= 8 ? 2 : 1);
+-            tone(f, 0.36, "triangle", 0.048);
+-            if (Math.random() < 0.15)
+-                tone(f * 2, 0.3, "sine", 0.018, 0.03);
+-        }
+-        step++;
+-    }
+-    return {
+-        get muted() {
+-            return S.muted;
+-        },
+-        get volumes() {
+-            return { music: S.musicVolume, effects: S.effectsVolume, voices: S.voicesVolume };
+-        },
+-        configure(values = {}) {
+-            const clamp = (value, fallback) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(1, Number(value))) : fallback;
+-            S.musicVolume = clamp(values.musicVolume, S.musicVolume);
+-            S.effectsVolume = clamp(values.effectsVolume, S.effectsVolume);
+-            S.voicesVolume = clamp(values.voicesVolume, S.voicesVolume);
+-            updateChannelVolumes();
+-            return this.volumes;
+-        },
+-        setMuted(value) {
+-            const next = value === true;
+-            if (S.muted === next) return S.muted;
+-            S.muted = next;
+-            if (!S.muted) ac();
+-            updateChannelVolumes();
+-            musicPlayback?.setMuted(S.muted || S.musicVolume <= 0);
+-            syncAmbient();
+-            return S.muted;
+-        },
+-        toggle() {
+-            S.muted = !S.muted;
+-            if (!S.muted)
+-                ac();
+-            updateChannelVolumes();
+-            /* Silenciar tem de parar o elemento, não só baixar o ganho: em
+-               streaming, ganho 0 continua a descarregar o ficheiro inteiro e a
+-               descodificar em contínuo. */
+-            musicPlayback?.setMuted(S.muted || S.musicVolume <= 0);
+-            syncAmbient();
+-            return S.muted;
+-        },
+-        play(n) {
+-            if (n && n.indexOf("emv:") === 0) {
+-                if (!triggerGate.allow("voice")) return false;
+-                const pp = n.split(":");
+-                const event = emoteVoiceEvent(pp[2]);
+-                const key = event && voiceSoundKey(pp[1], event);
+-                const voiceOptions = { group: AUDIO_GROUP.VOICE, replace: true, ttlMs: 2200 };
+-                if (key && playSample(key, 0.95, 0, null, voiceOptions)) return true;
+-                if (playSample("em_" + pp[1] + "_" + pp[2], 0.9, 0, null, voiceOptions)) return true;
+-                if (playSample("voice_" + pp[1], 0.9, 0, null, voiceOptions)) return true;
+-                FX.card();
+-                return true;
+-            }
+-            if (n && n.indexOf("voice_") === 0) {
+-                if (!triggerGate.allow("voice")) return false;
+-                if (!playSample(n, 0.9, 0, null, { group: AUDIO_GROUP.VOICE, replace: true, ttlMs: 2200 }))
+-                    FX.card();
+-                return true;
+-            }
+-            if (!FX[n] || !triggerGate.allow(n)) return false;
+-            FX[n]();
+-            return true;
+-        },
+-        playCue(value) {
+-            const cue = normalizeAudioCue(value);
+-            if (!cue) return false;
+-            let played = false;
+-            if (cue.sfx) played = this.play(cue.sfx) || played;
+-            if (cue.troop) played = playTroopCard(cue.troop) || played;
+-            if (cue.voice) played = this.playVoice(cue.voice.character, cue.voice.event) || played;
+-            return played;
+-        },
+-        playVoice(character, event) {
+-            if (!triggerGate.allow("voice")) return false;
+-            const key = voiceSoundKey(character, event);
+-            return !!(key && playSample(key, 0.95, 0, null, { group: AUDIO_GROUP.VOICE, replace: true, ttlMs: 2200 }));
+-        },
+-        playTroopCard,
+-        setMusicScene(scene) {
+-            if (!Object.values(MUSIC_SCENE).includes(scene)) return false;
+-            desiredMusicScene = scene;
+-            return musicPlayback ? musicPlayback.setScene(scene) : true;
+-        },
+-        beginGameEntryMusic() { musicPlayback?.beginGameEntry(); },
+-        cancelGameEntryMusic() { musicPlayback?.cancelGameEntry(); },
+-        getMusicSnapshot() { return musicPlayback?.snapshot?.() || { scene: desiredMusicScene, started: false }; },
+-        setAmbient(name) { ambientName = name || null; syncAmbient(); },
+-        clearAmbient(name) { if (name && ambientName !== name) return; ambientName = null; stopAmbientSource(); },
+-        start() {
+-            const c = ac();
+-            if (!c || started)
+-                return;
+-            started = true;
+-            primeSamples();
+-            startMusic();
+-            syncAmbient();
+-            /* O `tick` é a música procedural de fallback e a primeira coisa que
+-               faz é desistir se `SND.music` existir. Como existe sempre, este
+-               intervalo acordava a cada 265 ms para incrementar um contador e
+-               nunca era limpo. Agora só arranca se não houver música gravada. */
+-            if (typeof SND === "undefined" || !SND.music)
+-                proceduralTimer = setInterval(tick, 265);
+-        },
+-        stop() {
+-            if (proceduralTimer != null) {
+-                clearInterval(proceduralTimer);
+-                proceduralTimer = null;
+-            }
+-            musicPlayback?.stop();
+-            musicPlayback = null;
+-            desiredMusicScene = MUSIC_SCENE.LOBBY;
+-            stopAmbientSource();
+-            for (const gain of channelGains.values()) { try { gain.disconnect(); } catch {} }
+-            channelGains.clear();
+-            troopSequenceToken += 1;
+-            for (const group of [...activeSampleGroups.keys()]) stopSampleGroup(group);
+-            triggerGate.reset();
+-            bufferCache.clear();
+-            started = false;
+-        }
+-    };
+-})();
++import { normalizeDiagnosticError, recordDiagnostic } from "../diagnostics/diagnostics.js";
++import {
++  CHARACTER_VOICE_PLAY_EVENT,
++  emoteVoiceEvent,
++  pickVoiceVariant,
++  voiceSoundKey,
++} from "./characterAudio.js";
++import { AudioBufferCache } from "./audioBufferCache.js";
++import { MusicPlaybackController } from "./musicPlaybackController.js";
++import { MUSIC_SCENE } from "./musicCatalog.js";
++import { AUDIO_GROUP, audioPolicyForEffect, createAudioTriggerGate, normalizeAudioCue } from "./audioPlaybackPolicy.js";
++import {
++  AUDIO_SOUND_ALIASES as SND_ALIAS,
++  AUDIO_SOUNDS as SND,
++  shouldPrimeSoundKey,
++} from "./audioManifest.js";
++
++export const AudioSys = (() => {
++    let ctx = null, started = false, step = 0, proceduralTimer = null;
++    const S = { muted: false, musicVolume: 1, effectsVolume: 1, voicesVolume: 1 };
++    const channelGains = new Map();
++    const triggerGate = createAudioTriggerGate();
++    const activeSampleGroups = new Map();
++    let troopSequenceToken = 0;
++    const ac = () => {
++        if (!ctx) {
++            const C = window.AudioContext || window.webkitAudioContext;
++            if (!C)
++                return null;
++            ctx = new C();
++        }
++        if (ctx && ctx.state === "suspended")
++            ctx.resume();
++        return ctx;
++    };
++    const bus = (c) => {
++        if (!c.__bus) {
++            const b = c.createDynamicsCompressor();
++            b.threshold.value = -16;
++            b.knee.value = 18;
++            b.ratio.value = 5;
++            b.attack.value = 4e-3;
++            b.release.value = 0.18;
++            b.connect(c.destination);
++            c.__bus = b;
++        }
++        return c.__bus;
++    };
++    const channelBus = (c, channel = "effects") => {
++        const key = `${channel}`;
++        let gain = channelGains.get(key);
++        if (!gain) {
++            gain = c.createGain();
++            gain.connect(bus(c));
++            channelGains.set(key, gain);
++        }
++        const volume = channel === "voices" ? S.voicesVolume : S.effectsVolume;
++        gain.gain.value = S.muted ? 0 : volume;
++        return gain;
++    };
++    const updateChannelVolumes = () => {
++        for (const [channel, gain] of channelGains.entries()) {
++            const volume = channel === "voices" ? S.voicesVolume : S.effectsVolume;
++            gain.gain.value = S.muted ? 0 : volume;
++        }
++        if (musicPlayback) {
++            musicPlayback.setVolume(S.musicVolume);
++            musicPlayback.setMuted(S.muted || S.musicVolume <= 0);
++        }
++    };
++    function tone(f, dur, type, vol, delay, slideTo) {
++        if (S.muted)
++            return;
++        const c = ac();
++        if (!c)
++            return;
++        const t0 = c.currentTime + (delay || 0);
++        const o = c.createOscillator();
++        o.type = type;
++        o.frequency.setValueAtTime(f, t0);
++        if (slideTo)
++            o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
++        const g = c.createGain();
++        g.gain.setValueAtTime(1e-4, t0);
++        g.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
++        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
++        o.connect(g);
++        g.connect(channelBus(c, "effects"));
++        o.start(t0);
++        o.stop(t0 + dur + 0.06);
++    }
++    function noise(dur, vol, freq, delay) {
++        if (S.muted)
++            return;
++        const c = ac();
++        if (!c)
++            return;
++        const t0 = c.currentTime + (delay || 0);
++        const len = Math.max(1, Math.floor(c.sampleRate * dur));
++        const buf = c.createBuffer(1, len, c.sampleRate);
++        const d = buf.getChannelData(0);
++        for (let i = 0; i < len; i++)
++            d[i] = Math.random() * 2 - 1;
++        const srcN = c.createBufferSource();
++        srcN.buffer = buf;
++        const fl = c.createBiquadFilter();
++        fl.type = "lowpass";
++        fl.frequency.value = freq;
++        const g = c.createGain();
++        g.gain.setValueAtTime(vol, t0);
++        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
++        srcN.connect(fl);
++        fl.connect(g);
++        g.connect(channelBus(c, "effects"));
++        srcN.start(t0);
++    }
++    function swoosh(dur, vol, f0, f1, q, delay) {
++        if (S.muted)
++            return;
++        const c = ac();
++        if (!c)
++            return;
++        const t0 = c.currentTime + (delay || 0);
++        const len = Math.max(1, Math.floor(c.sampleRate * dur));
++        const buf = c.createBuffer(1, len, c.sampleRate);
++        const d = buf.getChannelData(0);
++        for (let i = 0; i < len; i++)
++            d[i] = Math.random() * 2 - 1;
++        const srcN = c.createBufferSource();
++        srcN.buffer = buf;
++        const fl = c.createBiquadFilter();
++        fl.type = "bandpass";
++        fl.Q.value = q || 1.2;
++        fl.frequency.setValueAtTime(Math.max(40, f0), t0);
++        fl.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t0 + dur);
++        const g = c.createGain();
++        g.gain.setValueAtTime(1e-4, t0);
++        g.gain.exponentialRampToValueAtTime(vol, t0 + Math.min(0.03, dur * 0.25));
++        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
++        srcN.connect(fl);
++        fl.connect(g);
++        g.connect(channelBus(c, "effects"));
++        srcN.start(t0);
++    }
++    function growl(dur, vol, fStart, fPeak, fEnd, delay) {
++        if (S.muted)
++            return;
++        const c = ac();
++        if (!c)
++            return;
++        const t0 = c.currentTime + (delay || 0);
++        const sh = c.createWaveShaper();
++        const curve = new Float32Array(256);
++        for (let i = 0; i < 256; i++)
++            curve[i] = Math.tanh(3.2 * (i / 128 - 1));
++        sh.curve = curve;
++        const g = c.createGain();
++        g.gain.setValueAtTime(1e-4, t0);
++        g.gain.exponentialRampToValueAtTime(vol, t0 + 0.09);
++        g.gain.setValueAtTime(vol, t0 + dur * 0.6);
++        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
++        const trem = c.createGain();
++        trem.gain.value = 1;
++        const lfo = c.createOscillator();
++        lfo.frequency.value = 12 + Math.random() * 5;
++        const lfoG = c.createGain();
++        lfoG.gain.value = 0.35;
++        lfo.connect(lfoG);
++        lfoG.connect(trem.gain);
++        [0, 7.3].forEach((det) => {
++            const o = c.createOscillator();
++            o.type = "sawtooth";
++            o.frequency.setValueAtTime(Math.max(20, fStart + det), t0);
++            o.frequency.exponentialRampToValueAtTime(Math.max(20, fPeak + det), t0 + 0.16);
++            o.frequency.exponentialRampToValueAtTime(Math.max(20, fEnd + det), t0 + dur);
++            o.connect(sh);
++            o.start(t0);
++            o.stop(t0 + dur + 0.05);
++        });
++        sh.connect(trem);
++        trem.connect(g);
++        g.connect(channelBus(c, "effects"));
++        lfo.start(t0);
++        lfo.stop(t0 + dur + 0.05);
++    }
++    const bufferCache = new AudioBufferCache();
++    async function loadDecodedBuffer(uri, audioContext) {
++        return bufferCache.getOrLoad(uri, async () => {
++            const response = await fetch(uri);
++            if (!response.ok)
++                throw new Error(`Falha HTTP ${response.status} ao carregar áudio.`);
++            const encoded = await response.arrayBuffer();
++            return audioContext.decodeAudioData(encoded);
++        });
++    }
++    let ambientName = null;
++    let ambientSource = null;
++    let ambientGain = null;
++    let ambientToken = 0;
++    function stopAmbientSource() {
++        ambientToken += 1;
++        if (ambientSource) {
++            try {
++                ambientSource.stop();
++            }
++            catch {
++            }
++            ambientSource.disconnect();
++            ambientSource = null;
++        }
++        if (ambientGain) {
++            ambientGain.disconnect();
++            ambientGain = null;
++        }
++    }
++    function syncAmbient() {
++        stopAmbientSource();
++        if (!ambientName || S.muted)
++            return;
++        const list = typeof SND !== "undefined" && SND[ambientName];
++        const c = ac();
++        if (!c || !list?.length)
++            return;
++        const name = ambientName;
++        const uri = list[0];
++        const token = ambientToken;
++        const startBuffer = (buf) => {
++            if (token !== ambientToken || ambientName !== name || S.muted)
++                return;
++            const source = c.createBufferSource();
++            const gain = c.createGain();
++            source.buffer = buf;
++            source.loop = true;
++            gain.gain.value = name === "lobbyFireplace" ? 0.24 : 0.3;
++            source.connect(gain);
++            gain.connect(channelBus(c, "effects"));
++            source.start();
++            ambientSource = source;
++            ambientGain = gain;
++        };
++        const cached = bufferCache.get(uri);
++        if (cached) {
++            startBuffer(cached);
++            return;
++        }
++        loadDecodedBuffer(uri, c)
++            .then(startBuffer)
++            .catch((error) => reportDecodeFailure(uri, error));
++    }
++    function stopSampleGroup(group) {
++        const active = activeSampleGroups.get(group);
++        if (!active) return;
++        for (const source of [...active]) {
++            try { source.stop(); } catch {}
++            try { source.disconnect(); } catch {}
++        }
++        active.clear();
++        activeSampleGroups.delete(group);
++    }
++    function playSample(name, vol, delay, onDur, options = {}) {
++        if (S.muted) {
++            options.onStart?.();
++            return true;
++        }
++        const list = typeof SND !== "undefined" && (SND[name] || SND[SND_ALIAS[name]]);
++        if (!list || !list.length)
++            return false;
++        const c = ac();
++        if (!c)
++            return false;
++        const requestedIndex = Number.isInteger(options.sampleIndex) ? options.sampleIndex : null;
++        const idx = requestedIndex == null
++            ? Math.floor(Math.random() * list.length)
++            : Math.max(0, Math.min(list.length - 1, requestedIndex));
++        const uri = list[idx];
++        const requestedAt = performance.now();
++        const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : 1400;
++        const group = options.group || null;
++        const replace = options.replace === true;
++        const maxVoices = Number.isFinite(options.maxVoices) ? Math.max(1, options.maxVoices) : Infinity;
++        const go = (buf) => {
++            if (performance.now() - requestedAt > ttlMs) return;
++            if (group && replace) stopSampleGroup(group);
++            const active = group ? (activeSampleGroups.get(group) || new Set()) : null;
++            if (active && active.size >= maxVoices) return;
++            const srcS = c.createBufferSource();
++            srcS.buffer = buf;
++            const g = c.createGain();
++            g.gain.value = vol || 1;
++            srcS.connect(g);
++            g.connect(channelBus(c, group === AUDIO_GROUP.VOICE ? "voices" : "effects"));
++            if (active) {
++                active.add(srcS);
++                activeSampleGroups.set(group, active);
++                srcS.onended = () => {
++                    active.delete(srcS);
++                    if (!active.size) activeSampleGroups.delete(group);
++                    try { srcS.disconnect(); } catch {}
++                    try { g.disconnect(); } catch {}
++                };
++            }
++            options.onStart?.({ index: idx, uri });
++            srcS.start(c.currentTime + (delay || 0));
++            if (onDur)
++                onDur(buf.duration);
++        };
++        const cached = bufferCache.get(uri);
++        if (cached) {
++            go(cached);
++            return true;
++        }
++        loadDecodedBuffer(uri, c)
++            .then(go)
++            .catch((error) => reportDecodeFailure(uri, error));
++        return true;
++    }
++    function emitCharacterVoice(character, event, variant) {
++        if (typeof window === "undefined" || typeof window.dispatchEvent !== "function")
++            return;
++        const EventCtor = window.CustomEvent;
++        if (typeof EventCtor !== "function")
++            return;
++        window.dispatchEvent(new EventCtor(CHARACTER_VOICE_PLAY_EVENT, {
++            detail: { character, event, variant },
++        }));
++    }
++    function playCharacterVoice(character, event) {
++        if (!triggerGate.allow("voice"))
++            return false;
++        const key = voiceSoundKey(character, event);
++        const variant = pickVoiceVariant(event);
++        if (!key || !variant)
++            return false;
++        return playSample(key, 0.95, 0, null, {
++            group: AUDIO_GROUP.VOICE,
++            replace: true,
++            ttlMs: 2200,
++            sampleIndex: variant - 1,
++            onStart: () => emitCharacterVoice(character, event, variant),
++        });
++    }
++    function playSampleSeries(names, vol = 1, token = troopSequenceToken) {
++        const queue = [...names];
++        const next = () => {
++            if (token !== troopSequenceToken) return;
++            const name = queue.shift();
++            if (!name) return;
++            if (!playSample(name, vol, 0, (duration) => {
++                const delayMs = Math.max(0, duration * 1000 - 35);
++                window.setTimeout(next, delayMs);
++            }, { ttlMs: 1800 })) next();
++        };
++        next();
++    }
++    function playTroopCard(subtype) {
++        if (!triggerGate.allow("card")) return false;
++        troopSequenceToken += 1;
++        const token = troopSequenceToken;
++        if (subtype === "cavaleiro") {
++            playSample("troopCardKnightHorse", 0.9, 0, null, { ttlMs: 1600 });
++            playSampleSeries(["troopCardKnightSword1", "troopCardKnightSword2", "troopCardKnightSword3"], 1, token);
++            return true;
++        }
++        if (subtype === "arqueiro") {
++            return playSample("troopCardArcher", 1, 0, null, { ttlMs: 1800 });
++        }
++        if (subtype === "catapulta") return playSample("troopCardCatapult", 1, 0, null, { ttlMs: 1800 });
++        return false;
++    }
++    let musicPlayback = null;
++    let desiredMusicScene = MUSIC_SCENE.LOBBY;
++    function ensureMusicPlayback(c) {
++        if (musicPlayback) return musicPlayback;
++        try {
++            musicPlayback = new MusicPlaybackController({ audioContext: c, destination: bus(c) });
++            musicPlayback.setVolume(S.musicVolume);
++            musicPlayback.setMuted(S.muted || S.musicVolume <= 0);
++            musicPlayback.setScene(desiredMusicScene, { immediate: true });
++            return musicPlayback;
++        } catch (error) {
++            recordDiagnostic("music-start-failed", normalizeDiagnosticError(error));
++            return null;
++        }
++    }
++    function startMusic() {
++        const c = ac();
++        const player = c ? ensureMusicPlayback(c) : null;
++        if (!player) return;
++        player.setScene(desiredMusicScene, { immediate: true });
++        player.start();
++    }
++    /* Loops de ambiente são longos e só um está ativo de cada vez. O
++       syncAmbient carrega-os quando são precisos, portanto não vale a pena
++       aquecê-los no arranque. */
++    let decodeFailureReported = false;
++    function reportDecodeFailure(uri, error) {
++        /* O `.catch(() => {})` que aqui estava é a razão pela qual ninguém
++           reparou que os 67 ficheiros Ogg Vorbis eram silenciosos em Safari.
++           Uma falha de descodificação é um problema de formato, não de rede, e
++           tem de ser visível. Reporta-se uma vez por sessão para não encher o
++           localStorage quando falham dezenas de ficheiros pela mesma razão. */
++        if (decodeFailureReported)
++            return;
++        decodeFailureReported = true;
++        recordDiagnostic("audio-decode-failed", { uri, ...normalizeDiagnosticError(error) });
++    }
++    function primeSamples() {
++        if (typeof SND === "undefined")
++            return;
++        const c = ac();
++        if (!c)
++            return;
++        const queue = [];
++        const queued = new Set();
++        for (const name of Object.keys(SND)) {
++            if (name.startsWith("voice_event_") || !shouldPrimeSoundKey(name))
++                continue;
++            for (const uri of SND[name]) {
++                if (!queued.has(uri) && !bufferCache.has(uri) && !bufferCache.isLoading(uri)) {
++                    queued.add(uri);
++                    queue.push(uri);
++                }
++            }
++        }
++        /* Antes eram cerca de 90 fetch simultâneos no arranque, o que satura a
++           fila de pedidos do browser e compete com o carregamento do lobby 3D.
++           Quatro em paralelo enche a cache sem bloquear o resto. */
++        let active = 0;
++        const pump = () => {
++            while (active < 4 && queue.length) {
++                const uri = queue.shift();
++                active += 1;
++                loadDecodedBuffer(uri, c)
++                    .catch((error) => reportDecodeFailure(uri, error))
++                    .finally(() => {
++                        active -= 1;
++                        pump();
++                    });
++            }
++        };
++        pump();
++    }
++    function metal(fs, dur, vol, delay) {
++        fs.forEach((f, i) => tone(f, dur * (1 - i * 0.12), "triangle", vol * Math.pow(0.72, i), delay || 0));
++    }
++    const FX = {
++        tap: () => tone(700, 0.05, "square", 0.06),
++        dice: () => {
++            playSample("diceShake", 0.95, 0, (d) => playSample("diceThrow", 1, Math.max(0.1, d - 0.22)));
++        },
++        coin: () => {
++            playSample("coinDrop", 0.85);
++        },
++        build: () => {
++            playSample("buildHit", 0.85);
++        },
++        card: () => {
++            playSample("cardSlide", 0.8);
++        },
++        bad: () => {
++            tone(311, 0.22, "sawtooth", 0.13, 0, 196);
++            tone(155, 0.3, "sawtooth", 0.11, 0.05);
++        },
++        dragon: () => {
++            playSample("dragonRoar", 0.72);
++        },
++        disaster: () => {
++            growl(1.5, 0.26, 70, 90, 30, 0);
++            swoosh(1.4, 0.2, 500, 60, 0.6, 0.05);
++            tone(49, 1.3, "sine", 0.22, 0.1, 30);
++        },
++        tsunami: () => { playSample("tsunami", 0.92); },
++        lobbyStart: () => { playSample("lobbyStart", 0.9); },
++        lobbySignature: () => { playSample("lobbySignature", 0.82, 0, null, { group: AUDIO_GROUP.UI, replace: true, ttlMs: 1400 }); },
++        uiClick: () => { playSample("uiClick", 0.5, 0, null, { group: AUDIO_GROUP.UI, replace: true, ttlMs: 550 }); },
++        yourTurn: () => { playSample("yourTurn", 1, 0, null, { group: AUDIO_GROUP.CEREMONIAL, replace: true, ttlMs: 1700 }); },
++        tradeOffer: () => { playSample("tradeOffer", 1, 0, null, { group: AUDIO_GROUP.GAME, maxVoices: 1, ttlMs: 1300 }); },
++        disasterGreed: () => { playSample("disasterGreed", 0.72, 0, null, { group: AUDIO_GROUP.CEREMONIAL, replace: true, ttlMs: 3400 }); },
++        disasterPlague: () => { playSample("disasterPlague", 0.76, 0, null, { group: AUDIO_GROUP.CEREMONIAL, replace: true, ttlMs: 2400 }); },
++        disasterTribute: () => { playSample("disasterTribute", 0.74, 0, null, { group: AUDIO_GROUP.CEREMONIAL, replace: true, ttlMs: 2600 }); },
++        lobbyBook: () => { playSample("lobbyBook", 0.72, 0, null, { group: AUDIO_GROUP.UI, replace: true, ttlMs: 900 }); },
++        swordP: () => {
++            playSample("swordHit", 1.25);
++        },
++        bowP: () => {
++            playSample("arrowHit", 1.25);
++        },
++        catP: () => {
++            playSample("catCreak", 1.1);
++        },
++        award: () => {
++            playSample("harp", 0.95);
++        },
++        flap: () => {
++            playSample("dragonFlap", 0.85);
++        },
++        swoop: () => {
++            playSample("swoop", 0.95);
++        },
++        chatpop: () => {
++            tone(880, 0.06, "sine", 0.1);
++            tone(1174, 0.09, "sine", 0.09, 0.06);
++        },
++        deal: () => {
++            tone(659, 0.09, "sine", 0.13);
++            tone(987, 0.16, "sine", 0.11, 0.09);
++            playSample("coinDrop", 0.45, 0.16);
++        },
++        clash: () => {
++            metal([2489, 3729, 5274, 6270], 0.34, 0.16);
++            swoosh(0.07, 0.3, 5e3, 2e3, 1, 0);
++            noise(0.12, 0.22, 200, 0.02);
++            metal([1975, 2960], 0.22, 0.08, 0.1);
++        },
++        arrow: () => {
++            swoosh(0.22, 0.26, 3400, 700, 2.2, 0);
++            tone(210, 0.05, "square", 0.14, 0.2);
++            noise(0.06, 0.18, 400, 0.2);
++        },
++        catapult: () => {
++            growl(0.28, 0.16, 120, 80, 55, 0);
++            swoosh(0.4, 0.24, 500, 2200, 1, 0.22);
++            noise(0.18, 0.34, 130, 0.62);
++            tone(55, 0.3, "sine", 0.24, 0.62, 34);
++        },
++        horn: () => {
++            [130.8, 155.6].forEach((f, i) => {
++                tone(f, 1.1, "sawtooth", 0.12, i * 0.05);
++                tone(f * 2, 1, "sawtooth", 0.06, i * 0.05);
++            });
++            swoosh(0.9, 0.06, 700, 300, 0.8, 0.1);
++        },
++        bell: () => {
++            metal([659, 1318, 1975, 2637], 0.9, 0.14);
++            metal([880, 1760], 0.7, 0.08, 0.28);
++        },
++        march: () => {
++            noise(0.05, 0.2, 900, 0);
++            noise(0.05, 0.16, 900, 0.14);
++            tone(98, 0.12, "triangle", 0.16, 0.14);
++            noise(0.07, 0.22, 700, 0.3);
++        },
++        fanfare: () => {
++            playSample("fanfareWin", 0.9);
++        }
++    };
++    const ROOTS = [110, 98, 87.31, 82.41];
++    const MODE = [0, 2, 3, 5, 7, 8, 10, 12];
++    const PAT = [0, 4, 2, 5, 4, 7, 5, 2, 0, 4, 2, 6, 7, 5, 4, 2];
++    function tick() {
++        if (S.muted || document.hidden || typeof SND !== "undefined" && SND.music) {
++            step++;
++            return;
++        }
++        const bar = Math.floor(step / 16) % 4;
++        if (step % 16 === 0) {
++            tone(ROOTS[bar], 4.4, "sine", 0.038);
++            tone(ROOTS[bar] * 1.5, 4.4, "sine", 0.024);
++            noise(0.09, 0.09, 140);
++        }
++        if (step % 16 === 8)
++            noise(0.06, 0.055, 200);
++        const deg = PAT[step % 16];
++        if (step % 2 === 0 || Math.random() < 0.35) {
++            const f = 220 * Math.pow(2, MODE[deg % 8] / 12) * (deg >= 8 ? 2 : 1);
++            tone(f, 0.36, "triangle", 0.048);
++            if (Math.random() < 0.15)
++                tone(f * 2, 0.3, "sine", 0.018, 0.03);
++        }
++        step++;
++    }
++    return {
++        get muted() {
++            return S.muted;
++        },
++        get volumes() {
++            return { music: S.musicVolume, effects: S.effectsVolume, voices: S.voicesVolume };
++        },
++        configure(values = {}) {
++            const clamp = (value, fallback) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(1, Number(value))) : fallback;
++            S.musicVolume = clamp(values.musicVolume, S.musicVolume);
++            S.effectsVolume = clamp(values.effectsVolume, S.effectsVolume);
++            S.voicesVolume = clamp(values.voicesVolume, S.voicesVolume);
++            updateChannelVolumes();
++            return this.volumes;
++        },
++        setMuted(value) {
++            const next = value === true;
++            if (S.muted === next) return S.muted;
++            S.muted = next;
++            if (!S.muted) ac();
++            updateChannelVolumes();
++            musicPlayback?.setMuted(S.muted || S.musicVolume <= 0);
++            syncAmbient();
++            return S.muted;
++        },
++        toggle() {
++            S.muted = !S.muted;
++            if (!S.muted)
++                ac();
++            updateChannelVolumes();
++            /* Silenciar tem de parar o elemento, não só baixar o ganho: em
++               streaming, ganho 0 continua a descarregar o ficheiro inteiro e a
++               descodificar em contínuo. */
++            musicPlayback?.setMuted(S.muted || S.musicVolume <= 0);
++            syncAmbient();
++            return S.muted;
++        },
++        play(n) {
++            if (n && n.indexOf("emv:") === 0) {
++                const pp = n.split(":");
++                const event = emoteVoiceEvent(pp[2]);
++                if (event)
++                    return playCharacterVoice(pp[1], event);
++                if (!triggerGate.allow("voice")) return false;
++                const voiceOptions = { group: AUDIO_GROUP.VOICE, replace: true, ttlMs: 2200 };
++                if (playSample("em_" + pp[1] + "_" + pp[2], 0.9, 0, null, voiceOptions)) return true;
++                if (playSample("voice_" + pp[1], 0.9, 0, null, voiceOptions)) return true;
++                FX.card();
++                return true;
++            }
++            if (n && n.indexOf("voice_") === 0) {
++                if (!triggerGate.allow("voice")) return false;
++                if (!playSample(n, 0.9, 0, null, { group: AUDIO_GROUP.VOICE, replace: true, ttlMs: 2200 }))
++                    FX.card();
++                return true;
++            }
++            if (!FX[n] || !triggerGate.allow(n)) return false;
++            FX[n]();
++            return true;
++        },
++        playCue(value) {
++            const cue = normalizeAudioCue(value);
++            if (!cue) return false;
++            let played = false;
++            if (cue.sfx) played = this.play(cue.sfx) || played;
++            if (cue.troop) played = playTroopCard(cue.troop) || played;
++            if (cue.voice) played = this.playVoice(cue.voice.character, cue.voice.event) || played;
++            return played;
++        },
++        playVoice(character, event) {
++            return playCharacterVoice(character, event);
++        },
++        playTroopCard,
++        setMusicScene(scene) {
++            if (!Object.values(MUSIC_SCENE).includes(scene)) return false;
++            desiredMusicScene = scene;
++            return musicPlayback ? musicPlayback.setScene(scene) : true;
++        },
++        beginGameEntryMusic() { musicPlayback?.beginGameEntry(); },
++        cancelGameEntryMusic() { musicPlayback?.cancelGameEntry(); },
++        getMusicSnapshot() { return musicPlayback?.snapshot?.() || { scene: desiredMusicScene, started: false }; },
++        setAmbient(name) { ambientName = name || null; syncAmbient(); },
++        clearAmbient(name) { if (name && ambientName !== name) return; ambientName = null; stopAmbientSource(); },
++        start() {
++            const c = ac();
++            if (!c || started)
++                return;
++            started = true;
++            primeSamples();
++            startMusic();
++            syncAmbient();
++            /* O `tick` é a música procedural de fallback e a primeira coisa que
++               faz é desistir se `SND.music` existir. Como existe sempre, este
++               intervalo acordava a cada 265 ms para incrementar um contador e
++               nunca era limpo. Agora só arranca se não houver música gravada. */
++            if (typeof SND === "undefined" || !SND.music)
++                proceduralTimer = setInterval(tick, 265);
++        },
++        stop() {
++            if (proceduralTimer != null) {
++                clearInterval(proceduralTimer);
++                proceduralTimer = null;
++            }
++            musicPlayback?.stop();
++            musicPlayback = null;
++            desiredMusicScene = MUSIC_SCENE.LOBBY;
++            stopAmbientSource();
++            for (const gain of channelGains.values()) { try { gain.disconnect(); } catch {} }
++            channelGains.clear();
++            troopSequenceToken += 1;
++            for (const group of [...activeSampleGroups.keys()]) stopSampleGroup(group);
++            triggerGate.reset();
++            bufferCache.clear();
++            started = false;
++        }
++    };
++})();
+diff --git a/src/audio/characterAudio.js b/src/audio/characterAudio.js
+index 80d1e19..2fbd384 100644
+--- a/src/audio/characterAudio.js
++++ b/src/audio/characterAudio.js
+@@ -1,76 +1,235 @@
+-const EMOTE_EVENT = Object.freeze({
+-  feliz: "emote_happy",
+-  rir: "emote_laugh",
+-  gozar: "emote_smug",
+-  zangado: "emote_angry",
+-  chocado: "emote_shocked",
+-  chorar: "emote_cry",
+-  suplica: "emote_plead",
+-  provocar: "emote_taunt",
+-});
+-
+-const VOICE_VARIANTS = Object.freeze({
+-  found_village: 2,
+-  found_palace: 2,
+-  longest_road: 2,
+-  largest_army: 2,
+-  victory: 2,
+-  robbed: 2,
+-  trade_done: 2,
+-  emote_happy: 1,
+-  emote_laugh: 1,
+-  emote_smug: 1,
+-  emote_angry: 1,
+-  emote_shocked: 1,
+-  emote_cry: 1,
+-  emote_plead: 1,
+-  emote_taunt: 1,
+-});
+-
+-export const VOICE_EVENTS = Object.freeze(Object.keys(VOICE_VARIANTS));
+-
+-export const VOICE_CHARACTERS = Object.freeze([
+-  "maria", "vlad", "romeo", "protheus", "makuru", "artheria", "muriel", "bones",
+-]);
+-
+-export function emoteVoiceEvent(emoteKey) {
+-  return EMOTE_EVENT[emoteKey] || null;
+-}
+-
+-export function voiceSoundKey(character, event) {
+-  if (!VOICE_CHARACTERS.includes(character) || !VOICE_VARIANTS[event]) return null;
+-  return `voice_event_${character}_${event}`;
+-}
+-
+-export function createCharacterVoiceSoundMap(baseUrl) {
+-  const root = String(baseUrl || "").replace(/\/?$/, "/");
+-  const result = {};
+-  for (const character of VOICE_CHARACTERS) {
+-    for (const [event, count] of Object.entries(VOICE_VARIANTS)) {
+-      const key = voiceSoundKey(character, event);
+-      result[key] = Array.from({ length: count }, (_, index) => {
+-        const suffix = event.startsWith("emote_") ? "" : `_${String(index + 1).padStart(2, "0")}`;
+-        return `${root}${character}/${character}_${event}${suffix}.m4a`;
+-      });
+-    }
+-  }
+-  return result;
+-}
+-
+-export const TROOP_CARD_SOUND_KEYS = Object.freeze({
+-  cavaleiro: "troopCardKnight",
+-  arqueiro: "troopCardArcher",
+-  catapulta: "troopCardCatapult",
+-});
+-
+-export function createTroopCardSoundMap(baseUrl) {
+-  const root = String(baseUrl || "").replace(/\/?$/, "/");
+-  return {
+-    troopCardKnightHorse: [`${root}knight-horse.m4a`],
+-    troopCardKnightSword1: [`${root}knight-sword-1.m4a`],
+-    troopCardKnightSword2: [`${root}knight-sword-2.m4a`],
+-    troopCardKnightSword3: [`${root}knight-sword-3.m4a`],
+-    troopCardArcher: [`${root}archer-card.m4a`],
+-    troopCardCatapult: [`${root}catapult-card.m4a`],
+-  };
+-}
++const EMOTE_EVENT = Object.freeze({
++  feliz: "emote_happy",
++  rir: "emote_laugh",
++  gozar: "emote_smug",
++  zangado: "emote_angry",
++  chocado: "emote_shocked",
++  chorar: "emote_cry",
++  suplica: "emote_plead",
++  provocar: "emote_taunt",
++});
++
++const VOICE_VARIANTS = Object.freeze({
++  found_village: 2,
++  found_palace: 2,
++  longest_road: 2,
++  largest_army: 2,
++  victory: 2,
++  robbed: 2,
++  trade_done: 2,
++  emote_happy: 1,
++  emote_laugh: 1,
++  emote_smug: 1,
++  emote_angry: 1,
++  emote_shocked: 1,
++  emote_cry: 1,
++  emote_plead: 1,
++  emote_taunt: 1,
++});
++
++export const CHARACTER_VOICE_PLAY_EVENT = "rdd:character-voice";
++export const VOICE_EVENTS = Object.freeze(Object.keys(VOICE_VARIANTS));
++
++export const VOICE_CHARACTERS = Object.freeze([
++  "maria", "vlad", "romeo", "protheus", "makuru", "artheria", "muriel", "bones",
++]);
++
++const VOICE_TRANSCRIPTS = Object.freeze({
++  maria: Object.freeze({
++    found_village: Object.freeze(["A new jewel for the crown.", "Build it pretty, please."]),
++    found_palace: Object.freeze(["Every princess needs a palace.", "Gold does suit me."]),
++    longest_road: Object.freeze(["All roads lead to my door.", "A princess must be reachable."]),
++    largest_army: Object.freeze(["For the kingdom and the light!", "Even light carries a sword."]),
++    victory: Object.freeze(["The light always wins!", "Was there ever any doubt?"]),
++    robbed: Object.freeze(["How dare you!", "I'll remember this. Vividly."]),
++    trade_done: Object.freeze(["A pleasure doing business.", "See? Diplomacy."]),
++    emote_happy: Object.freeze(["What a glorious day!"]),
++    emote_laugh: Object.freeze(["Hehe! Adorable."]),
++    emote_smug: Object.freeze(["Darling, that's precious."]),
++    emote_angry: Object.freeze(["This will not stand!"]),
++    emote_shocked: Object.freeze(["Light preserve me!"]),
++    emote_cry: Object.freeze(["A princess doesn't cry. Much."]),
++    emote_plead: Object.freeze(["Please, have a heart!"]),
++    emote_taunt: Object.freeze(["The light fears no one!"]),
++  }),
++  vlad: Object.freeze({
++    found_village: Object.freeze(["More land beneath my shadow.", "Let it never see the sun."]),
++    found_palace: Object.freeze(["Let it rise, and let it loom.", "A throne suits the dark."]),
++    longest_road: Object.freeze(["Every road leads to me now.", "The kingdom walks where I permit."]),
++    largest_army: Object.freeze(["They march because they fear.", "My legions do not tire."]),
++    victory: Object.freeze(["It was always inevitable.", "The night keeps what it takes."]),
++    robbed: Object.freeze(["You will regret that hand.", "Take it. I will take more."]),
++    trade_done: Object.freeze(["A fair bargain. For now.", "Our interests align. Briefly."]),
++    emote_happy: Object.freeze(["The darkness smiles tonight."]),
++    emote_laugh: Object.freeze(["Ha. Pathetic mortals."]),
++    emote_smug: Object.freeze(["You call that a kingdom?"]),
++    emote_angry: Object.freeze(["You will pay in blood."]),
++    emote_shocked: Object.freeze(["That should not be possible."]),
++    emote_cry: Object.freeze(["Even the immortal grieve."]),
++    emote_plead: Object.freeze(["Spare me. For now."]),
++    emote_taunt: Object.freeze(["Come. Face the dark."]),
++  }),
++  romeo: Object.freeze({
++    found_village: Object.freeze(["Told you I'd get here first!", "Watch me build an empire."]),
++    found_palace: Object.freeze(["A palace. At my age!", "Not bad for a boy, eh?"]),
++    longest_road: Object.freeze(["Fastest legs in the kingdom!", "Try catching me now."]),
++    largest_army: Object.freeze(["Biggest army, smallest king.", "Who's the kid now?"]),
++    victory: Object.freeze(["I won! I actually won!", "Someone tell my mother."]),
++    robbed: Object.freeze(["Hey! That's not fair!", "Pick on someone your own size!"]),
++    trade_done: Object.freeze(["Nice one! Wait, was it?", "See, I can negotiate."]),
++    emote_happy: Object.freeze(["Yes! Just as planned!"]),
++    emote_laugh: Object.freeze(["Hahaha, did you see that?"]),
++    emote_smug: Object.freeze(["I did that when I was five."]),
++    emote_angry: Object.freeze(["That's not fair!"]),
++    emote_shocked: Object.freeze(["Whoa. Didn't see that."]),
++    emote_cry: Object.freeze(["I'm not crying. It's dust."]),
++    emote_plead: Object.freeze(["Come on, I'm just a kid!"]),
++    emote_taunt: Object.freeze(["Catch me if you can!"]),
++  }),
++  protheus: Object.freeze({
++    found_village: Object.freeze(["A village! Now, where's the kitchen?", "Put the tavern in the middle."]),
++    found_palace: Object.freeze(["Big enough for a proper feast.", "I'll need a bigger chair."]),
++    longest_road: Object.freeze(["In my day we had horses, not roads.", "Longest road, shortest patience."]),
++    largest_army: Object.freeze(["An army marches on its stomach. Mine especially.", "I was a soldier once. Briefly."]),
++    victory: Object.freeze(["Bring wine! All of it!", "Victory tastes like supper."]),
++    robbed: Object.freeze(["Thief! Scoundrel! What did they take?", "Someone write this down!"]),
++    trade_done: Object.freeze(["A toast to commerce!", "In my day we shook on it. And drank."]),
++    emote_happy: Object.freeze(["This calls for a feast!"]),
++    emote_laugh: Object.freeze(["Hahaha! I'm choking."]),
++    emote_smug: Object.freeze(["We did it better in my day."]),
++    emote_angry: Object.freeze(["More wine! And vengeance!"]),
++    emote_shocked: Object.freeze(["I nearly fell off the throne!"]),
++    emote_cry: Object.freeze(["Nothing a drink won't fix. Probably."]),
++    emote_plead: Object.freeze(["Pity an old king!"]),
++    emote_taunt: Object.freeze(["Come here! I was good at this once!"]),
++  }),
++  makuru: Object.freeze({
++    found_village: Object.freeze(["Makuru claims this. Nobody saw.", "Cosy. And nobody's counting."]),
++    found_palace: Object.freeze(["Too shiny. Makuru likes it.", "Now Makuru is respectable."]),
++    longest_road: Object.freeze(["Every road is Makuru's road.", "More ways in. More ways out."]),
++    largest_army: Object.freeze(["Makuru pays well. Sometimes.", "Many blades. Few questions."]),
++    victory: Object.freeze(["Makuru wins. Makuru always wins.", "Count your things. Go on."]),
++    robbed: Object.freeze(["Nobody steals from Makuru.", "Makuru weeps. Makuru remembers."]),
++    trade_done: Object.freeze(["Hehe. A pleasure, friend.", "Makuru is generous today."]),
++    emote_happy: Object.freeze(["Hehehe. All according to plan."]),
++    emote_laugh: Object.freeze(["Kheh kheh kheh!"]),
++    emote_smug: Object.freeze(["Fools. All of you, fools."]),
++    emote_angry: Object.freeze(["Nobody tricks Makuru."]),
++    emote_shocked: Object.freeze(["My things! I mean, the things!"]),
++    emote_cry: Object.freeze(["So few treasures left."]),
++    emote_plead: Object.freeze(["Makuru is innocent, I swear."]),
++    emote_taunt: Object.freeze(["Come, if you don't fear goblins."]),
++  }),
++  artheria: Object.freeze({
++    found_village: Object.freeze(["The grove permits it.", "Roots first. Walls later."]),
++    found_palace: Object.freeze(["Stone endures. So do we.", "Tall. The trees are taller."]),
++    longest_road: Object.freeze(["The paths answer to the woods.", "I walk further than you look."]),
++    largest_army: Object.freeze(["The woods send their own.", "Every arrow knows its name."]),
++    victory: Object.freeze(["The forest remembers this day.", "Patience wins. It always did."]),
++    robbed: Object.freeze(["The woods saw that.", "Take it. It was never yours."]),
++    trade_done: Object.freeze(["The exchange is balanced.", "Give and take, as the seasons do."]),
++    emote_happy: Object.freeze(["The forest celebrates with us."]),
++    emote_laugh: Object.freeze(["Even the trees are laughing."]),
++    emote_smug: Object.freeze(["Predictable as the wind."]),
++    emote_angry: Object.freeze(["You've woken the groves."]),
++    emote_shocked: Object.freeze(["Not even the spirits saw this."]),
++    emote_cry: Object.freeze(["The leaves fall for me."]),
++    emote_plead: Object.freeze(["Let nature soften your heart."]),
++    emote_taunt: Object.freeze(["My arrow knows your name."]),
++  }),
++  muriel: Object.freeze({
++    found_village: Object.freeze(["The stars marked this spot.", "I saw this in the smoke."]),
++    found_palace: Object.freeze(["A tower worthy of the arcane.", "Now the visions have a window."]),
++    longest_road: Object.freeze(["Every path bends to my will.", "I chose the route. Naturally."]),
++    largest_army: Object.freeze(["They serve the arcane, not me.", "Summoned, not recruited."]),
++    victory: Object.freeze(["The spell held. Mostly.", "The cards said so. I merely read them."]),
++    robbed: Object.freeze(["You've cursed yourself now.", "I'll take that back. Later."]),
++    trade_done: Object.freeze(["The stars approve this exchange.", "A fine trade. For one of us."]),
++    emote_happy: Object.freeze(["The stars align!"]),
++    emote_laugh: Object.freeze(["Ahaha. Deliciously tragic."]),
++    emote_smug: Object.freeze(["I read your future. It's thin."]),
++    emote_angry: Object.freeze(["I'll turn you into a toad!"]),
++    emote_shocked: Object.freeze(["This was not in the cards!"]),
++    emote_cry: Object.freeze(["Not even magic mends this."]),
++    emote_plead: Object.freeze(["Mercy. The arcane rewards you."]),
++    emote_taunt: Object.freeze(["Defy me and meet the arcane!"]),
++  }),
++  bones: Object.freeze({
++    found_village: Object.freeze(["Another place not to sleep.", "It'll do."]),
++    found_palace: Object.freeze(["Too big. Fine.", "Room for the whole family. They're dead."]),
++    longest_road: Object.freeze(["Long walk. I have time.", "I've been further. Downward."]),
++    largest_army: Object.freeze(["They were dead anyway.", "Loyal. Quiet. Ideal."]),
++    victory: Object.freeze(["Worth coming back for.", "Told you I had time."]),
++    robbed: Object.freeze(["That's fine. I own nothing.", "Bold. You'll keep."]),
++    trade_done: Object.freeze(["Done.", "Acceptable."]),
++    emote_happy: Object.freeze(["I feel alive. Ironic."]),
++    emote_laugh: Object.freeze(["That's the closest I get."]),
++    emote_smug: Object.freeze(["I've seen better. And I was dead."]),
++    emote_angry: Object.freeze(["I'll gnaw your foundations."]),
++    emote_shocked: Object.freeze(["Nearly lost my head. Again."]),
++    emote_cry: Object.freeze(["No tears. Literally."]),
++    emote_plead: Object.freeze(["Mercy. I've suffered enough."]),
++    emote_taunt: Object.freeze(["You can't kill what's already dead."]),
++  }),
++});
++
++export function emoteVoiceEvent(emoteKey) {
++  return EMOTE_EVENT[emoteKey] || null;
++}
++
++export function voiceVariantCount(event) {
++  return VOICE_VARIANTS[event] || 0;
++}
++
++export function pickVoiceVariant(event, random = Math.random) {
++  const count = voiceVariantCount(event);
++  if (!count) return null;
++  if (count === 1) return 1;
++  const sample = Number(random?.());
++  const normalized = Number.isFinite(sample) ? Math.max(0, Math.min(0.999999999, sample)) : 0;
++  return Math.floor(normalized * count) + 1;
++}
++
++export function voiceTranscript(character, event, variant = 1) {
++  const lines = VOICE_TRANSCRIPTS[character]?.[event];
++  const index = Number(variant) - 1;
++  return Array.isArray(lines) && Number.isInteger(index) && index >= 0 ? (lines[index] || "") : "";
++}
++
++export function voiceSoundKey(character, event) {
++  if (!VOICE_CHARACTERS.includes(character) || !VOICE_VARIANTS[event]) return null;
++  return `voice_event_${character}_${event}`;
++}
++
++export function createCharacterVoiceSoundMap(baseUrl) {
++  const root = String(baseUrl || "").replace(/\/?$/, "/");
++  const result = {};
++  for (const character of VOICE_CHARACTERS) {
++    for (const [event, count] of Object.entries(VOICE_VARIANTS)) {
++      const key = voiceSoundKey(character, event);
++      result[key] = Array.from({ length: count }, (_, index) => {
++        const suffix = event.startsWith("emote_") ? "" : `_${String(index + 1).padStart(2, "0")}`;
++        return `${root}${character}/${character}_${event}${suffix}.m4a`;
++      });
++    }
++  }
++  return result;
++}
++
++export const TROOP_CARD_SOUND_KEYS = Object.freeze({
++  cavaleiro: "troopCardKnight",
++  arqueiro: "troopCardArcher",
++  catapulta: "troopCardCatapult",
++});
++
++export function createTroopCardSoundMap(baseUrl) {
++  const root = String(baseUrl || "").replace(/\/?$/, "/");
++  return {
++    troopCardKnightHorse: [`${root}knight-horse.m4a`],
++    troopCardKnightSword1: [`${root}knight-sword-1.m4a`],
++    troopCardKnightSword2: [`${root}knight-sword-2.m4a`],
++    troopCardKnightSword3: [`${root}knight-sword-3.m4a`],
++    troopCardArcher: [`${root}archer-card.m4a`],
++    troopCardCatapult: [`${root}catapult-card.m4a`],
++  };
++}
+diff --git a/src/ui/game/useCharacterSubtitles.js b/src/ui/game/useCharacterSubtitles.js
+index 05178ab..51d0a5e 100644
+--- a/src/ui/game/useCharacterSubtitles.js
++++ b/src/ui/game/useCharacterSubtitles.js
+@@ -1,75 +1,94 @@
+-import { useEffect, useMemo, useRef, useState } from "react";
+-import { emoteVoiceEvent } from "../../audio/characterAudio.js";
+-import { t } from "../../locales/i18n.js";
+-
+-const SUBTITLE_LIFETIME_MS = 3600;
+-
+-function voiceSubtitle(event) {
+-  return event ? t(`voice.${event}`) : "";
+-}
+-
+-export function deriveCharacterSubtitleEvents(game, emotes = {}) {
+-  const events = [];
+-  const top = game?.presentation?.log?.[0];
+-  const voice = top?.audio?.voice;
+-  if (voice?.character && voice?.event) {
+-    const playerIndex = (game?.players || []).findIndex((player) => player?.ch === voice.character);
+-    if (playerIndex >= 0) {
+-      events.push({
+-        playerIndex,
+-        id: `voice:${top.id}:${voice.character}:${voice.event}`,
+-        text: voiceSubtitle(voice.event),
+-      });
+-    }
+-  }
+-  for (const [rawIndex, emote] of Object.entries(emotes || {})) {
+-    const playerIndex = Number(rawIndex);
+-    if (!Number.isSafeInteger(playerIndex) || !emote?.id || !emote?.k) continue;
+-    const event = emoteVoiceEvent(emote.k);
+-    events.push({
+-      playerIndex,
+-      id: `emote:${emote.id}`,
+-      text: event ? voiceSubtitle(event) : t(`emote.${emote.k}`),
+-    });
+-  }
+-  return events;
+-}
+-
+-export default function useCharacterSubtitles({ game, emotes = {}, lifetimeMs = SUBTITLE_LIFETIME_MS } = {}) {
+-  const [active, setActive] = useState({});
+-  const seenRef = useRef(new Set());
+-  const timersRef = useRef(new Map());
+-  const topLogId = game?.presentation?.log?.[0]?.id ?? null;
+-  const emoteSignature = useMemo(() => Object.entries(emotes || {})
+-    .map(([index, emote]) => `${index}:${emote?.id || ""}:${emote?.k || ""}`)
+-    .sort()
+-    .join("|"), [emotes]);
+-
+-  useEffect(() => {
+-    const nextEvents = deriveCharacterSubtitleEvents(game, emotes);
+-    for (const event of nextEvents) {
+-      if (!event.text || seenRef.current.has(event.id)) continue;
+-      seenRef.current.add(event.id);
+-      setActive((current) => ({ ...current, [event.playerIndex]: event }));
+-      const previous = timersRef.current.get(event.playerIndex);
+-      if (previous != null) window.clearTimeout(previous);
+-      const timer = window.setTimeout(() => {
+-        timersRef.current.delete(event.playerIndex);
+-        setActive((current) => {
+-          if (current[event.playerIndex]?.id !== event.id) return current;
+-          const copy = { ...current };
+-          delete copy[event.playerIndex];
+-          return copy;
+-        });
+-      }, lifetimeMs);
+-      timersRef.current.set(event.playerIndex, timer);
+-    }
+-  }, [game, topLogId, emoteSignature, lifetimeMs]);
+-
+-  useEffect(() => () => {
+-    for (const timer of timersRef.current.values()) window.clearTimeout(timer);
+-    timersRef.current.clear();
+-  }, []);
+-
+-  return active;
+-}
++import { useEffect, useRef, useState } from "react";
++import {
++  CHARACTER_VOICE_PLAY_EVENT,
++  emoteVoiceEvent,
++  voiceTranscript,
++} from "../../audio/characterAudio.js";
++import { t } from "../../locales/i18n.js";
++
++const SUBTITLE_LIFETIME_MS = 3600;
++
++function voiceSubtitle(event) {
++  return event ? t(`voice.${event}`) : "";
++}
++
++export function deriveCharacterSubtitleEvents(game, emotes = {}) {
++  const events = [];
++  const top = game?.presentation?.log?.[0];
++  const voice = top?.audio?.voice;
++  if (voice?.character && voice?.event) {
++    const playerIndex = (game?.players || []).findIndex((player) => player?.ch === voice.character);
++    if (playerIndex >= 0) {
++      events.push({
++        playerIndex,
++        id: `voice:${top.id}:${voice.character}:${voice.event}`,
++        text: voiceSubtitle(voice.event),
++      });
++    }
++  }
++  for (const [rawIndex, emote] of Object.entries(emotes || {})) {
++    const playerIndex = Number(rawIndex);
++    if (!Number.isSafeInteger(playerIndex) || !emote?.id || !emote?.k) continue;
++    const event = emoteVoiceEvent(emote.k);
++    events.push({
++      playerIndex,
++      id: `emote:${emote.id}`,
++      text: event ? voiceSubtitle(event) : t(`emote.${emote.k}`),
++    });
++  }
++  return events;
++}
++
++export default function useCharacterSubtitles({ game, emotes = {}, lifetimeMs = SUBTITLE_LIFETIME_MS } = {}) {
++  const [active, setActive] = useState({});
++  const playersRef = useRef(game?.players || []);
++  const timersRef = useRef(new Map());
++  const sequenceRef = useRef(0);
++
++  useEffect(() => {
++    playersRef.current = game?.players || [];
++  }, [game?.players]);
++
++  useEffect(() => {
++    const handleVoicePlayback = (browserEvent) => {
++      const detail = browserEvent?.detail || {};
++      const { character, event, variant } = detail;
++      const text = voiceTranscript(character, event, variant);
++      if (!text) return;
++
++      const playerIndex = playersRef.current.findIndex((player) => player?.ch === character);
++      if (playerIndex < 0) return;
++
++      sequenceRef.current += 1;
++      const subtitle = {
++        playerIndex,
++        id: `playback:${sequenceRef.current}:${character}:${event}:${variant}`,
++        text,
++      };
++
++      setActive((current) => ({ ...current, [playerIndex]: subtitle }));
++      const previous = timersRef.current.get(playerIndex);
++      if (previous != null) window.clearTimeout(previous);
++      const timer = window.setTimeout(() => {
++        timersRef.current.delete(playerIndex);
++        setActive((current) => {
++          if (current[playerIndex]?.id !== subtitle.id) return current;
++          const copy = { ...current };
++          delete copy[playerIndex];
++          return copy;
++        });
++      }, lifetimeMs);
++      timersRef.current.set(playerIndex, timer);
++    };
++
++    window.addEventListener(CHARACTER_VOICE_PLAY_EVENT, handleVoicePlayback);
++    return () => window.removeEventListener(CHARACTER_VOICE_PLAY_EVENT, handleVoicePlayback);
++  }, [lifetimeMs]);
++
++  useEffect(() => () => {
++    for (const timer of timersRef.current.values()) window.clearTimeout(timer);
++    timersRef.current.clear();
++  }, []);
++
++  return active;
++}
+diff --git a/tests/character-audio.test.js b/tests/character-audio.test.js
+index e114f11..0ad9d95 100644
+--- a/tests/character-audio.test.js
++++ b/tests/character-audio.test.js
+@@ -5,7 +5,10 @@ import {
+   createCharacterVoiceSoundMap,
+   createTroopCardSoundMap,
+   emoteVoiceEvent,
++  pickVoiceVariant,
+   voiceSoundKey,
++  voiceTranscript,
++  voiceVariantCount,
+ } from "../src/audio/characterAudio.js";
+ 
+ test("voice catalog exposes eight characters and all specific events", () => {
+@@ -48,3 +51,76 @@ test("troop card sound catalog contains horse, three ordered swords, archer and
+   assert.match(map.troopCardKnightSword2[0], /knight-sword-2\.m4a$/);
+   assert.match(map.troopCardKnightSword3[0], /knight-sword-3\.m4a$/);
+ });
++
++
++test("every recorded character voice variant has an exact English transcript", () => {
++  let total = 0;
++  for (const character of VOICE_CHARACTERS) {
++    for (const event of [
++      "found_village",
++      "found_palace",
++      "longest_road",
++      "largest_army",
++      "victory",
++      "robbed",
++      "trade_done",
++      "emote_happy",
++      "emote_laugh",
++      "emote_smug",
++      "emote_angry",
++      "emote_shocked",
++      "emote_cry",
++      "emote_plead",
++      "emote_taunt",
++    ]) {
++      const count = voiceVariantCount(event);
++      assert.ok(count > 0, `${event} should expose at least one variant`);
++      for (let variant = 1; variant <= count; variant += 1) {
++        assert.ok(
++          voiceTranscript(character, event, variant).trim().length > 0,
++          `${character}/${event}/${variant} should have a transcript`,
++        );
++        total += 1;
++      }
++    }
++  }
++  assert.equal(total, 176);
++});
++
++test("Muriel trade, robbery and provisional victory transcripts match the current recordings map", () => {
++  assert.equal(voiceTranscript("muriel", "victory", 1), "The spell held. Mostly.");
++  assert.equal(voiceTranscript("muriel", "victory", 2), "The cards said so. I merely read them.");
++  assert.equal(voiceTranscript("muriel", "robbed", 1), "You've cursed yourself now.");
++  assert.equal(voiceTranscript("muriel", "robbed", 2), "I'll take that back. Later.");
++  assert.equal(voiceTranscript("muriel", "trade_done", 1), "The stars approve this exchange.");
++  assert.equal(voiceTranscript("muriel", "trade_done", 2), "A fine trade. For one of us.");
++
++  const murielLines = [
++    "found_village",
++    "found_palace",
++    "longest_road",
++    "largest_army",
++    "victory",
++    "robbed",
++    "trade_done",
++    "emote_happy",
++    "emote_laugh",
++    "emote_smug",
++    "emote_angry",
++    "emote_shocked",
++    "emote_cry",
++    "emote_plead",
++    "emote_taunt",
++  ].flatMap((event) => Array.from(
++    { length: voiceVariantCount(event) },
++    (_, index) => voiceTranscript("muriel", event, index + 1),
++  ));
++  assert.equal(murielLines.includes("This was never chance."), false);
++});
++
++test("voice variant selection stays inside the recorded variant range", () => {
++  assert.equal(pickVoiceVariant("found_village", () => 0), 1);
++  assert.equal(pickVoiceVariant("found_village", () => 0.999999), 2);
++  assert.equal(pickVoiceVariant("emote_happy", () => 0.999999), 1);
++  assert.equal(pickVoiceVariant("unknown", () => 0.5), null);
++});
