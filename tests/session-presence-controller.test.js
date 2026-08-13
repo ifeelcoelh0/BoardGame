@@ -10,6 +10,7 @@ import { createHostSessionPresenceController } from "../src/multiplayer/hostSess
 import { createClientSessionPresenceController } from "../src/multiplayer/clientSessionPresenceController.js";
 import { IDENTITY_PROTOCOL_VERSION } from "../src/game/playerIdentity.js";
 import { STATE_VIEW_VERSION } from "../src/game/gameStateView.js";
+import { activateBotController } from "../src/game/playerPresence.js";
 import { IDS, TOKEN_HASHES, makeLobby, makePlayer } from "./fixtures.js";
 
 function fakeConnection(id) {
@@ -120,6 +121,44 @@ test("host session controller reconnects a player and replaces the stale connect
   assert.equal(oldConnection.closed, true);
   assert.equal(harness.getGame().players[1].connected, true);
   assert.equal(harness.runtime.auth.get(nextConnection), IDS.guest1);
+});
+
+
+test("a returning human reclaims a seat that the bot took over", async () => {
+  const guest = makePlayer({
+    playerId: IDS.guest1,
+    seatId: IDS.seat1,
+    ch: "rhaegal",
+    sessionTokenHash: TOKEN_HASHES.guest1,
+    connected: false,
+  });
+  activateBotController(guest, { now: 900 });
+  const game = makeLobby({ players: [makePlayer(), guest] });
+  game.phase = "play";
+  game.order = [0, 1];
+  game.turn = { pos: 1 };
+  const harness = makeHostHarness(game);
+  const connection = fakeConnection("returning-human");
+  registerConnection(harness.runtime, connection);
+  const sent = [];
+
+  await harness.controller.onSessionAuth({
+    connection,
+    message: {
+      t: "session-auth",
+      protocolVersion: IDENTITY_PROTOCOL_VERSION,
+      playerId: IDS.guest1,
+      sessionToken: "f".repeat(64),
+    },
+    send: (payload) => sent.push(payload),
+  });
+
+  assert.equal(sent[0].ok, true);
+  assert.equal(harness.getGame().players[1].controller, "human");
+  assert.equal(harness.getGame().players[1].connected, true);
+  assert.equal(harness.getGame().players[1].botActivatedAt, null);
+  assert.match(harness.logs.at(-1), /retomou o controlo/i);
+  assert.ok(harness.timers.some(([type]) => type === "clear-game"));
 });
 
 test("host presence controller removes voluntary lobby exits and marks transport loss", async () => {

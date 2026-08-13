@@ -17,6 +17,7 @@ import {
   isLobbyReservationExpired,
   markPlayerConnected,
   markPlayerDisconnected,
+  restoreHumanController,
   PLAYER_CONTROLLER,
 } from "../game/playerPresence.js";
 import { gameModeConfig } from "../game/gameModes.js";
@@ -156,8 +157,11 @@ export function createHostSessionPresenceController(options = {}) {
       previousConnections.forEach(safeClose);
 
       let committed = current;
+      const reclaimingBotSeat = player.controller === PLAYER_CONTROLLER.BOT
+        && Number.isFinite(player.botActivatedAt);
       if (
-        player.connected === false
+        reclaimingBotSeat
+        || player.connected === false
         || player.disconnectedAt != null
         || player.reconnectDeadline != null
         || player.turnReconnectDeadline != null
@@ -166,8 +170,15 @@ export function createHostSessionPresenceController(options = {}) {
         const next = copy(current);
         const reconnectingIndex = findPlayerIndexById(next, player.playerId);
         const reconnectingPlayer = next.players[reconnectingIndex];
+        if (reclaimingBotSeat) restoreHumanController(reconnectingPlayer);
         markPlayerConnected(reconnectingPlayer);
-        log(next, `🔗 ${nameOf(reconnectingPlayer.ch)} regressou ao reino.`, reconnectingIndex);
+        log(
+          next,
+          reclaimingBotSeat
+            ? `🔗 ${nameOf(reconnectingPlayer.ch)} regressou e retomou o controlo do seu reino.`
+            : `🔗 ${nameOf(reconnectingPlayer.ch)} regressou ao reino.`,
+          reconnectingIndex,
+        );
         clearLobbyPresenceTimer(reconnectingPlayer.playerId);
         clearGamePresenceTimer(reconnectingPlayer.playerId);
         committed = await commit(next);

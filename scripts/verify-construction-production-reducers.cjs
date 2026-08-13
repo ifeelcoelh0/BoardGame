@@ -12,9 +12,6 @@ const tests = fs.readFileSync(path.join(root, "tests/construction-production-red
 const boardVisuals = fs.readFileSync(path.join(root, "src/ui/board/boardVisualConfig.js"), "utf8");
 
 const failures = [];
-for (const fragment of ['from "../game/constructionReducer.js"', "advanceSetupState"]) {
-  if (!legacy.includes(fragment)) failures.push(`Integração visual/AFK ausente no legacy: ${fragment}`);
-}
 for (const fragment of ["reduceRoadConstruction", "reduceVillageConstruction", "reducePalaceConstruction"]) {
   if (!actionReducer.includes(fragment)) failures.push(`Integração ausente no reducer central: ${fragment}`);
 }

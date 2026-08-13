@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  GAME_FIRST_AFK_GRACE_MS,
-  GAME_REPEAT_AFK_GRACE_MS,
+  GAME_BOT_TAKEOVER_GRACE_MS,
   PLAYER_CONTROL_STATUS,
   activateBotController,
   beginGameTurnReconnectWindow,
@@ -11,9 +10,9 @@ import {
   isGameTurnReconnectExpired,
   isLobbyReservationExpired,
   lobbyReconnectSeconds,
-  markAfkActionSkipped,
   markPlayerConnected,
   markPlayerDisconnected,
+  restoreHumanController,
 } from "../src/game/playerPresence.js";
 
 test("lobby disconnect clears ready and reserves the seat for 30 seconds", () => {
@@ -27,7 +26,7 @@ test("lobby disconnect clears ready and reserves the seat for 30 seconds", () =>
   assert.equal(isLobbyReservationExpired(player, 31_000), true);
 });
 
-test("game disconnect keeps the player and waits until an action is required", () => {
+test("game disconnect keeps the human seat and waits until an action is required", () => {
   const player = { connected: true, ready: true };
   markPlayerDisconnected(player, { now: 1000, phase: "play" });
   assert.equal(player.connected, false);
@@ -36,22 +35,16 @@ test("game disconnect keeps the player and waits until an action is required", (
   assert.equal(player.controlStatus, PLAYER_CONTROL_STATUS.DISCONNECTED);
 });
 
-test("first AFK block waits 90 seconds and later blocks wait 30 seconds", () => {
-  const player = { connected: false, afkSkipCount: 0 };
-  assert.equal(gameAfkGraceMs(player), GAME_FIRST_AFK_GRACE_MS);
+test("a required disconnected human gets a 90 second bot-takeover window", () => {
+  const player = { connected: false, afkSkipCount: 3 };
+  assert.equal(gameAfkGraceMs(player), GAME_BOT_TAKEOVER_GRACE_MS);
   beginGameTurnReconnectWindow(player, { now: 1000 });
   assert.equal(player.turnReconnectDeadline, 91_000);
   assert.equal(gameTurnReconnectSeconds(player, 61_000), 30);
   assert.equal(isGameTurnReconnectExpired(player, 91_000), true);
-
-  markAfkActionSkipped(player, { now: 91_000 });
-  assert.equal(player.afkSkipCount, 1);
-  assert.equal(gameAfkGraceMs(player), GAME_REPEAT_AFK_GRACE_MS);
-  beginGameTurnReconnectWindow(player, { now: 100_000 });
-  assert.equal(player.turnReconnectDeadline, 130_000);
 });
 
-test("reconnection resets the AFK escalation", () => {
+test("reconnection restores normal presence before bot takeover", () => {
   const player = {
     connected: false,
     afkSkipCount: 3,
@@ -66,6 +59,17 @@ test("reconnection resets the AFK escalation", () => {
   assert.equal(player.controlStatus, PLAYER_CONTROL_STATUS.ACTIVE);
 });
 
+test("a reclaimed bot seat returns cleanly to human control", () => {
+  const player = { connected: false, ready: true };
+  activateBotController(player, { now: 100 });
+  assert.equal(player.controller, "bot");
+  assert.equal(player.botActivatedAt, 100);
+  restoreHumanController(player);
+  markPlayerConnected(player);
+  assert.equal(player.controller, "human");
+  assert.equal(player.botActivatedAt, null);
+  assert.equal(player.connected, true);
+});
 
 test("bots stay connected when presence code receives a disconnect signal", () => {
   const player = { connected: true, ready: true };
