@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { emoteVoiceEvent } from "../../audio/characterAudio.js";
+import { useEffect, useRef, useState } from "react";
+import {
+  CHARACTER_VOICE_PLAY_EVENT,
+  emoteVoiceEvent,
+  voiceTranscript,
+} from "../../audio/characterAudio.js";
 import { t } from "../../locales/i18n.js";
 
 const SUBTITLE_LIFETIME_MS = 3600;
@@ -37,34 +41,49 @@ export function deriveCharacterSubtitleEvents(game, emotes = {}) {
 
 export default function useCharacterSubtitles({ game, emotes = {}, lifetimeMs = SUBTITLE_LIFETIME_MS } = {}) {
   const [active, setActive] = useState({});
-  const seenRef = useRef(new Set());
+  const playersRef = useRef(game?.players || []);
   const timersRef = useRef(new Map());
-  const topLogId = game?.presentation?.log?.[0]?.id ?? null;
-  const emoteSignature = useMemo(() => Object.entries(emotes || {})
-    .map(([index, emote]) => `${index}:${emote?.id || ""}:${emote?.k || ""}`)
-    .sort()
-    .join("|"), [emotes]);
+  const sequenceRef = useRef(0);
 
   useEffect(() => {
-    const nextEvents = deriveCharacterSubtitleEvents(game, emotes);
-    for (const event of nextEvents) {
-      if (!event.text || seenRef.current.has(event.id)) continue;
-      seenRef.current.add(event.id);
-      setActive((current) => ({ ...current, [event.playerIndex]: event }));
-      const previous = timersRef.current.get(event.playerIndex);
+    playersRef.current = game?.players || [];
+  }, [game?.players]);
+
+  useEffect(() => {
+    const handleVoicePlayback = (browserEvent) => {
+      const detail = browserEvent?.detail || {};
+      const { character, event, variant } = detail;
+      const text = voiceTranscript(character, event, variant);
+      if (!text) return;
+
+      const playerIndex = playersRef.current.findIndex((player) => player?.ch === character);
+      if (playerIndex < 0) return;
+
+      sequenceRef.current += 1;
+      const subtitle = {
+        playerIndex,
+        id: `playback:${sequenceRef.current}:${character}:${event}:${variant}`,
+        text,
+      };
+
+      setActive((current) => ({ ...current, [playerIndex]: subtitle }));
+      const previous = timersRef.current.get(playerIndex);
       if (previous != null) window.clearTimeout(previous);
       const timer = window.setTimeout(() => {
-        timersRef.current.delete(event.playerIndex);
+        timersRef.current.delete(playerIndex);
         setActive((current) => {
-          if (current[event.playerIndex]?.id !== event.id) return current;
+          if (current[playerIndex]?.id !== subtitle.id) return current;
           const copy = { ...current };
-          delete copy[event.playerIndex];
+          delete copy[playerIndex];
           return copy;
         });
       }, lifetimeMs);
-      timersRef.current.set(event.playerIndex, timer);
-    }
-  }, [game, topLogId, emoteSignature, lifetimeMs]);
+      timersRef.current.set(playerIndex, timer);
+    };
+
+    window.addEventListener(CHARACTER_VOICE_PLAY_EVENT, handleVoicePlayback);
+    return () => window.removeEventListener(CHARACTER_VOICE_PLAY_EVENT, handleVoicePlayback);
+  }, [lifetimeMs]);
 
   useEffect(() => () => {
     for (const timer of timersRef.current.values()) window.clearTimeout(timer);

@@ -1,5 +1,10 @@
 import { normalizeDiagnosticError, recordDiagnostic } from "../diagnostics/diagnostics.js";
-import { emoteVoiceEvent, voiceSoundKey } from "./characterAudio.js";
+import {
+  CHARACTER_VOICE_PLAY_EVENT,
+  emoteVoiceEvent,
+  pickVoiceVariant,
+  voiceSoundKey,
+} from "./characterAudio.js";
 import { AudioBufferCache } from "./audioBufferCache.js";
 import { MusicPlaybackController } from "./musicPlaybackController.js";
 import { MUSIC_SCENE } from "./musicCatalog.js";
@@ -253,15 +258,20 @@ export const AudioSys = (() => {
         activeSampleGroups.delete(group);
     }
     function playSample(name, vol, delay, onDur, options = {}) {
-        if (S.muted)
+        if (S.muted) {
+            options.onStart?.();
             return true;
+        }
         const list = typeof SND !== "undefined" && (SND[name] || SND[SND_ALIAS[name]]);
         if (!list || !list.length)
             return false;
         const c = ac();
         if (!c)
             return false;
-        const idx = Math.floor(Math.random() * list.length);
+        const requestedIndex = Number.isInteger(options.sampleIndex) ? options.sampleIndex : null;
+        const idx = requestedIndex == null
+            ? Math.floor(Math.random() * list.length)
+            : Math.max(0, Math.min(list.length - 1, requestedIndex));
         const uri = list[idx];
         const requestedAt = performance.now();
         const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : 1400;
@@ -289,6 +299,7 @@ export const AudioSys = (() => {
                     try { g.disconnect(); } catch {}
                 };
             }
+            options.onStart?.({ index: idx, uri });
             srcS.start(c.currentTime + (delay || 0));
             if (onDur)
                 onDur(buf.duration);
@@ -302,6 +313,31 @@ export const AudioSys = (() => {
             .then(go)
             .catch((error) => reportDecodeFailure(uri, error));
         return true;
+    }
+    function emitCharacterVoice(character, event, variant) {
+        if (typeof window === "undefined" || typeof window.dispatchEvent !== "function")
+            return;
+        const EventCtor = window.CustomEvent;
+        if (typeof EventCtor !== "function")
+            return;
+        window.dispatchEvent(new EventCtor(CHARACTER_VOICE_PLAY_EVENT, {
+            detail: { character, event, variant },
+        }));
+    }
+    function playCharacterVoice(character, event) {
+        if (!triggerGate.allow("voice"))
+            return false;
+        const key = voiceSoundKey(character, event);
+        const variant = pickVoiceVariant(event);
+        if (!key || !variant)
+            return false;
+        return playSample(key, 0.95, 0, null, {
+            group: AUDIO_GROUP.VOICE,
+            replace: true,
+            ttlMs: 2200,
+            sampleIndex: variant - 1,
+            onStart: () => emitCharacterVoice(character, event, variant),
+        });
     }
     function playSampleSeries(names, vol = 1, token = troopSequenceToken) {
         const queue = [...names];
@@ -572,12 +608,12 @@ export const AudioSys = (() => {
         },
         play(n) {
             if (n && n.indexOf("emv:") === 0) {
-                if (!triggerGate.allow("voice")) return false;
                 const pp = n.split(":");
                 const event = emoteVoiceEvent(pp[2]);
-                const key = event && voiceSoundKey(pp[1], event);
+                if (event)
+                    return playCharacterVoice(pp[1], event);
+                if (!triggerGate.allow("voice")) return false;
                 const voiceOptions = { group: AUDIO_GROUP.VOICE, replace: true, ttlMs: 2200 };
-                if (key && playSample(key, 0.95, 0, null, voiceOptions)) return true;
                 if (playSample("em_" + pp[1] + "_" + pp[2], 0.9, 0, null, voiceOptions)) return true;
                 if (playSample("voice_" + pp[1], 0.9, 0, null, voiceOptions)) return true;
                 FX.card();
@@ -603,9 +639,7 @@ export const AudioSys = (() => {
             return played;
         },
         playVoice(character, event) {
-            if (!triggerGate.allow("voice")) return false;
-            const key = voiceSoundKey(character, event);
-            return !!(key && playSample(key, 0.95, 0, null, { group: AUDIO_GROUP.VOICE, replace: true, ttlMs: 2200 }));
+            return playCharacterVoice(character, event);
         },
         playTroopCard,
         setMusicScene(scene) {
