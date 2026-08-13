@@ -10,7 +10,7 @@ const tests = fs.readFileSync(path.join(root, "tests/mandatory-decision-reducer.
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const failures = [];
 
-for (const fragment of ['from "../game/mandatoryDecisionReducer.js"', "reduceMandatoryQueueSkip", "requiredGameActorIndex"]) {
+for (const fragment of ['from "../game/mandatoryDecisionReducer.js"', "requiredGameActorIndex"]) {
   if (!legacy.includes(fragment)) failures.push(`Integração de presença/UI obrigatória ausente: ${fragment}`);
 }
 for (const fragment of ["reduceDiscardDecision", "reduceDragonPlacement", "reduceResourceSteal", "reduceTsunamiDecision", "reduceQueueResourceDecision"]) {
@@ -81,4 +81,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("Dragão, roubo, descarte, Tsunami, Tributo, bênçãos e skip obrigatório extraídos.");
+console.log("Dragão, roubo, descarte, Tsunami, Tributo e bênçãos extraídos; o skip legado permanece testado mas deixou de integrar a presença runtime.");

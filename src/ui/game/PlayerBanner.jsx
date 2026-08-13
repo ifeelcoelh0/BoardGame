@@ -177,7 +177,7 @@ export default function PlayerBanner({
           {isBot && <em className="rdb-player-banner__presence is-bot">bot</em>}
           {player.connected === false && (
             <em className="rdb-player-banner__presence is-offline">
-              {reconnectSeconds != null ? `OFFLINE · ${reconnectSeconds}s` : "OFFLINE"}
+              {reconnectSeconds != null ? `BOT EM ${reconnectSeconds}s` : "OFFLINE"}
             </em>
           )}
           {hasStatuses && (
@@ -225,7 +225,7 @@ export default function PlayerBanner({
         <span className="rdb-player-banner__turn">
           <i />
           {player.connected === false
-            ? ` A REENTRAR${reconnectSeconds != null ? ` · ${reconnectSeconds}s` : ""}`
+            ? ` A AGUARDAR${reconnectSeconds != null ? ` · BOT EM ${reconnectSeconds}s` : ""}`
             : " A JOGAR"}
         </span>
       )}

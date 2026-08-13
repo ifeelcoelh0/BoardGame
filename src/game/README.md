@@ -6,7 +6,7 @@ Esta pasta é a fronteira canónica das regras e dados puros da partida. Não de
 
 - `lobbyRules.js`: pré-condições de arranque do lobby.
 - `playerIdentity.js`: criação de `playerId`/`seatId`, tokens de sessão, SHA-256 e armazenamento da sessão por tab.
-- `playerPresence.js`: presença no lobby e na partida, prazos de reconexão e política de skip AFK 90 s → 30 s.
+- `playerPresence.js`: presença no lobby e na partida, prazo de reconexão e estado de controlo humano/bot; durante a partida o humano tem 90 s quando chega a sua vez antes de um bot assumir temporariamente o lugar.
 - `lobbyProtocol.js`: envelopes de ações, validação e reducer autoritativo para personagem, pronto, poderes, kick e início.
 - `gameProtocol.js`: catálogo e validação dos envelopes de ações autoritativas da partida.
 - `gameStateView.js`: vistas públicas/privadas por jogador, incluindo ocultação de mãos, baralho e mapa sob nevoeiro.
