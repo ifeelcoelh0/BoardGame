@@ -1,6 +1,7 @@
 import GameIcon from "../assets/GameIcon.jsx";
 import ResourceCost from "./hud/ResourceCost.jsx";
 import { ACTION_PRESENTATION } from "./gameUiComposition.js";
+import { t } from "../../locales/i18n.js";
 import "../../styles/game-actions.css";
 
 function ActionIcon({ action, size = 28 }) {
@@ -61,7 +62,7 @@ export default function GameActionPanel({
 
   if (presentation.mode === ACTION_PRESENTATION.ROLL) {
     return (
-      <div className={`rd-action-roll${embedded ? " rd-action-roll--embedded" : ""}`} aria-label="Lançar os dados">
+      <div className={`rd-action-roll${embedded ? " rd-action-roll--embedded" : ""}`} aria-label={t("hud.rollDice")}>
         <GameActionButton action={model.roll} onAction={onAction} square />
       </div>
     );
@@ -71,26 +72,26 @@ export default function GameActionPanel({
     return (
       <div className="rd-action-placement" role="status">
         <div><strong>{presentation.label}</strong><span>{presentation.hint}</span></div>
-        <button type="button" onClick={onCancelPlacement}>Cancelar</button>
+        <button type="button" onClick={onCancelPlacement}>{t("common.cancel")}</button>
       </div>
     );
   }
 
   if (presentation.mode === ACTION_PRESENTATION.MINIMIZED) {
     return (
-      <div className="rd-action-minimized" aria-label="Ações do turno recolhidas">
-        <button type="button" onClick={onRestore}>Ações</button>
+      <div className="rd-action-minimized" aria-label={t("hud.actionsCollapsed")}>
+        <button type="button" onClick={onRestore}>{t("hud.openActions")}</button>
         <GameActionButton action={model.endTurn} onAction={onAction} compact />
       </div>
     );
   }
 
   return (
-    <div className={`rd-action-panel${embedded ? " rd-action-panel--embedded" : ""}`} aria-label="Ações do turno">
+    <div className={`rd-action-panel${embedded ? " rd-action-panel--embedded" : ""}`} aria-label={t("hud.actions")}>
       <header className="rd-action-panel__toolbar">
-        <span>As tuas ações</span>
+        <span>{t("hud.actions")}</span>
         <GameActionButton action={{ ...model.endTurn, tone: "danger" }} onAction={onAction} compact className="rd-action-panel__end-turn" />
-        <button type="button" className="rd-action-panel__close" onClick={onMinimize} aria-label="Fechar painel de ações">×</button>
+        <button type="button" className="rd-action-panel__close" onClick={onMinimize} aria-label={t("hud.closeActions")}>×</button>
       </header>
       <div className="rd-action-panel__groups">
         {model.groups.map((group) => <ActionGroup key={group.id} group={group} onAction={onAction} />)}

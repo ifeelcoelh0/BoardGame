@@ -1,10 +1,10 @@
 import { GAME_ACTION } from "../game/gameProtocol.js";
-import { RESOURCE_DEFINITIONS as RES } from "../game/resources.js";
+import { RESOURCE_DEFINITIONS as RES, resourceName } from "../game/resources.js";
 import { DISASTER_DEFINITIONS as DISASTERS } from "../game/disasterReducer.js";
 import { WAR_UNIT_ICONS as UICON } from "../game/warReducer.js";
 import { isWarMode as GUERRA } from "../game/gameModes.js";
 import { makeBoardGraph as makeGraph } from "../game/boardGeometry.js";
-import { characterById } from "../game/characterCatalog.js";
+import { characterById, characterQuotes } from "../game/characterCatalog.js";
 import {
   appendGameLog,
   setGameAward,
@@ -12,7 +12,7 @@ import {
   setGameDisaster,
   setGameStory,
 } from "../game/presentationState.js";
-import { terrainLabel, WAR_UNIT_LABELS } from "./gameLabels.js";
+import { terrainLabel, warUnitLabel, warUnitName } from "./gameLabels.js";
 
 const FLAV = Object.freeze({
   madeira: (amount) => "abateu " + amount + (amount > 1 ? " troncos" : " tronco") + " na Floresta Sombria 🪵",
@@ -21,6 +21,8 @@ const FLAV = Object.freeze({
   ouro: (amount) => "extraiu " + amount + (amount > 1 ? " pepitas" : " pepita") + " de ouro das grutas 🪙",
   obsidiana: (amount) => "arrancou " + amount + (amount > 1 ? " lascas" : " lasca") + " de obsidiana às montanhas ⚫",
 });
+
+const CANONICAL_LOG_LOCALE = "pt-PT";
 
 const WAR_FLAVOUR = Object.freeze([
   "O corvo já circula.",
@@ -43,7 +45,7 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
   const logTrade = (game, message, playerIndex = null, audio = null, meta = null) => addLog(game, message, playerIndex, { kind: "trade", ...(meta || {}), ...(audio ? { audio } : {}) });
   const logExploration = (game, message, playerIndex = null, audio = null) => addLog(game, message, playerIndex, { kind: "exploration", ...(audio ? { audio } : {}) });
   const speak = (game, playerIndex) => {
-    const quotes = characterById(game.players[playerIndex].ch)?.q || [];
+    const quotes = characterQuotes(game.players[playerIndex].ch, CANONICAL_LOG_LOCALE);
     if (quotes.length) addLog(game, "“" + pick(quotes) + "”", playerIndex);
   };
   const sfxCue = (sfx) => ({ sfx });
@@ -71,9 +73,9 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
     prev: previousPlayerIndex == null ? null : previousPlayerIndex,
     value,
   }, eventIdOptions);
-  const tname = (type) => WAR_UNIT_LABELS[type].replace(/^\S+ /, "");
+  const tname = (type) => warUnitName(type, null, CANONICAL_LOG_LOCALE);
+  const troopLabel = (type) => warUnitLabel(type, CANONICAL_LOG_LOCALE);
   const WFLAV = WAR_FLAVOUR;
-  const TROOPS = WAR_UNIT_LABELS;
 
   function presentExplorationEvent(g, gr, event) {
       if (!event)
@@ -83,10 +85,10 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
           return;
       }
       if (event.type === "WAGON_MOVED" && event.reveal) {
-          const terrain = terrainLabel(event.reveal.terrain);
+          const terrain = terrainLabel(event.reveal.terrain, null, CANONICAL_LOG_LOCALE);
           const resource = event.reveal.resource;
           if (resource)
-              logExploration(g, "🗺️ " + pname(g, event.actorIndex) + " descobriu " + terrain + " e trouxe 1 " + RES[resource].n + " " + RES[resource].i + ".", event.actorIndex, sfxCue("coin"));
+              logExploration(g, "🗺️ " + pname(g, event.actorIndex) + " descobriu " + terrain + " e trouxe 1 " + resourceName(resource, CANONICAL_LOG_LOCALE) + " " + RES[resource].i + ".", event.actorIndex, sfxCue("coin"));
           else
               logExploration(g, "🗺️ " + pname(g, event.actorIndex) + " descobriu " + terrain + ". Não há aqui nada que preste.", event.actorIndex);
           event.reveal.ports.forEach(() => logExploration(g, "⚓ " + pname(g, event.actorIndex) + " encontrou um porto na costa distante!", event.actorIndex));
@@ -103,7 +105,7 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
   }
 
   function warKillLog(g, me, aT, dT, vi) {
-      logWar(g, UICON[aT] + " " + TROOPS[aT].replace(/^\S+ /, "") + " de " + pname(g, me) + " abateu " + UICON[dT] + " de " + pname(g, vi) + "!", me, sfxCue(unitSfx(aT)));
+      logWar(g, UICON[aT] + " " + tname(aT) + " de " + pname(g, me) + " abateu " + UICON[dT] + " de " + pname(g, vi) + "!", me, sfxCue(unitSfx(aT)));
   }
 
   function siegeThreatText(g, gr, hk) {
@@ -192,13 +194,13 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
       const details = event.details || {};
       if (card.kind === "tropa") {
           if (GUERRA(g.mode))
-              addLog(g, TROOPS[card.sub] + " de " + pname(g, me) + " marcha para o campo de batalha!", me, { audio: troopCue(card.sub) });
+              addLog(g, troopLabel(card.sub) + " de " + pname(g, me) + " marcha para o campo de batalha!", me, { audio: troopCue(card.sub) });
           else
-              addLog(g, TROOPS[card.sub] + " de " + pname(g, me) + " marcha! O Dragão vai ser guiado.", me, { audio: troopCue(card.sub) });
+              addLog(g, troopLabel(card.sub) + " de " + pname(g, me) + " marcha! O Dragão vai ser guiado.", me, { audio: troopCue(card.sub) });
           if (details.trinityCompleted) {
               addLog(g, "⚜️ " + pname(g, me) + " reuniu a TRINDADE DAS ARMAS! Os seus domínios estão para sempre a salvo do Dragão.", me);
               speak(g, me);
-              fireEv(g, "char", me, "Trindade das Armas!", "“" + pick(characterById(g.players[me].ch).q) + "” Os domínios de " + pname(g, me) + " ficam para sempre a salvo do Dragão!");
+              fireEv(g, "char", me, "Trindade das Armas!", "“" + pick(characterQuotes(g.players[me].ch, CANONICAL_LOG_LOCALE)) + "” Os domínios de " + pname(g, me) + " ficam para sempre a salvo do Dragão!");
           }
           presentScoringEvents(g, details.scoringEvents || []);
           return;
@@ -217,8 +219,8 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
       }
       if (card.kind === "monopolio") {
           const res = details.resource;
-          addLog(g, "👑 MONOPÓLIO! " + pname(g, me) + " confiscou todo o " + RES[res].n + " (" + details.total + ").", me, { audio: sfxCue("card") });
-          fireEv(g, "char", me, "Monopólio!", "“Todo o " + RES[res].n + " do reino... é MEU!” (" + details.total + " cartas confiscadas)");
+          addLog(g, "👑 MONOPÓLIO! " + pname(g, me) + " confiscou todo o " + resourceName(res, CANONICAL_LOG_LOCALE) + " (" + details.total + ").", me, { audio: sfxCue("card") });
+          fireEv(g, "char", me, "Monopólio!", "“Todo o " + resourceName(res, CANONICAL_LOG_LOCALE) + " do reino... é MEU!” (" + details.total + " cartas confiscadas)");
           return;
       }
       if (card.kind === "descoberta") {
@@ -550,13 +552,13 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
       }
       else if (actionType === GAME_ACTION.BUILD_PALACE) {
           addLog(g, "🏰 " + pname(g, actorIndex) + " ergueu um PALÁCIO!", actorIndex, { audio: voiceCue(g, actorIndex, "found_palace", "build") });
-          fireEv(g, "char", actorIndex, "Um palácio ergue-se!", "“" + pick(characterById(g.players[actorIndex].ch).q) + "”");
+          fireEv(g, "char", actorIndex, "Um palácio ergue-se!", "“" + pick(characterQuotes(g.players[actorIndex].ch, CANONICAL_LOG_LOCALE)) + "”");
       }
       else if (actionType === GAME_ACTION.PLACE_DRAGON) {
           const event = first("DRAGON_PLACED");
           if (event) {
               const terrain = g.board.hexes.find((hex) => hex.k === event.hex)?.terr;
-              addLog(g, "🐉 O Dragão pousou em " + terrainLabel(terrain, "terreno desconhecido") + ".", actorIndex, { audio: sfxCue("flap") });
+              addLog(g, "🐉 O Dragão pousou em " + terrainLabel(terrain, "terreno desconhecido", CANONICAL_LOG_LOCALE) + ".", actorIndex, { audio: sfxCue("flap") });
               event.excluded.forEach(({ playerIndex, reason }) => {
                   const why = reason === "IMMUNE" ? "imune (Trindade)" : "sem cartas na mão";
                   addLog(g, "🔎 " + pname(g, playerIndex) + " está adjacente mas não pode ser saqueado: " + why + ".", playerIndex);

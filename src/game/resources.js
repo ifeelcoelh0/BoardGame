@@ -1,12 +1,18 @@
+import { getLocale, t } from "../locales/i18n.js";
+
 export const RESOURCE_DEFINITIONS = Object.freeze({
-  madeira: Object.freeze({ n: "Madeira", i: "🪵", c: "#7a5a35" }),
-  tijolo: Object.freeze({ n: "Tijolo", i: "🧱", c: "#a4572f" }),
-  cavalos: Object.freeze({ n: "Cavalos", i: "🐎", c: "#2fbf95" }),
-  ouro: Object.freeze({ n: "Ouro", i: "🪙", c: "#e8c020" }),
-  obsidiana: Object.freeze({ n: "Obsidiana", i: "⚫", c: "#8244d6" }),
+  madeira: Object.freeze({ get n() { return t("resources.madeira"); }, i: "🪵", c: "#7a5a35" }),
+  tijolo: Object.freeze({ get n() { return t("resources.tijolo"); }, i: "🧱", c: "#a4572f" }),
+  cavalos: Object.freeze({ get n() { return t("resources.cavalos"); }, i: "🐎", c: "#2fbf95" }),
+  ouro: Object.freeze({ get n() { return t("resources.ouro"); }, i: "🪙", c: "#e8c020" }),
+  obsidiana: Object.freeze({ get n() { return t("resources.obsidiana"); }, i: "⚫", c: "#8244d6" }),
 });
 
 export const RESOURCE_KEYS = Object.freeze(Object.keys(RESOURCE_DEFINITIONS));
+
+export function resourceName(resource, locale = getLocale()) {
+  return isResourceKey(resource) ? t(`resources.${resource}`, undefined, locale) : String(resource || "");
+}
 
 export const BUILD_COSTS = Object.freeze({
   estrada: Object.freeze({ madeira: 1, tijolo: 1 }),

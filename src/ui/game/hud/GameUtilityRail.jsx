@@ -6,6 +6,7 @@ import { CHARACTER_GLOW_COLORS as GLOW } from "../../board/boardVisualConfig.js"
 import GameIcon from "../../assets/GameIcon.jsx";
 import { GAME_UTILITY_ICONS } from "../../../assets/gameUiIcons.js";
 import { HUD_UTILITY } from "./hudCatalog.js";
+import { t } from "../../../locales/i18n.js";
 import "../../../styles/game-utility-rail.css";
 
 function chatAuthor(game, message) {
@@ -19,9 +20,9 @@ function chatAuthor(game, message) {
 }
 
 const UTILITY_BUTTONS = Object.freeze([
-  Object.freeze({ id: HUD_UTILITY.HISTORY, label: "Crónicas", icon: GAME_UTILITY_ICONS.history }),
-  Object.freeze({ id: HUD_UTILITY.GRIMOIRE, label: "Grimório", icon: GAME_UTILITY_ICONS.grimoire }),
-  Object.freeze({ id: HUD_UTILITY.OPTIONS, label: "Opções", icon: GAME_UTILITY_ICONS.options }),
+  Object.freeze({ id: HUD_UTILITY.HISTORY, labelKey: "utility.history", icon: GAME_UTILITY_ICONS.history }),
+  Object.freeze({ id: HUD_UTILITY.GRIMOIRE, labelKey: "utility.grimoire", icon: GAME_UTILITY_ICONS.grimoire }),
+  Object.freeze({ id: HUD_UTILITY.OPTIONS, labelKey: "utility.options", icon: GAME_UTILITY_ICONS.options }),
 ]);
 
 export default function GameUtilityRail({
@@ -116,11 +117,11 @@ export default function GameUtilityRail({
       onPointerLeave={scheduleCollapse}
       onFocusCapture={openRail}
       onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) scheduleCollapse(); }}
-      aria-label="Ferramentas da partida"
+      aria-label={t("utility.tools")}
     >
       {socialMode === "emotes" && (
-        <section className="rd-utility-rail__popover rd-utility-rail__reactions" aria-label="Reações">
-          <header><small>Gestos do reino</small><strong>Reações</strong></header>
+        <section className="rd-utility-rail__popover rd-utility-rail__reactions" aria-label={t("utility.reactions")}>
+          <header><small>{t("utility.realmGestures")}</small><strong>{t("utility.reactions")}</strong></header>
           <div className="rd-utility-rail__emote-grid">
             {EMOTES.map((emote, index) => (
               <button key={emote.k} type="button" disabled={disabled || emoteCooldown} title={`${emote.n} (${index + 1})`} onClick={() => fireEmote(emote.k)}>
@@ -131,10 +132,10 @@ export default function GameUtilityRail({
         </section>
       )}
       {socialMode === "chat" && (
-        <section className="rd-utility-rail__popover rd-utility-rail__chat" aria-label="Chat do reino">
-          <header><small>Vozes à mesa</small><strong>Conversa do Reino</strong></header>
+        <section className="rd-utility-rail__popover rd-utility-rail__chat" aria-label={t("utility.chat")}>
+          <header><small>{t("utility.tableVoices")}</small><strong>{t("utility.realmConversation")}</strong></header>
           <div className="rd-utility-rail__chat-log" aria-live="polite">
-            {chat.length === 0 && <p className="rd-utility-rail__empty">Sem mensagens ainda.</p>}
+            {chat.length === 0 && <p className="rd-utility-rail__empty">{t("utility.noMessages")}</p>}
             {chat.map((message) => {
               const author = chatAuthor(game, message);
               return <article key={message.id} className="rd-utility-rail__message"><b style={{ "--rd-social-author": author.color }}>{author.name}</b><span>{message.tx}</span></article>;
@@ -142,17 +143,17 @@ export default function GameUtilityRail({
             <div ref={endRef} />
           </div>
           <div className="rd-utility-rail__composer">
-            <input value={text} maxLength={200} disabled={disabled} placeholder="Escreve uma mensagem…" aria-label="Mensagem para o reino" onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitChat(); if (event.key === "Escape") setSocialMode(null); }} />
-            <button type="button" disabled={disabled || !text.trim()} onClick={submitChat} aria-label="Enviar mensagem">→</button>
+            <input value={text} maxLength={200} disabled={disabled} placeholder={t("utility.messagePlaceholder")} aria-label={t("utility.messageAria")} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitChat(); if (event.key === "Escape") setSocialMode(null); }} />
+            <button type="button" disabled={disabled || !text.trim()} onClick={submitChat} aria-label={t("utility.sendMessage")}>→</button>
           </div>
         </section>
       )}
       <nav className="rd-utility-rail__dock">
-        <button type="button" className={socialMode === "emotes" ? "is-active is-primary" : "is-primary"} onClick={() => toggleSocial("emotes")} aria-label="Reações"><GameIcon name="RDD_Reactions" size={30} alt="" /><span>Reações</span></button>
-        <button type="button" className={socialMode === "chat" ? "is-active is-primary" : "is-primary"} onClick={() => toggleSocial("chat")} aria-label="Conversa"><GameIcon name="RDD_ChatTankard" size={30} alt="" /><span>Conversa</span>{unread > 0 && <i>{unread > 9 ? "9+" : unread}</i>}</button>
+        <button type="button" className={socialMode === "emotes" ? "is-active is-primary" : "is-primary"} onClick={() => toggleSocial("emotes")} aria-label={t("utility.reactions")}><GameIcon name="RDD_Reactions" size={30} alt="" /><span>{t("utility.reactions")}</span></button>
+        <button type="button" className={socialMode === "chat" ? "is-active is-primary" : "is-primary"} onClick={() => toggleSocial("chat")} aria-label={t("utility.conversation")}><GameIcon name="RDD_ChatTankard" size={30} alt="" /><span>{t("utility.conversation")}</span>{unread > 0 && <i>{unread > 9 ? "9+" : unread}</i>}</button>
         {UTILITY_BUTTONS.map((item) => (
-          <button key={item.id} type="button" className={`${activeUtility === item.id ? "is-active " : ""}is-secondary`} onClick={() => openUtility(item.id)} aria-label={item.label}>
-            <GameIcon name={item.icon} size={28} alt="" /><span>{item.label}</span>{item.id === HUD_UTILITY.HISTORY && logCount ? <i>{logCount}</i> : null}
+          <button key={item.id} type="button" className={`${activeUtility === item.id ? "is-active " : ""}is-secondary`} onClick={() => openUtility(item.id)} aria-label={t(item.labelKey)}>
+            <GameIcon name={item.icon} size={28} alt="" /><span>{t(item.labelKey)}</span>{item.id === HUD_UTILITY.HISTORY && logCount ? <i>{logCount}</i> : null}
           </button>
         ))}
       </nav>

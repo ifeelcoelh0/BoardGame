@@ -1,14 +1,15 @@
 import { handSize } from "../../../game/resources.js";
-import { calculateVictoryPoints, longestRoadLength, troopTotal } from "../../../game/scoringReducer.js";
+import { longestRoadLength, scoreBreakdown, troopTotal } from "../../../game/scoringReducer.js";
 import { isWarMode } from "../../../game/gameModes.js";
 import { characterById } from "../../../game/characterCatalog.js";
+import { t } from "../../../locales/i18n.js";
 
 function statArray(stats, key) {
   return Array.isArray(stats?.[key]) ? stats[key] : [];
 }
 
 function playerName(game, index) {
-  return characterById(game.players[index].ch)?.n || `Jogador ${index + 1}`;
+  return characterById(game.players[index].ch)?.n || t("end.player", { number: index + 1 });
 }
 
 export function buildEndgameModel(game, graph, seat) {
@@ -26,6 +27,7 @@ export function buildEndgameModel(game, graph, seat) {
     });
     const roads = Object.values(game.roads || {}).filter((owner) => owner === index).length;
     const victoryCards = [...(player.devNew || []), ...(player.devOld || [])].filter((card) => card.kind === "vp").length;
+    const score = scoreBreakdown(game, index, { includeSecret: true });
     return {
       playerIndex: index,
       characterId: player.ch,
@@ -40,9 +42,18 @@ export function buildEndgameModel(game, graph, seat) {
       troops: troopTotal(player),
       hasLargestArmy: game.la?.p === index,
       victoryCards,
+      scoreSources: Object.freeze({
+        villages,
+        palaces: palaces * 2,
+        longestRoad: score.longestRoad,
+        largestArmy: score.largestArmy,
+        occupations: score.occupations,
+        glory: score.glory,
+        secretVictoryPoints: score.secretVictoryPoints,
+      }),
       hand: handSize(player),
       immune: !!player.immune,
-      victoryPoints: calculateVictoryPoints(game, index, true),
+      victoryPoints: score.total,
     };
   }).sort((a, b) => b.victoryPoints - a.victoryPoints || a.playerIndex - b.playerIndex);
 
@@ -58,9 +69,9 @@ export function buildEndgameModel(game, graph, seat) {
       characterId: game.players[game.winner].ch,
       name: playerName(game, game.winner),
       shortName: playerName(game, game.winner).split(" ").pop(),
-      title: winnerCharacter?.t || "Soberano do Reino",
+      title: winnerCharacter?.t || t("end.realmSovereign"),
       quote,
-      victoryPoints: calculateVictoryPoints(game, game.winner, true),
+      victoryPoints: standings.find((entry) => entry.playerIndex === game.winner)?.victoryPoints || 0,
     },
     standings,
     dice: {

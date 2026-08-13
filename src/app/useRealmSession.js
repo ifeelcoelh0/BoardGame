@@ -43,6 +43,7 @@ import { reduceLobbyToSetup } from "../game/gameSetupReducer.js";
 import { CHARACTERS as CHARS, characterById as charOf } from "../game/characterCatalog.js";
 import { emoteById as emoteOf } from "../presentation/emoteCatalog.js";
 import { PEER_PREFIX as PREFIX, resolvePeerConfig } from "../multiplayer/config.js";
+import { t } from "../locales/i18n.js";
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -779,7 +780,7 @@ export default function useRealmSession({ stage, navigate, book }) {
                 pendingIdentity.current = null;
             clearLocalIdentity();
             setConnSt("off");
-            setErr(e?.message || "Não foi possível criar uma sessão segura.");
+            setErr(e?.message || t("session.secureFailed"));
         }
     };
     const refreshSavedRealms = () => setSavedRealms(inspectGameSaves());
@@ -790,7 +791,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         const g = result.ok ? result.game : null;
         if (!g) {
             refreshSavedRealms();
-            setErr("Não foi possível recuperar esse reino.");
+            setErr(t("session.recoverFailed"));
             return;
         }
         const requestId = createStableId("resume");
@@ -833,7 +834,7 @@ export default function useRealmSession({ stage, navigate, book }) {
             if (event.type === "SESSION_AUTH_REQUIRED") {
                 navigate(APP_STAGE.JOINING_ROOM);
                 setConnSt("auth");
-                setErr("A validar a tua sessão guardada…");
+                setErr(t("session.validating"));
                 return;
             }
             if (event.type === "CLAIM_REQUIRED") {
@@ -1041,7 +1042,7 @@ export default function useRealmSession({ stage, navigate, book }) {
             return;
         if (g.players.length >= gameModeConfig(g.mode).maxPlayers) {
             setConnSt("on");
-            setErr("O reino já está cheio.");
+            setErr(t("session.full"));
             navigate(APP_STAGE.SESSION_REQUIRED);
             return;
         }
@@ -1077,7 +1078,7 @@ export default function useRealmSession({ stage, navigate, book }) {
                 return;
             pendingIdentity.current = null;
             setConnSt("on");
-            setErr("Não foi possível criar uma sessão segura para este lugar.");
+            setErr(t("session.seatSecureFailed"));
         }
     };
     const togglePerks = () => {
@@ -1131,7 +1132,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         const used = new Set(current.players.map((player) => player.ch).filter(Boolean));
         const character = CHARS.find((candidate) => !used.has(candidate.id));
         if (!character) {
-            setErr("Não existem casas livres para outro bot.");
+            setErr(t("session.noBotHouse"));
             return false;
         }
         void dispatchLobbyAction(LOBBY_ACTION.ADD_BOT, { characterId: character.id });

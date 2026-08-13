@@ -27,6 +27,8 @@ const VOICE_VARIANTS = Object.freeze({
   emote_taunt: 1,
 });
 
+export const VOICE_EVENTS = Object.freeze(Object.keys(VOICE_VARIANTS));
+
 export const VOICE_CHARACTERS = Object.freeze([
   "maria", "vlad", "romeo", "protheus", "makuru", "artheria", "muriel", "bones",
 ]);

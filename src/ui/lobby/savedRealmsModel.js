@@ -1,19 +1,20 @@
 import { getLobbyModeMeta } from "./lobbyModeCatalog.js";
+import { getLocale, t } from "../../locales/i18n.js";
 
-const PHASE_LABELS = Object.freeze({
-  lobby: "No salão",
-  setup: "A preparar o reino",
-  play: "Em partida",
-  ended: "Partida terminada",
+const PHASE_KEYS = Object.freeze({
+  lobby: "save.lobby",
+  setup: "save.setup",
+  play: "save.play",
+  ended: "save.ended",
 });
 
 export function phaseLabel(phase) {
-  return PHASE_LABELS[phase] || "Estado desconhecido";
+  return t(PHASE_KEYS[phase] || "save.unknownState");
 }
 
-export function formatSavedRealmDate(value, locale = "pt-PT") {
+export function formatSavedRealmDate(value, locale = getLocale()) {
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "Data desconhecida";
+  if (!Number.isFinite(date.getTime())) return t("save.unknownDate", undefined, locale);
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
     timeStyle: "short",
@@ -21,7 +22,7 @@ export function formatSavedRealmDate(value, locale = "pt-PT") {
 }
 
 export function savedRealmStatus(entry) {
-  if (!entry?.valid) return { label: "Save inválido", recoverable: false };
+  if (!entry?.valid) return { label: t("save.invalid"), recoverable: false };
   return { label: phaseLabel(entry.game?.phase || entry.phase), recoverable: true };
 }
 
@@ -40,7 +41,7 @@ export function savedRealmSummary(entry) {
     valid: entry?.valid === true,
     recoverable: status.recoverable,
     statusLabel: status.label,
-    modeLabel: mode?.name ?? "Modo desconhecido",
+    modeLabel: mode?.name ?? t("save.unknownMode"),
     playerCount,
     round,
     updatedLabel: formatSavedRealmDate(entry?.updatedAt),

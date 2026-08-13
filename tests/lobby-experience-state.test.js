@@ -22,7 +22,7 @@ test("foyer view model has no fake room or character ownership", () => {
 
 test("o salão usa um catálogo único para apresentar os modos", () => {
   assert.equal(LOBBY_MODES.length, 5);
-  assert.equal(getLobbyModeMeta("dragao").name, "Modo Dragão");
+  assert.equal(getLobbyModeMeta("dragao").name, "Dragon Mode");
   assert.equal(getLobbyModeMeta("guerra").duration, "75–120 min");
   assert.equal(getLobbyModeMeta("desconhecido").id, "dragao");
 });

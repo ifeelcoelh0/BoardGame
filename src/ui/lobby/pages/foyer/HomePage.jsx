@@ -3,6 +3,7 @@ import GameIcon from "../../../assets/GameIcon.jsx";
 import { BOOK_PAGE } from "../../bookPages.js";
 import { savedRealmSummary } from "../../savedRealmsModel.js";
 import Leaf, { Opening } from "../Leaf.jsx";
+import { t } from "../../../../locales/i18n.js";
 
 export default function HomePage({ foyer, goTo }) {
   const entries = foyer.savedRealms ?? [];
@@ -15,39 +16,39 @@ export default function HomePage({ foyer, goTo }) {
 
   return (
     <>
-      <Leaf page={BOOK_PAGE.HOME} side="left" chapter="O SALÃO" title="Reinos do Dragão">
-        <Opening>Oito casas. Um trono. E um dragão que não escolhe lados.</Opening>
+      <Leaf page={BOOK_PAGE.HOME} side="left" chapter={t("lobby.hall")} title={t("lobby.gameTitle")}>
+        <Opening>{t("lobby.homeOpening")}</Opening>
         <dl className="rd-lobby-book-ui__facts">
-          <div><dt>Jogadores</dt><dd>2–4</dd></div>
-          <div><dt>Casas</dt><dd>8</dd></div>
-          <div><dt>Reinos guardados</dt><dd>{savedCount}</dd></div>
+          <div><dt>{t("lobby.players")}</dt><dd>2–4</dd></div>
+          <div><dt>{t("lobby.houses")}</dt><dd>8</dd></div>
+          <div><dt>{t("lobby.savedRealms")}</dt><dd>{savedCount}</dd></div>
         </dl>
 
         {latest ? (
-          <section className="rd-lobby-book-ui__latest" aria-label="Última sessão">
-            <small>ÚLTIMA SESSÃO</small>
-            <strong>Reino {latest.code}</strong>
+          <section className="rd-lobby-book-ui__latest" aria-label={t("lobby.lastSession")}>
+            <small>{t("lobby.lastSession")}</small>
+            <strong>{t("lobby.realmCode", { code: latest.code })}</strong>
             <span>{latestSummary?.modeLabel} · {latestSummary?.updatedLabel}</span>
             <button type="button" disabled={!latestSummary?.recoverable} onClick={() => foyer.onResume(latest.code)}>
-              Retomar última sessão
+              {t("lobby.resumeLast")}
             </button>
           </section>
         ) : (
           <p className="rd-lobby-book-ui__folio-copy is-muted">
-            As partidas que fundares neste dispositivo aparecerão aqui automaticamente.
+            {t("lobby.savesAuto")}
           </p>
         )}
       </Leaf>
 
-      <Leaf page={BOOK_PAGE.HOME} side="right" chapter="COMEÇAR" title="Escolhe o caminho">
+      <Leaf page={BOOK_PAGE.HOME} side="right" chapter={t("lobby.start")} title={t("lobby.choosePath")}>
         <div className="rd-lobby-book-ui__pathways">
           <button data-testid="create-realm" className="is-primary" type="button" onClick={() => goTo(BOOK_PAGE.MODE)}>
             <GameIcon name="RDD_FoundRealm" size={34} alt="" />
-            <span><strong>Fundar um Reino</strong><em>Cria uma nova mesa e partilha o código.</em></span>
+            <span><strong>{t("lobby.foundRealm")}</strong><em>{t("lobby.foundRealmDesc")}</em></span>
           </button>
           <button data-testid="join-realm" type="button" onClick={() => { foyer.setErr(""); goTo(BOOK_PAGE.JOIN); }}>
             <GameIcon name="I_Key01" size={34} alt="" />
-            <span><strong>Entrar num Reino</strong><em>Usa o código recebido do anfitrião.</em></span>
+            <span><strong>{t("lobby.joinRealm")}</strong><em>{t("lobby.joinRealmDesc")}</em></span>
           </button>
           <button
             data-testid="open-saved-realms"
@@ -57,8 +58,8 @@ export default function HomePage({ foyer, goTo }) {
           >
             <GameIcon name="I_Chest01" size={34} alt="" />
             <span>
-              <strong>Retomar um Reino</strong>
-              <em>{savedCount ? `${savedCount} ${savedCount === 1 ? "reino guardado" : "reinos guardados"} neste dispositivo.` : "Nenhuma partida guardada neste dispositivo."}</em>
+              <strong>{t("lobby.resumeRealm")}</strong>
+              <em>{savedCount ? t("lobby.savedCount", { count: savedCount }) : t("lobby.noSaved")}</em>
             </span>
           </button>
         </div>

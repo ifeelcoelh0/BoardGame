@@ -6,6 +6,7 @@ import { getLobbyRequiredPlayers } from "../../../game/lobbyRules.js";
 import { BOOK_PAGE, BOOK_SCOPE } from "../bookPages.js";
 import Leaf, { Opening } from "./Leaf.jsx";
 import GameSettingsControls from "../../settings/GameSettingsControls.jsx";
+import { t } from "../../../locales/i18n.js";
 
 /*
    Páginas do reino, mais as três que existem nos dois âmbitos.
@@ -29,14 +30,14 @@ function ReadyActions({ realm }) {
         onClick={realm.onToggleReady}
         disabled={isStarting || !hasConfirmedCharacter}
       >
-        {localPlayer?.ready ? "Cancelar pronto" : "Estou pronto"}
+        {localPlayer?.ready ? t("lobby.readyCancel") : t("lobby.ready")}
       </button>
       {isHost ? (
         <button data-testid="start-game" className="is-primary" type="button" disabled={!allReady || isStarting} onClick={realm.onStart}>
-          <GameIcon name="C_Elm04" size={21} /> {isStarting ? "A abrir o mapa…" : "Iniciar partida"}
+          <GameIcon name="C_Elm04" size={21} /> {isStarting ? t("lobby.openingMap") : t("lobby.startMatch")}
         </button>
       ) : (
-        <p className="rd-lobby-book-ui__waiting">{allReady ? "À espera do anfitrião…" : "A mesa aguarda todos os jogadores."}</p>
+        <p className="rd-lobby-book-ui__waiting">{allReady ? t("lobby.waitHost") : t("lobby.waitPlayers")}</p>
       )}
     </div>
   );
@@ -46,8 +47,8 @@ function PlayerRow({ player, slot, realm, onRequestKick }) {
   if (!player) {
     return (
       <div className="rd-lobby-book-ui__player is-empty">
-        <span><strong>Lugar {slot + 1}</strong><em>À espera de um reino</em></span>
-        {realm.isHost && <button data-testid="add-bot" type="button" onClick={realm.onAddBot} disabled={realm.isStarting}>Adicionar bot</button>}
+        <span><strong>{t("lobby.seat", { slot: slot + 1 })}</strong><em>{t("lobby.waitRealm")}</em></span>
+        {realm.isHost && <button data-testid="add-bot" type="button" onClick={realm.onAddBot} disabled={realm.isStarting}>{t("lobby.addBot")}</button>}
       </div>
     );
   }
@@ -56,12 +57,12 @@ function PlayerRow({ player, slot, realm, onRequestKick }) {
   return (
     <div className={`rd-lobby-book-ui__player${isLocal ? " is-local" : ""}${disconnected ? " is-disconnected" : ""}`}>
       <span>
-        <small>{player.index === 0 ? "ANFITRIÃO" : player.controller === "bot" ? `BOT ${player.index}` : `JOGADOR ${player.index + 1}`}{isLocal ? " · TU" : ""}</small>
-        <strong>{player.character?.n ?? "Casa por escolher"}</strong>
-        <em>{player.controller === "bot" ? "Controlado pelo reino" : disconnected ? `Lugar reservado por ${lobbyReconnectSeconds(player, realm.presenceNow) ?? 0}s` : player.ready ? "Pronto" : "A preparar-se"}</em>
+        <small>{player.index === 0 ? t("lobby.host") : player.controller === "bot" ? `BOT ${player.index}` : t("lobby.player", { number: player.index + 1 })}{isLocal ? ` · ${t("lobby.you")}` : ""}</small>
+        <strong>{player.character?.n ?? t("lobby.houseUnchosen")}</strong>
+        <em>{player.controller === "bot" ? t("lobby.botControlled") : disconnected ? t("lobby.seatReserved", { seconds: lobbyReconnectSeconds(player, realm.presenceNow) ?? 0 }) : player.ready ? t("lobby.readyState") : t("lobby.preparing")}</em>
       </span>
       {realm.isHost && player.index > 0 && (
-        <button type="button" onClick={() => onRequestKick(player.playerId)} disabled={realm.isStarting}>{player.controller === "bot" ? "Remover bot" : "Expulsar"}</button>
+        <button type="button" onClick={() => onRequestKick(player.playerId)} disabled={realm.isStarting}>{player.controller === "bot" ? t("lobby.removeBot") : t("lobby.kick")}</button>
       )}
     </div>
   );
@@ -72,27 +73,27 @@ export function RealmPage({ realm }) {
   const requiredPlayers = getLobbyRequiredPlayers(game);
   return (
     <>
-      <Leaf page={BOOK_PAGE.REALM} side="left" chapter="A PARTIDA" title={mode.name}>
+      <Leaf page={BOOK_PAGE.REALM} side="left" chapter={t("lobby.match")} title={mode.name}>
         <dl className="rd-lobby-book-ui__facts">
-          <div><dt>Duração estimada</dt><dd>{mode.duration}</dd></div>
-          <div><dt>Estado</dt><dd>{isStarting ? "A iniciar" : "No salão"}</dd></div>
-          <div><dt>Tipo</dt><dd>{game.test ? "Reino de teste" : "Reino normal"}</dd></div>
-          <div><dt>Jogadores</dt><dd>{players.length}/4</dd></div>
+          <div><dt>{t("lobby.estimatedDuration")}</dt><dd>{mode.duration}</dd></div>
+          <div><dt>{t("lobby.state")}</dt><dd>{isStarting ? t("lobby.starting") : t("lobby.inHall")}</dd></div>
+          <div><dt>{t("lobby.type")}</dt><dd>{game.test ? t("lobby.testRealm") : t("lobby.normalRealm")}</dd></div>
+          <div><dt>{t("lobby.players")}</dt><dd>{players.length}/4</dd></div>
         </dl>
         <button data-testid="room-code" className="rd-lobby-book-ui__code" type="button" onClick={realm.onCopyCode}>
-          <small>{codeCopied ? "CÓDIGO COPIADO" : "CÓDIGO DO REINO"}</small>
+          <small>{codeCopied ? t("lobby.codeCopied") : t("lobby.realmCodeLabel")}</small>
           <strong>{game.code}</strong>
-          <span>{codeCopied ? "Pronto para partilhar" : "Clica para copiar"}</span>
+          <span>{codeCopied ? t("lobby.readyShare") : t("lobby.clickCopy")}</span>
         </button>
       </Leaf>
-      <Leaf page={BOOK_PAGE.REALM} side="right" chapter="O TEU LUGAR" title={localPlayer?.character?.n ?? "Casa por escolher"}>
+      <Leaf page={BOOK_PAGE.REALM} side="right" chapter={t("lobby.yourSeat")} title={localPlayer?.character?.n ?? t("lobby.houseUnchosen")}>
         {perk
-          ? <div className="rd-lobby-book-ui__perk"><small>PODER DA TUA CASA</small><strong>{perk.n}</strong><p>{perk.d}</p></div>
-          : <p className="rd-lobby-book-ui__folio-copy">A tua casa, prontidão e lugar na mesa são controlados a partir deste livro.</p>}
+          ? <div className="rd-lobby-book-ui__perk"><small>{t("lobby.yourHousePower")}</small><strong>{perk.n}</strong><p>{perk.d}</p></div>
+          : <p className="rd-lobby-book-ui__folio-copy">{t("lobby.bookControls")}</p>}
         <dl className="rd-lobby-book-ui__facts">
-          <div><dt>Personagem</dt><dd>{hasConfirmedCharacter ? "Confirmada" : "Por escolher"}</dd></div>
-          <div><dt>Prontidão</dt><dd>{localPlayer?.ready ? "Pronto" : "A preparar"}</dd></div>
-          <div><dt>Mínimo</dt><dd>{requiredPlayers} jogadores</dd></div>
+          <div><dt>{t("lobby.character")}</dt><dd>{hasConfirmedCharacter ? t("lobby.confirmed") : t("lobby.toChoose")}</dd></div>
+          <div><dt>{t("lobby.readiness")}</dt><dd>{localPlayer?.ready ? t("lobby.readyState") : t("lobby.preparing")}</dd></div>
+          <div><dt>{t("lobby.minimum")}</dt><dd>{t("lobby.playerCount", { count: requiredPlayers })}</dd></div>
         </dl>
         <div className="rd-lobby-book-ui__realm-actions">
           <button
@@ -103,8 +104,8 @@ export function RealmPage({ realm }) {
           >
             <GameIcon name="RDD_Palace" size={24} alt="" />
             <span>
-              <strong>{hasConfirmedCharacter ? "Trocar de casa" : "Escolher a minha casa"}</strong>
-              <em>{hasConfirmedCharacter ? "Volta à parede das casas e escolhe outro brasão." : "Escolhe a casa que te representará nesta partida."}</em>
+              <strong>{hasConfirmedCharacter ? t("lobby.changeHouse") : t("lobby.chooseMyHouse")}</strong>
+              <em>{hasConfirmedCharacter ? t("lobby.changeHouseDesc") : t("lobby.chooseHouseSelfDesc")}</em>
             </span>
           </button>
           <button
@@ -116,12 +117,12 @@ export function RealmPage({ realm }) {
           >
             <span className="rd-lobby-book-ui__action-symbol" aria-hidden="true">↩</span>
             <span>
-              <strong>Sair do reino</strong>
-              <em>{realm.isHost ? "Desfaz o reino e desliga os convidados." : "Liberta o teu lugar e regressa ao salão."}</em>
+              <strong>{t("lobby.leaveRealm")}</strong>
+              <em>{realm.isHost ? t("lobby.leaveHostDesc") : t("lobby.leaveGuestDesc")}</em>
             </span>
           </button>
         </div>
-        {game.test && <p className="rd-lobby-book-ui__test-note">Reino de teste · pode iniciar a partir de {requiredPlayers} jogadores.</p>}
+        {game.test && <p className="rd-lobby-book-ui__test-note">{t("lobby.testRealmNote", { count: requiredPlayers })}</p>}
         <ReadyActions realm={realm} />
       </Leaf>
     </>
@@ -132,31 +133,31 @@ export function PlayersPage({ realm }) {
   const [pendingKickId, setPendingKickId] = useState(null);
   useEffect(() => setPendingKickId(null), [realm.players.length]);
   const pendingPlayer = realm.players.find((player) => player.playerId === pendingKickId) ?? null;
-  const pendingName = pendingPlayer?.character?.n ?? "este jogador";
+  const pendingName = pendingPlayer?.character?.n ?? t("lobby.thisPlayer");
   const pendingIsBot = pendingPlayer?.controller === "bot";
   return (
     <>
-      <Leaf page={BOOK_PAGE.PLAYERS} side="left" chapter="A MESA" title="Jogadores I">
+      <Leaf page={BOOK_PAGE.PLAYERS} side="left" chapter={t("lobby.table")} title={t("lobby.playersI")}>
         <div className="rd-lobby-book-ui__players">
           {realm.slots.slice(0, 2).map((player, slot) => (
             <PlayerRow key={player?.playerId || `empty-${slot}`} player={player} slot={slot} realm={realm} onRequestKick={setPendingKickId} />
           ))}
         </div>
-        <Opening>Os lugares desligados ficam reservados durante a janela de reconexão.</Opening>
+        <Opening>{t("lobby.reconnectSeats")}</Opening>
       </Leaf>
-      <Leaf page={BOOK_PAGE.PLAYERS} side="right" chapter="A MESA" title="Jogadores II">
+      <Leaf page={BOOK_PAGE.PLAYERS} side="right" chapter={t("lobby.table")} title={t("lobby.playersII")}>
         <div className="rd-lobby-book-ui__players">
           {realm.slots.slice(2, 4).map((player, offset) => (
             <PlayerRow key={player?.playerId || `empty-${offset + 2}`} player={player} slot={offset + 2} realm={realm} onRequestKick={setPendingKickId} />
           ))}
         </div>
         {pendingPlayer && (
-          <div className="rd-lobby-book-ui__confirm" role="alertdialog" aria-label={`Confirmar expulsão de ${pendingName}`}>
-            <p>{pendingIsBot ? "Remover" : "Expulsar"} <strong>{pendingName}</strong> deste reino?</p>
+          <div className="rd-lobby-book-ui__confirm" role="alertdialog" aria-label={t("lobby.confirmKick", { name: pendingName })}>
+            <p>{pendingIsBot ? t("lobby.removeQuestion") : t("lobby.kickQuestion")} <strong>{pendingName}</strong> {t("lobby.fromRealm")}</p>
             <div>
-              <button type="button" onClick={() => setPendingKickId(null)}>Cancelar</button>
+              <button type="button" onClick={() => setPendingKickId(null)}>{t("common.cancel")}</button>
               <button data-testid={`kick-${pendingPlayer.playerId}`} type="button" onClick={() => { realm.onKickPlayer?.(pendingPlayer.playerId); setPendingKickId(null); }}>
-                {pendingIsBot ? "Confirmar remoção" : "Confirmar expulsão"}
+                {pendingIsBot ? t("lobby.confirmRemove") : t("lobby.confirmKickAction")}
               </button>
             </div>
           </div>
@@ -171,28 +172,28 @@ export function SettingsPage({ realm, scope, audio }) {
   const inRealm = scope === BOOK_SCOPE.REALM && realm;
   return (
     <>
-      <Leaf page={BOOK_PAGE.SETTINGS} side="left" chapter="CONFIGURAÇÃO" title="Opções do reino">
+      <Leaf page={BOOK_PAGE.SETTINGS} side="left" chapter={t("lobby.config")} title={t("lobby.realmOptions")}>
         {inRealm ? (
           realm.game.mode === "guerra" ? (
             <button className="rd-lobby-book-ui__setting" type="button" onClick={realm.onTogglePerks} disabled={!realm.isHost || realm.isStarting}>
-              Poderes de casa: <b>{realm.game.perksOn === false ? "desligados" : "ativos"}</b>
-              <span>{realm.isHost ? "Alterar configuração" : "Definido pelo anfitrião"}</span>
+              {t("lobby.housePowers")}: <b>{realm.game.perksOn === false ? t("lobby.disabled") : t("lobby.active")}</b>
+              <span>{realm.isHost ? t("lobby.changeConfig") : t("lobby.hostDefined")}</span>
             </button>
           ) : (
-            <p className="rd-lobby-book-ui__folio-copy">Este modo não possui opções de partida alteráveis no salão.</p>
+            <p className="rd-lobby-book-ui__folio-copy">{t("lobby.noModeOptions")}</p>
           )
         ) : (
           <p className="rd-lobby-book-ui__folio-copy">
-            As opções de partida ficam disponíveis depois de fundares ou entrares num reino.
+            {t("lobby.optionsAfterJoin")}
           </p>
         )}
         <dl className="rd-lobby-book-ui__facts">
-          <div><dt>Modo</dt><dd>{inRealm ? realm.mode.name : "Por escolher"}</dd></div>
-          <div><dt>Tipo</dt><dd>{inRealm ? (realm.game.test ? "Teste" : "Normal") : "—"}</dd></div>
-          <div><dt>Autoridade</dt><dd>{inRealm ? (realm.isHost ? "Anfitrião" : "Convidado") : "—"}</dd></div>
+          <div><dt>{t("lobby.mode")}</dt><dd>{inRealm ? realm.mode.name : t("lobby.chooseLater")}</dd></div>
+          <div><dt>{t("lobby.type")}</dt><dd>{inRealm ? (realm.game.test ? t("lobby.test") : t("lobby.normal")) : "—"}</dd></div>
+          <div><dt>{t("lobby.authority")}</dt><dd>{inRealm ? (realm.isHost ? t("lobby.host") : t("lobby.guest")) : "—"}</dd></div>
         </dl>
       </Leaf>
-      <Leaf page={BOOK_PAGE.SETTINGS} side="right" chapter="ESTE DISPOSITIVO" title="Preferências">
+      <Leaf page={BOOK_PAGE.SETTINGS} side="right" chapter={t("lobby.thisDevice")} title={t("lobby.preferences")}>
         <GameSettingsControls
           settings={audio?.settings}
           setSetting={audio?.setSetting}
@@ -210,24 +211,23 @@ export function RulesPage({ realm, scope }) {
   const requiredPlayers = inRealm ? getLobbyRequiredPlayers(realm.game) : 3;
   return (
     <>
-      <Leaf page={BOOK_PAGE.RULES} side="left" chapter="REGRAS DA MESA" title={inRealm ? realm.mode.name : "Como se joga"}>
+      <Leaf page={BOOK_PAGE.RULES} side="left" chapter={t("lobby.tableRules")} title={inRealm ? realm.mode.name : t("lobby.howToPlay")}>
         <dl className="rd-lobby-book-ui__facts">
-          <div><dt>Jogadores</dt><dd>{requiredPlayers}–4</dd></div>
-          <div><dt>Duração</dt><dd>{inRealm ? realm.mode.duration : "Depende do modo"}</dd></div>
-          <div><dt>Teste</dt><dd>{inRealm ? (realm.game.test ? "99 recursos iniciais" : "Regras normais") : "—"}</dd></div>
+          <div><dt>{t("lobby.players")}</dt><dd>{requiredPlayers}–4</dd></div>
+          <div><dt>{t("lobby.duration")}</dt><dd>{inRealm ? realm.mode.duration : t("lobby.dependsMode")}</dd></div>
+          <div><dt>{t("lobby.test")}</dt><dd>{inRealm ? (realm.game.test ? "99 starting resources" : t("lobby.normalRules")) : "—"}</dd></div>
         </dl>
         <Opening>
-          Todos os jogadores presentes precisam de escolher uma casa e marcar-se como
-          prontos antes do anfitrião poder iniciar.
+          {t("lobby.readyOpening")}
         </Opening>
       </Leaf>
-      <Leaf page={BOOK_PAGE.RULES} side="right" chapter="COMO USAR O SALÃO" title="Antes da partida">
+      <Leaf page={BOOK_PAGE.RULES} side="right" chapter={t("lobby.useHall")} title={t("lobby.beforeMatch")}>
         <ol className="rd-lobby-book-ui__rules-list">
-          <li>Funda um reino ou entra com um código.</li>
-          <li>Escolhe e confirma a tua casa na parede das casas.</li>
-          <li>Partilha o código do reino com os outros jogadores.</li>
-          <li>Acompanha a mesa na página Jogadores.</li>
-          <li>Marca-te como pronto e aguarda o anfitrião.</li>
+          <li>{t("lobby.rule1")}</li>
+          <li>{t("lobby.rule2")}</li>
+          <li>{t("lobby.rule3")}</li>
+          <li>{t("lobby.rule4")}</li>
+          <li>{t("lobby.rule5")}</li>
         </ol>
         {inRealm && <ReadyActions realm={realm} />}
       </Leaf>
@@ -241,34 +241,33 @@ export function DiagnosticsPage({ realm, scope, diagnostics }) {
   const events = report?.events ?? [];
   return (
     <>
-      <Leaf page={BOOK_PAGE.DIAGNOSTICS} side="left" chapter="ESTADO DO SISTEMA" title="Versão">
+      <Leaf page={BOOK_PAGE.DIAGNOSTICS} side="left" chapter={t("lobby.systemState")} title={t("lobby.version")}>
         <dl className="rd-lobby-book-ui__facts">
-          <div><dt>Build</dt><dd data-testid="diagnostics-version">v{APP_BUILD_VERSION}</dd></div>
-          <div><dt>Compatibilidade</dt><dd>protocolo {APP_BUILD_COMPATIBILITY_VERSION}</dd></div>
-          <div><dt>Ligação</dt><dd>{diagnostics?.connectionLabel ?? "—"}</dd></div>
-          <div><dt>TURN</dt><dd>{report?.network?.turnEnabled ? "ativo" : "não configurado"}</dd></div>
-          <div><dt>Signaling</dt><dd>{report?.network?.signaling === "custom" ? "próprio" : "PeerJS cloud"}</dd></div>
-          <div><dt>Papel</dt><dd>{inRealm ? (realm.isHost ? "Anfitrião" : "Convidado") : "Sem reino"}</dd></div>
-          <div><dt>Reino</dt><dd>{inRealm ? realm.game.code : "—"}</dd></div>
+          <div><dt>{t("lobby.build")}</dt><dd data-testid="diagnostics-version">v{APP_BUILD_VERSION}</dd></div>
+          <div><dt>{t("lobby.compatibility")}</dt><dd>{t("lobby.protocol", { version: APP_BUILD_COMPATIBILITY_VERSION })}</dd></div>
+          <div><dt>{t("lobby.connection")}</dt><dd>{diagnostics?.connectionLabel ?? "—"}</dd></div>
+          <div><dt>{t("lobby.turn")}</dt><dd>{report?.network?.turnEnabled ? t("lobby.turnActive") : t("lobby.turnNotConfigured")}</dd></div>
+          <div><dt>{t("lobby.signaling")}</dt><dd>{report?.network?.signaling === "custom" ? t("lobby.custom") : "PeerJS cloud"}</dd></div>
+          <div><dt>{t("lobby.role")}</dt><dd>{inRealm ? (realm.isHost ? t("lobby.host") : t("lobby.guest")) : t("lobby.noRealm")}</dd></div>
+          <div><dt>{t("hud.realm")}</dt><dd>{inRealm ? realm.game.code : "—"}</dd></div>
         </dl>
         <Opening>
-          Ao reportar um problema, indica a versão e o código do reino. Os jogadores de uma
-          mesma partida têm de ter o mesmo protocolo.
+          {t("lobby.reportOpening")}
         </Opening>
       </Leaf>
-      <Leaf page={BOOK_PAGE.DIAGNOSTICS} side="right" chapter="REGISTO LOCAL" title="Últimos eventos">
-        {!events.length && <p className="rd-lobby-book-ui__folio-copy">Sem eventos registados neste navegador.</p>}
+      <Leaf page={BOOK_PAGE.DIAGNOSTICS} side="right" chapter={t("lobby.localLog")} title={t("lobby.latestEvents")}>
+        {!events.length && <p className="rd-lobby-book-ui__folio-copy">{t("lobby.noEvents")}</p>}
         <div className="rd-lobby-book-ui__diagnostics" data-testid="diagnostics-events">
           {events.slice(-8).reverse().map((event, index) => (
             <article key={`${event.at ?? index}-${index}`}>
-              <span><strong>{event.type ?? "evento"}</strong><em>{event.at ?? ""}</em></span>
+              <span><strong>{event.type ?? t("lobby.event")}</strong><em>{event.at ?? ""}</em></span>
               {event.message && <p>{event.message}</p>}
             </article>
           ))}
         </div>
         <div className="rd-lobby-book-ui__actions is-single-column">
           <button type="button" onClick={diagnostics?.onCopyReport} disabled={!diagnostics?.onCopyReport}>
-            {diagnostics?.reportCopied ? "Relatório copiado" : "Copiar relatório"}
+            {diagnostics?.reportCopied ? t("lobby.reportCopied") : t("lobby.copyReport")}
           </button>
         </div>
       </Leaf>

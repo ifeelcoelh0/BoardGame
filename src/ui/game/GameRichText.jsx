@@ -18,9 +18,23 @@ const TERM_ICON = Object.freeze({
   palácios: GAME_ACTION_ICONS.palace,
   carta: GAME_ACTION_ICONS.card,
   cartas: GAME_ACTION_ICONS.card,
+  wood: RESOURCE_ICON_BY_KEY.madeira,
+  clay: RESOURCE_ICON_BY_KEY.tijolo,
+  horse: RESOURCE_ICON_BY_KEY.cavalos,
+  horses: RESOURCE_ICON_BY_KEY.cavalos,
+  gold: RESOURCE_ICON_BY_KEY.ouro,
+  obsidian: RESOURCE_ICON_BY_KEY.obsidiana,
+  road: GAME_ACTION_ICONS.road,
+  roads: GAME_ACTION_ICONS.road,
+  village: GAME_ACTION_ICONS.village,
+  villages: GAME_ACTION_ICONS.village,
+  palace: GAME_ACTION_ICONS.palace,
+  palaces: GAME_ACTION_ICONS.palace,
+  card: GAME_ACTION_ICONS.card,
+  cards: GAME_ACTION_ICONS.card,
 });
 
-const TERM_RE = /(madeira|tijolo|argila|cavalos?|ouro|obsidiana|estradas?|aldeias?|palácios?|cartas?)/giu;
+const TERM_RE = /(madeira|tijolo|argila|cavalos?|ouro|obsidiana|estradas?|aldeias?|palácios?|cartas?|wood|clay|horses?|gold|obsidian|roads?|villages?|palaces?|cards?)/giu;
 
 export default function GameRichText({ children, iconSize = 16 }) {
   const text = cleanGameUiText(children);
@@ -30,7 +44,7 @@ export default function GameRichText({ children, iconSize = 16 }) {
     const index = match.index ?? 0;
     if (index > cursor) parts.push(text.slice(cursor, index));
     const word = match[0];
-    const icon = TERM_ICON[word.toLocaleLowerCase("pt-PT")];
+    const icon = TERM_ICON[word.toLowerCase()];
     parts.push(
       <span className="rd-rich-term" key={`${index}-${word}`}>
         {icon && <GameIcon name={icon} size={iconSize} alt="" />}

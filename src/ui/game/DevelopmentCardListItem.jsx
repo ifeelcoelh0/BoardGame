@@ -1,5 +1,6 @@
 import DevelopmentCard from "./DevelopmentCard.jsx";
 import { developmentCardPresentation } from "../../presentation/developmentCardCatalog.js";
+import { t } from "../../locales/i18n.js";
 
 export default function DevelopmentCardListItem({
   card,
@@ -20,7 +21,7 @@ export default function DevelopmentCardListItem({
         <span>{status || meta.description}</span>
       </div>
       {onPlay && card?.kind !== "vp" ? (
-        <button type="button" className="rd-dev-card-row__action" disabled={disabled} onClick={onPlay}>Jogar</button>
+        <button type="button" className="rd-dev-card-row__action" disabled={disabled} onClick={onPlay}>{t("common.play")}</button>
       ) : null}
     </article>
   );

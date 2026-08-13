@@ -1,3 +1,5 @@
+import { t } from "../../locales/i18n.js";
+
 export const ACTION_PRESENTATION = Object.freeze({
   HIDDEN: "hidden",
   ROLL: "roll",
@@ -6,18 +8,19 @@ export const ACTION_PRESENTATION = Object.freeze({
   PLACEMENT: "placement",
 });
 
-const MAP_SELECTION = Object.freeze({
-  estrada: Object.freeze({ label: "A construir: Estrada", hint: "Escolhe uma aresta válida no mapa." }),
-  aldeia: Object.freeze({ label: "A construir: Aldeia", hint: "Escolhe um ponto válido no mapa." }),
-  palacio: Object.freeze({ label: "A construir: Palácio", hint: "Escolhe uma aldeia tua para a elevar." }),
-  suborno: Object.freeze({ label: "A escolher alvo do Suborno", hint: "Escolhe uma unidade válida no mapa." }),
-  carruagem: Object.freeze({ label: "A colocar Carruagem", hint: "Escolhe um hexágono válido no mapa." }),
-  mover: Object.freeze({ label: "A mover Carruagem", hint: "Escolhe um hexágono vizinho." }),
-  fundar: Object.freeze({ label: "A fundar Aldeia", hint: "Escolhe um canto válido do hexágono." }),
+const MAP_SELECTION_KEYS = Object.freeze({
+  estrada: ["placement.road", "placement.roadHint"],
+  aldeia: ["placement.village", "placement.villageHint"],
+  palacio: ["placement.palace", "placement.palaceHint"],
+  suborno: ["placement.bribe", "placement.bribeHint"],
+  carruagem: ["placement.wagon", "placement.wagonHint"],
+  mover: ["placement.moveWagon", "placement.moveWagonHint"],
+  fundar: ["placement.foundVillage", "placement.foundVillageHint"],
 });
 
 export function mapSelectionPresentation(mode) {
-  return mode ? MAP_SELECTION[mode] ?? null : null;
+  const keys = mode ? MAP_SELECTION_KEYS[mode] : null;
+  return keys ? Object.freeze({ label: t(keys[0]), hint: t(keys[1]) }) : null;
 }
 
 export function deriveActionPresentation({ myTurn, phase, winner, actionModel, interactionMode, minimized = false, forcedBoardChoice = false }) {

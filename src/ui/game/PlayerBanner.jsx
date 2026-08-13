@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import CharacterSprite from "../assets/CharacterSprite.jsx";
 import GameIcon from "../assets/GameIcon.jsx";
 import { GAME_SUMMARY_ICONS as SUMMARY_ICONS, RESOURCE_ICON_BY_KEY as RESOURCE_ICONS } from "../../assets/gameUiIcons.js";
+import { t } from "../../locales/i18n.js";
+import { playerBannerScore } from "./playerBannerScoreModel.js";
+import "../../styles/player-banner.css";
 
 const ROTATION_DIRECTIONS = [
   "south",
@@ -14,13 +17,7 @@ const ROTATION_DIRECTIONS = [
   "south-west",
 ];
 
-const RESOURCE_LABELS = {
-  madeira: "Madeira",
-  tijolo: "Argila",
-  cavalos: "Cavalos",
-  ouro: "Ouro",
-  obsidiana: "Obsidiana",
-};
+const resourceLabel = (resource) => t(`resources.${resource}`);
 
 const STATUS_ICONS = {
   immune: "S_Holy09",
@@ -90,8 +87,8 @@ function DetailedResources({ player, isLocal }) {
       <div className="rdb-player-banner__hidden-hand">
         <BannerIcon name={SUMMARY_ICONS.resources} size={28} />
         <div>
-          <strong>{Object.values(player.res || {}).reduce((sum, amount) => sum + (amount || 0), 0)} recursos</strong>
-          <span>A composição da mão deste rival é secreta.</span>
+          <strong>{t("hud.resourceTotal", { count: Object.values(player.res || {}).reduce((sum, amount) => sum + (amount || 0), 0) })}</strong>
+          <span>{t("hud.secretHand")}</span>
         </div>
       </div>
     );
@@ -100,9 +97,9 @@ function DetailedResources({ player, isLocal }) {
   return (
     <div className="rdb-player-banner__resource-grid">
       {resourceEntries.map((resource) => (
-        <span key={resource} title={RESOURCE_LABELS[resource]}>
+        <span key={resource} title={resourceLabel(resource)}>
           <BannerIcon name={RESOURCE_ICONS[resource]} size={26} />
-          <small>{RESOURCE_LABELS[resource]}</small>
+          <small>{resourceLabel(resource)}</small>
           <b>{player.res?.[resource] || 0}</b>
         </span>
       ))}
@@ -139,7 +136,8 @@ export default function PlayerBanner({
     ? Math.max(...player.portOff.map((port) => port.left))
     : 0;
   const hasStatuses = player.immune || player.sick > 0 || tsunamiTurns > 0;
-  const visibleVictoryPoints = publicVictoryPoints;
+  const score = playerBannerScore({ publicVictoryPoints, secretVictoryPoints, isLocal });
+  const visibleVictoryPoints = score.publicScore;
   const isBot = player.controller === "bot";
 
   const handleKeyDown = (event) => {
@@ -156,13 +154,13 @@ export default function PlayerBanner({
       role="button"
       tabIndex={0}
       aria-expanded={isExpanded}
-      title={isExpanded ? "Fechar detalhes desta casa" : "Abrir detalhes desta casa"}
+      title={isExpanded ? t("common.close") : t("common.details")}
       onClick={onToggle}
       onKeyDown={handleKeyDown}
     >
       <span className="rdb-player-banner__grain" aria-hidden="true" />
       <span className={`rdb-player-banner__rank${rank === 0 ? " is-first" : ""}`}>
-        {rank + 1}.º
+        #{rank + 1}
       </span>
 
       <span className="rdb-player-banner__portrait" aria-hidden="true">
@@ -173,28 +171,28 @@ export default function PlayerBanner({
         <small>{character.t}</small>
         <span className="rdb-player-banner__name-line">
           <strong>{character.n.split(" ").pop()}</strong>
-          {isLocal && <i>(tu)</i>}
-          {isBot && <em className="rdb-player-banner__presence is-bot">bot</em>}
+          {isLocal && <i>({t("common.you")})</i>}
+          {isBot && <em className="rdb-player-banner__presence is-bot">{t("common.bot")}</em>}
           {player.connected === false && (
             <em className="rdb-player-banner__presence is-offline">
-              {reconnectSeconds != null ? `BOT EM ${reconnectSeconds}s` : "OFFLINE"}
+              {reconnectSeconds != null ? t("hud.botIn", { seconds: reconnectSeconds }) : t("common.offline")}
             </em>
           )}
           {hasStatuses && (
-            <span className="rdb-player-banner__status-icons" aria-label="Estados atuais">
+            <span className="rdb-player-banner__status-icons" aria-label={t("hud.currentStates")}>
               {player.immune && (
-                <span title="Trindade das Armas — imune">
+                <span title={t("hud.weaponTrinityImmune")}>
                   <BannerIcon name={STATUS_ICONS.immune} size={18} />
                 </span>
               )}
               {player.sick > 0 && (
-                <span title={`Peste — ${player.sick} turno(s)`}>
+                <span title={t("hud.plagueTurns", { turns: player.sick })}>
                   <BannerIcon name={STATUS_ICONS.plague} size={18} />
                   <b>{player.sick}</b>
                 </span>
               )}
               {tsunamiTurns > 0 && (
-                <span title={`Tsunami — porto(s) regressam em ${tsunamiTurns} turno(s)`}>
+                <span title={t("hud.tsunamiTurns", { turns: tsunamiTurns })}>
                   <BannerIcon name={STATUS_ICONS.tsunami} size={18} />
                   <b>{tsunamiTurns}</b>
                 </span>
@@ -204,29 +202,36 @@ export default function PlayerBanner({
         </span>
       </span>
 
-      <span className="rdb-player-banner__victory" title="Pontos de vitória">
-        <small>P.V.</small>
-        <strong>{visibleVictoryPoints}</strong>
-        {isLocal && secretVictoryPoints > 0 && <i>+{secretVictoryPoints} secreto</i>}
+      <span
+        className="rdb-player-banner__victory"
+        title={isLocal && secretVictoryPoints > 0
+          ? `${t("hud.publicVictoryPoints")}: ${visibleVictoryPoints} · ${t("hud.yourTotalVictoryPoints")}: ${visibleVictoryPoints + secretVictoryPoints}`
+          : `${t("hud.victoryPoints")}: ${visibleVictoryPoints}`}
+      >
+        <small>{t("hud.vpAbbrev")}</small>
+        <strong aria-label={score.hasPrivateTotal ? `${t("hud.publicVictoryPoints")}: ${score.publicScore}. ${t("hud.yourTotalVictoryPoints")}: ${score.total}` : `${t("hud.victoryPoints")}: ${score.publicScore}`}>
+          {score.publicScore}
+          {score.hasPrivateTotal && <span className="rdb-player-banner__secret-total"> ({score.total})</span>}
+        </strong>
       </span>
 
       <span className="rdb-player-banner__stats">
-        <BannerStat icon={SUMMARY_ICONS.resources} label="Recursos na mão" compactLabel="Recursos" value={resourceCount} />
-        <BannerStat icon={SUMMARY_ICONS.cards} label="Cartas de desenvolvimento" compactLabel="Cartas" value={developmentCards} />
-        <BannerStat icon={SUMMARY_ICONS.road} label="Estradas construídas" compactLabel="Estradas" value={roadCount} highlighted={hasLongestRoad} />
-        <BannerStat icon={SUMMARY_ICONS.troops} label="Força do exército" compactLabel="Exército" value={troopCount} highlighted={hasLargestArmy} />
+        <BannerStat icon={SUMMARY_ICONS.resources} label={t("hud.resourcesInHand")} compactLabel={t("hud.resources")} value={resourceCount} />
+        <BannerStat icon={SUMMARY_ICONS.cards} label={t("hud.developmentCards")} compactLabel={t("hud.cards")} value={developmentCards} />
+        <BannerStat icon={SUMMARY_ICONS.road} label={t("hud.roadsBuilt")} compactLabel={t("hud.roads")} value={roadCount} highlighted={hasLongestRoad} />
+        <BannerStat icon={SUMMARY_ICONS.troops} label={t("hud.armyStrength")} compactLabel={t("hud.army")} value={troopCount} highlighted={hasLargestArmy} />
       </span>
 
       <span className="rdb-player-banner__affordance" aria-hidden="true">
-        <b>{isExpanded ? "FECHAR" : "DETALHES"}</b><i>›</i>
+        <b>{isExpanded ? t("common.close").toUpperCase() : t("common.details").toUpperCase()}</b><i>›</i>
       </span>
 
       {isActive && (
         <span className="rdb-player-banner__turn">
           <i />
           {player.connected === false
-            ? ` A AGUARDAR${reconnectSeconds != null ? ` · BOT EM ${reconnectSeconds}s` : ""}`
-            : " A JOGAR"}
+            ? ` ${t("hud.waiting")}${reconnectSeconds != null ? ` · ${t("hud.botIn", { seconds: reconnectSeconds })}` : ""}`
+            : ` ${t("hud.playing")}`}
         </span>
       )}
       {children}
@@ -240,7 +245,7 @@ export default function PlayerBanner({
               event.stopPropagation();
               onToggle?.();
             }}
-            aria-label="Fechar detalhes"
+            aria-label={t("common.close")}
           >
             ×
           </button>
@@ -251,75 +256,75 @@ export default function PlayerBanner({
             </span>
             <div>
               <small>{character.t}</small>
-              <h3>{character.n}{isLocal ? " (tu)" : ""}</h3>
+              <h3>{character.n}{isLocal ? ` (${t("common.you")})` : ""}</h3>
               {quote && <blockquote>“{quote}”</blockquote>}
             </div>
           </header>
 
           <div className="rdb-player-banner__detail-section">
-            <h4>ESTADO DA CASA</h4>
+            <h4>{t("hud.houseState")}</h4>
             <div className="rdb-player-banner__status-list">
-              {!hasStatuses && <span className="rdb-player-banner__no-status">Sem efeitos ativos.</span>}
+              {!hasStatuses && <span className="rdb-player-banner__no-status">{t("hud.noActiveEffects")}</span>}
               {player.immune && (
                 <StatusBadge
                   type="immune"
-                  label="Imune"
-                  title="Trindade das Armas — imune ao Dragão e aos desastres"
+                  label={t("hud.immune")}
+                  title={t("hud.weaponTrinityImmune")}
                 />
               )}
               {player.sick > 0 && (
                 <StatusBadge
                   type="plague"
                   value={player.sick}
-                  label="Peste"
-                  title={`Doente durante mais ${player.sick} turno(s)`}
+                  label={t("hud.plague")}
+                  title={t("hud.plagueTurns", { turns: player.sick })}
                 />
               )}
               {tsunamiTurns > 0 && (
                 <StatusBadge
                   type="tsunami"
                   value={tsunamiTurns}
-                  label="Tsunami"
-                  title={`Porto(s) regressam em ${tsunamiTurns} turno(s)`}
+                  label={t("hud.tsunami")}
+                  title={t("hud.tsunamiTurns", { turns: tsunamiTurns })}
                 />
               )}
             </div>
           </div>
 
           <div className="rdb-player-banner__detail-section">
-            <h4>RECURSOS</h4>
+            <h4>{t("hud.resources").toUpperCase()}</h4>
             <DetailedResources player={player} isLocal={isLocal} />
           </div>
 
           {perk && (
             <div className={`rdb-player-banner__perk${perkLive ? " is-live" : ""}`}>
-              <small>{perkLive ? "PODER DA CASA ATIVO" : "PODER DA CASA"}</small>
+              <small>{perkLive ? t("hud.housePowerActive") : t("hud.housePower")}</small>
               <strong>{perk.n}</strong>
               <p>{perk.d}</p>
-              {!perkLive && warMode && <i>Ainda não despertou nesta partida.</i>}
-              {!warMode && <i>Este poder pertence ao modo Guerra dos Reinos.</i>}
+              {!perkLive && warMode && <i>{t("hud.powerNotAwake")}</i>}
+              {!warMode && <i>{t("hud.powerWarOnly")}</i>}
             </div>
           )}
 
           <div className="rdb-player-banner__detail-stats">
-            <span><BannerIcon name={SUMMARY_ICONS.cards} size={22} /><small>Cartas</small><b>{developmentCards}</b></span>
-            <span className={hasLongestRoad ? "is-award" : ""}><BannerIcon name={SUMMARY_ICONS.road} size={22} /><small>Estrada</small><b>{longestRoad}</b></span>
-            <span className={hasLargestArmy ? "is-award" : ""}><BannerIcon name={SUMMARY_ICONS.troops} size={22} /><small>Tropas</small><b>{troopCount}</b></span>
-            <span><BannerIcon name="I_Telescope" size={22} /><small>Pontos visíveis</small><b>{publicVictoryPoints}</b></span>
+            <span><BannerIcon name={SUMMARY_ICONS.cards} size={22} /><small>{t("hud.cards")}</small><b>{developmentCards}</b></span>
+            <span className={hasLongestRoad ? "is-award" : ""}><BannerIcon name={SUMMARY_ICONS.road} size={22} /><small>{t("hud.roads")}</small><b>{longestRoad}</b></span>
+            <span className={hasLargestArmy ? "is-award" : ""}><BannerIcon name={SUMMARY_ICONS.troops} size={22} /><small>{t("hud.army")}</small><b>{troopCount}</b></span>
+            <span><BannerIcon name="I_Telescope" size={22} /><small>{t("hud.publicVictoryPoints")}</small><b>{publicVictoryPoints}</b></span>
           </div>
 
           {(hasLongestRoad || hasLargestArmy) && (
             <div className="rdb-player-banner__awards">
-              {hasLongestRoad && <span>Estrada Mais Longa</span>}
-              {hasLargestArmy && <span>Maior Exército</span>}
+              {hasLongestRoad && <span>{t("hud.longestRoad")}</span>}
+              {hasLargestArmy && <span>{t("hud.largestArmy")}</span>}
             </div>
           )}
 
           {warMode && player.troops && (
             <div className="rdb-player-banner__army-breakdown">
-              <span><small>Cavaleiros</small><b>{player.troops.cavaleiro || 0}</b></span>
-              <span><small>Catapultas</small><b>{player.troops.catapulta || 0}</b></span>
-              <span><small>Arqueiros</small><b>{player.troops.arqueiro || 0}</b></span>
+              <span><small>{t("hud.knights")}</small><b>{player.troops.cavaleiro || 0}</b></span>
+              <span><small>{t("hud.catapults")}</small><b>{player.troops.catapulta || 0}</b></span>
+              <span><small>{t("hud.archers")}</small><b>{player.troops.arqueiro || 0}</b></span>
             </div>
           )}
         </section>

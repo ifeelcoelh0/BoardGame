@@ -1,3 +1,4 @@
+import { t } from "../../locales/i18n.js";
 import { getLobbyModeMeta } from "./lobbyModeCatalog.js";
 
 export function createEmptyLobbyViewModel(characters = []) {
@@ -5,7 +6,7 @@ export function createEmptyLobbyViewModel(characters = []) {
     characters.map((character) => [character.id, { status: "free", ownerColor: null }]),
   );
   return {
-    mode: { name: "Salão dos Reinos", icon: null, duration: "Escolhe o teu caminho" },
+    mode: { get name() { return t("lobby.hallOfRealms"); }, icon: null, get duration() { return t("lobby.chooseYourPath"); } },
     players: [],
     localPlayer: null,
     isHost: false,

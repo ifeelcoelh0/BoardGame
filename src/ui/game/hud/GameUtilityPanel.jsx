@@ -1,6 +1,7 @@
 import GameButton from "../../system/GameButton.jsx";
 import GameSurface from "../../system/GameSurface.jsx";
 import GameSettingsControls from "../../settings/GameSettingsControls.jsx";
+import { t } from "../../../locales/i18n.js";
 
 export function GameUtilityPanelShell({ title, eyebrow, onClose, children }) {
   return (
@@ -11,7 +12,7 @@ export function GameUtilityPanelShell({ title, eyebrow, onClose, children }) {
             <small>{eyebrow}</small>
             <h3>{title}</h3>
           </div>
-          <button type="button" className="rd-hud-panel__close" onClick={onClose} aria-label={`Fechar ${title}`}>×</button>
+          <button type="button" className="rd-hud-panel__close" onClick={onClose} aria-label={`${t("common.close")} ${title}`}>×</button>
         </header>
         {children}
       </GameSurface>
@@ -22,7 +23,7 @@ export function GameUtilityPanelShell({ title, eyebrow, onClose, children }) {
 
 export function OptionsUtilityPanel({ settings, setSetting, fullscreen, onToggleFullscreen, onExit, onClose }) {
   return (
-    <GameUtilityPanelShell eyebrow="Preferências deste dispositivo" title="Opções" onClose={onClose}>
+    <GameUtilityPanelShell eyebrow={t("utility.preferencesDevice")} title={t("utility.options")} onClose={onClose}>
       <GameSettingsControls
         settings={settings}
         setSetting={setSetting}
@@ -31,8 +32,8 @@ export function OptionsUtilityPanel({ settings, setSetting, fullscreen, onToggle
       />
       <div className="rd-hud-options__divider" />
       <div className="rd-hud-options__row rd-hud-options__row--exit">
-        <div><small>SESSÃO</small><strong>Abandonar a partida</strong><p>O reino permanece guardado para poderes retomá-lo.</p></div>
-        <GameButton variant="danger" size="sm" onClick={onExit}>Sair</GameButton>
+        <div><small>{t("utility.session")}</small><strong>{t("utility.leaveMatch")}</strong><p>{t("utility.leaveMatchDesc")}</p></div>
+        <GameButton variant="danger" size="sm" onClick={onExit}>{t("utility.exit")}</GameButton>
       </div>
     </GameUtilityPanelShell>
   );

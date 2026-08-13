@@ -5,6 +5,7 @@ import {
   bookSectionsForScope,
   firstBookPageForSection,
 } from "./bookPages.js";
+import { t } from "../../locales/i18n.js";
 
 /*
    Navegação semântica do Book v2.
@@ -19,7 +20,7 @@ export default function BookPager({ page, scope = BOOK_SCOPE.FOYER, onPageChange
   const sections = bookSectionsForScope(scope);
 
   return (
-    <nav className={`rd-book-pager${compact ? " is-compact" : ""}`} aria-label="Secções do livro">
+    <nav className={`rd-book-pager${compact ? " is-compact" : ""}`} aria-label={t("book.sections")}>
       <div className="rd-book-pager__sections">
         {sections.map((section) => {
           const sectionMeta = bookSectionMeta(section);
@@ -41,7 +42,7 @@ export default function BookPager({ page, scope = BOOK_SCOPE.FOYER, onPageChange
       </div>
 
       <div className="rd-book-pager__index">
-        <small>{scope === BOOK_SCOPE.REALM ? "LIVRO DO REINO" : "LIVRO DOS REINOS"}</small>
+        <small>{scope === BOOK_SCOPE.REALM ? t("book.realmBook") : t("book.realmsBook")}</small>
         <strong>{meta.label}</strong>
       </div>
     </nav>

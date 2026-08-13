@@ -30,7 +30,7 @@ requireText(takeover, "requiredGameActorIndex", "takeover apenas quando o lugar 
 requireText(hostSession, "restoreHumanController", "reentrada humana após takeover");
 requireText(hostSession, "clearGamePresenceTimer(reconnectingPlayer.playerId)", "cancelamento do prazo numa reconexão");
 requireText(banner, "reconnectSeconds", "contagem de reconexão visível no tabuleiro");
-requireText(banner, "BOT EM", "destino do prazo de reconexão comunicado no tabuleiro");
+requireText(banner, 't("hud.botIn"', "destino do prazo de reconexão comunicado no tabuleiro");
 rejectText(source, "skipAfkRequiredAction", "skip de turno no session hook");
 rejectText(source, "skipAfkAfterReconnectTimeout", "skip após prazo no session hook");
 

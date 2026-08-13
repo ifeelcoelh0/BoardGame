@@ -50,12 +50,12 @@ test("award models preserve ownership transfer without duplicating game rules", 
   assert.equal(road.artKey, "awardLongestRoad");
   assert.equal(road.playerName, "Princesa Maria");
   assert.equal(road.previousPlayerName, "Vlad Drácula");
-  assert.equal(road.metric, "7 troços · +2 PV");
+  assert.equal(road.metric, "7 segments · +2 VP");
   assert.equal(road.signature, "Princesa Maria");
 
   const army = awardImportantEventModel(game, { kind: "army", pi: 1, prev: null, value: 4 });
   assert.equal(army.artKey, "awardLargestArmy");
-  assert.equal(army.metric, "4 tropas · +2 PV");
+  assert.equal(army.metric, "4 troops · +2 VP");
   assert.equal(army.signature, "Vlad Drácula");
   assert.equal(awardImportantEventModel(game, { kind: "unknown", pi: 0 }), null);
 });

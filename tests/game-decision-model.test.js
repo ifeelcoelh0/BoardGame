@@ -82,7 +82,7 @@ test("discovery retains the first resource as decision progress", () => {
   const model = buildGameDecisionModel(game(), graph(), 0, { decision: { type: "descoberta", cardId: 4, first: "ouro" } });
   assert.equal(model.type, GAME_DECISION_TYPE.DISCOVERY);
   assert.equal(model.first, "ouro");
-  assert.match(model.description, /segundo/i);
+  assert.match(model.description, /second/i);
 });
 
 test("bank model exposes every exchange ratio and whether the player can pay it", () => {

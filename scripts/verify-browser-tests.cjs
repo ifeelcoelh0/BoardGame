@@ -12,10 +12,11 @@ function forbidPath(path) {
 need("cypress.config.js", 'baseUrl: "http://127.0.0.1:4173"');
 need("cypress/e2e/lobby.cy.js", "abre diretamente no salão");
 need("cypress/e2e/lobby.cy.js", "cria uma sessão estável");
-need("cypress/e2e/core-modes.cy.js", "Modo Clássico");
-need("cypress/e2e/core-modes.cy.js", "Cerco Relâmpago");
-need("cypress/e2e/core-modes.cy.js", "Modo Dragão");
-need("cypress/helpers/lobby.js", "Selar o pacto com");
+need("cypress/e2e/core-modes.cy.js", "classico");
+need("cypress/e2e/core-modes.cy.js", "rapido");
+need("cypress/e2e/core-modes.cy.js", "dragao");
+need("cypress/e2e/core-modes.cy.js", "startRealmWithBots");
+need("cypress/helpers/lobby.js", "Seal the pact with");
 need("cypress/helpers/lobby.js", "startRealmWithBots");
 need("src/ui/game/GameScreen.jsx", "game-screen");
 need("src/multiplayer/browserPeerRuntime.js", "transport");

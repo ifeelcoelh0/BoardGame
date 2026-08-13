@@ -1,0 +1,3 @@
+.rd-skip-link{position:fixed;left:12px;top:-56px;z-index:10000;padding:9px 12px;border:1px solid #d4ad58;border-radius:7px;background:#160e08;color:#ffe7a6;font:700 12px/1.1 Cinzel,serif;text-decoration:none;box-shadow:0 8px 20px rgba(0,0,0,.45);transition:top .16s ease}
+.rd-skip-link:focus{top:12px;outline:2px solid #ffe9a8;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.rd-skip-link{transition:none}}

@@ -1,79 +1,28 @@
-/*
-   Catálogo editorial dos modos mostrado no salão.
+import { t } from "../../locales/i18n.js";
 
-   O mesmo modo aparecia em dois sítios diferentes: FoyerPages tinha descrições,
-   duração e complexidade, enquanto lobbyViewModel mantinha outro mapa com nome,
-   ícone e duração. Isso criava duas fontes de verdade para a mesma informação.
-   O Book v2 passa a consumir este catálogo único, e o view-model limita-se a
-   selecionar a entrada correspondente ao jogo.
-*/
-
-export const LOBBY_MODES = Object.freeze([
-  Object.freeze({
-    id: "dragao",
-    name: "Modo Dragão",
-    icon: "RDD_ModeDragon",
-    description: "A experiência completa, com o dragão a interferir na mesa.",
-    duration: "60–90 min",
-    complexity: "Média",
-    dragon: "Sim",
-    war: "Não",
-    exploration: "Não",
-    ideal: "A experiência principal de Reinos do Dragão.",
-  }),
-  Object.freeze({
-    id: "classico",
-    name: "Modo Clássico",
-    icon: "RDD_Palace",
-    description: "Construção e comércio, sem eventos de dragão.",
-    duration: "45–75 min",
-    complexity: "Média",
-    dragon: "Não",
-    war: "Não",
-    exploration: "Não",
-    ideal: "Quem quer uma partida focada em expansão e comércio.",
-  }),
-  Object.freeze({
-    id: "rapido",
-    name: "Cerco Relâmpago",
-    icon: "S_Thunder03",
-    description: "Partida curta, pontuação reduzida.",
-    duration: "20–35 min",
-    complexity: "Baixa",
-    dragon: "Não",
-    war: "Não",
-    exploration: "Não",
-    ideal: "Mesas que querem uma partida rápida e directa.",
-  }),
-  Object.freeze({
-    id: "guerra",
-    name: "Guerra dos Reinos",
-    icon: "W_Sword006",
-    description: "Combate directo, tropas e poderes de casa.",
-    duration: "75–120 min",
-    complexity: "Alta",
-    dragon: "Não",
-    war: "Sim",
-    exploration: "Não",
-    ideal: "Jogadores que procuram confronto directo e controlo territorial.",
-  }),
-  Object.freeze({
-    id: "exploracao",
-    name: "Terras do Além",
-    icon: "I_Map",
-    description: "Mapa maior, carruagens e regiões por descobrir.",
-    duration: "60–100 min",
-    complexity: "Alta",
-    dragon: "Não",
-    war: "Não",
-    exploration: "Sim",
-    ideal: "Quem gosta de descobrir o mapa e expandir para território desconhecido.",
-  }),
+const MODE_DATA = Object.freeze([
+  Object.freeze({ id: "dragao", icon: "RDD_ModeDragon", duration: "60–90 min", dragon: true, war: false, exploration: false }),
+  Object.freeze({ id: "classico", icon: "RDD_Palace", duration: "45–75 min", dragon: false, war: false, exploration: false }),
+  Object.freeze({ id: "rapido", icon: "S_Thunder03", duration: "20–35 min", dragon: false, war: false, exploration: false }),
+  Object.freeze({ id: "guerra", icon: "W_Sword006", duration: "75–120 min", dragon: false, war: true, exploration: false }),
+  Object.freeze({ id: "exploracao", icon: "I_Map", duration: "60–100 min", dragon: false, war: false, exploration: true }),
 ]);
 
-const LOBBY_MODE_BY_ID = Object.freeze(Object.fromEntries(
-  LOBBY_MODES.map((mode) => [mode.id, mode]),
-));
+function localizeMode(mode) {
+  return Object.freeze({
+    ...mode,
+    name: t(`mode.${mode.id}.name`),
+    description: t(`mode.${mode.id}.description`),
+    complexity: t(`mode.${mode.id}.complexity`),
+    dragon: mode.dragon ? t("common.yes") : t("common.no"),
+    war: mode.war ? t("common.yes") : t("common.no"),
+    exploration: mode.exploration ? t("common.yes") : t("common.no"),
+    ideal: t(`mode.${mode.id}.ideal`),
+  });
+}
+
+export const LOBBY_MODES = Object.freeze(MODE_DATA.map(localizeMode));
+const LOBBY_MODE_BY_ID = Object.freeze(Object.fromEntries(LOBBY_MODES.map((mode) => [mode.id, mode])));
 
 export function getLobbyModeMeta(modeId) {
   return LOBBY_MODE_BY_ID[modeId] ?? LOBBY_MODE_BY_ID.dragao;

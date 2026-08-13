@@ -1,5 +1,6 @@
 import { developmentCardArt, DEVELOPMENT_CARD_ART_STATUS } from "../../assets/developmentCardArt.js";
 import { developmentCardPresentation } from "../../presentation/developmentCardCatalog.js";
+import { t } from "../../locales/i18n.js";
 import "../../styles/development-card.css";
 
 const FAMILY_MARKS = Object.freeze({
@@ -34,9 +35,9 @@ export default function DevelopmentCard({ card, characterId = null, mini = false
         {art.url ? (
           <img className="rd-dev-card__art" src={art.url} alt="" draggable="false" />
         ) : (
-          <div className="rd-dev-card__missing-art" aria-label="Arte ainda em preparação">
+          <div className="rd-dev-card__missing-art" aria-label={t("cards.missingArt")}>
             <span aria-hidden="true">{FAMILY_MARKS[meta.family] || FAMILY_MARKS.unknown}</span>
-            {!mini && <small>arte em preparação</small>}
+            {!mini && <small>{t("cards.missingArtShort")}</small>}
           </div>
         )}
       </div>
@@ -45,7 +46,7 @@ export default function DevelopmentCard({ card, characterId = null, mini = false
           <p>{meta.description}</p>
         </div>
       )}
-      <footer className="rd-dev-card__footer" aria-hidden="true"><span>REINOS DO DRAGÃO</span></footer>
+      <footer className="rd-dev-card__footer" aria-hidden="true"><span>{t("cards.brand")}</span></footer>
     </article>
   );
 }

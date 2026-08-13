@@ -44,12 +44,15 @@ import { boardInteractionBlockReason, developmentCardPlayReason } from "./gameIn
 import { createGameActionDispatchGate } from "./gameActionDispatchGate.js";
 import { GameDecisionSystem } from "./decisions/index.js";
 import GameEmoteBubble from "./social/GameEmoteBubble.jsx";
+import CharacterSubtitle from "./social/CharacterSubtitle.jsx";
+import useCharacterSubtitles from "./useCharacterSubtitles.js";
 import GameStoryToast from "./GameStoryToast.jsx";
 import DevelopmentCardReveal from "./DevelopmentCardReveal.jsx";
 import EndgameExperience from "./endgame/EndgameExperience.jsx";
 import GameGrimoirePanel from "./hud/GameGrimoirePanel.jsx";
 import { GAME_ACTION_ICONS } from "../../assets/gameUiIcons.js";
 import { warUnitName } from "../../presentation/gameLabels.js";
+import { t } from "../../locales/i18n.js";
 
 const Board3D = lazy(preloadBoardModule);
 const PERKS = CHARACTER_PERKS;
@@ -61,7 +64,20 @@ const pname = (game, index) => charOf(game.players[index].ch).n;
 const milLeft = militaryActionsLeft;
 const hasPerk = (game, playerIndex, characterId) => GUERRA(game.mode) && game.perksOn !== false && game.gelo?.active && game.players?.[playerIndex]?.ch === characterId;
 function Modal({ children, onClose, center }) {
-  return <div className={"modalbg" + (center ? " center" : "")} onClick={onClose}><div className="modal" onClick={(event) => event.stopPropagation()}>{children}</div></div>;
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    const previous = document.activeElement;
+    dialogRef.current?.focus();
+    const onKeyDown = (event) => { if (event.key === "Escape") onCloseRef.current?.(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, []);
+  return <div className={"modalbg" + (center ? " center" : "")} onClick={onClose}><div ref={dialogRef} className="modal" role="dialog" aria-modal="true" aria-label={t("a11y.dialog")} tabIndex={-1} onClick={(event) => event.stopPropagation()}>{children}</div></div>;
 }
 
 
@@ -74,6 +90,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
     const awardEvent = presentation.award;
     const storyEvent = presentation.story;
     const disasterEvent = presentation.disaster;
+    const characterSubtitles = useCharacterSubtitles({ game: g, emotes });
     const [ui, dispatchUi] = useReducer(gameUiReducer, undefined, createInitialGameUiState);
     const dispatchGameActionRef = useRef(dispatchGameAction);
     dispatchGameActionRef.current = dispatchGameAction;
@@ -328,7 +345,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
     const openUtility = (panel) => setUtilityPanel((current) => toggleHudUtility(current, panel));
     const closeUtility = () => setUtilityPanel(null);
     const leaveGame = () => {
-        if (onExit && window.confirm(seat === 0 ? "Sair para o menu? O reino fica guardado — podes retomá-lo no ecrã inicial, mas os convidados perdem a ligação até voltares." : "Sair para o menu? Podes voltar a entrar com o código do reino."))
+        if (onExit && window.confirm(seat === 0 ? t("game.leaveHost") : t("game.leaveGuest")))
             onExit();
     };
     const lens = g.players.map((_, i) => longestRoadLen(g, gr, i));
@@ -372,49 +389,52 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
                 "--house-bottom": shade(ch.c, -30),
                 "--house-accent": ch.ac
             }}
-        >{emotes && emotes[i] &&  <GameEmoteBubble key={"em" + emotes[i].id} emoteId={emotes[i].k}/>}</PlayerBanner>;
+        >
+          {emotes && emotes[i] && <GameEmoteBubble key={"em" + emotes[i].id} emoteId={emotes[i].k}/>}
+          <CharacterSubtitle characterName={ch.n} subtitle={characterSubtitles[i]} />
+        </PlayerBanner>;
     })}</PlayerRail>;
     let status = null;
     if (g.phase === "ended")
-        status = pname(g, g.winner) + " venceu!";
+        status = t("game.won", { name: pname(g, g.winner) });
     else if (requiredPlayer?.connected === false && requiredReconnectSeconds != null)
-        status = "A aguardar " + pname(g, requiredActor) + " — " + formatReconnectClock(requiredReconnectSeconds);
+        status = t("game.waitingFor", { name: pname(g, requiredActor), time: formatReconnectClock(requiredReconnectSeconds) });
     else if (qItem)
-        status = qItem.p === seat ? null : "À espera de " + pname(g, qItem.p) + "…";
+        status = qItem.p === seat ? null : t("game.waitingDecision", { name: pname(g, qItem.p) });
     else if (g.turn.steal)
-        status = myTurn ? null : pname(g, cur) + " escolhe quem saquear…";
+        status = myTurn ? null : t("game.chooseVictim", { name: pname(g, cur) });
     else if (setupMode)
         status = myTurn
             ? g.setup.needRoad
-                ? "Coloca uma estrada junto à tua aldeia"
-                : (RAPIDO(g) ? "Toca num ponto para erguer um palácio" : "Toca num ponto para fundar uma aldeia") + (g.setup.i >= g.players.length ? " (a 2.ª dá recursos!)" : "")
-            : pname(g, cur) + " está a fundar o seu reino…";
+                ? t("game.placeRoad")
+                : (RAPIDO(g) ? t("game.placePalace") : t("game.placeVillage")) + (g.setup.i >= g.players.length ? t("game.secondGivesResources") : "")
+            : t("game.foundingRealm", { name: pname(g, cur) });
     else if (myTurn && g.turn.mustDragon)
-        status = "Escolhe o hexágono onde o Dragão vai pousar";
+        status = t("game.chooseDragonHex");
     else if (myTurn && GUERRA(g.mode) && g.turn.deploy)
-        status = "Destaca " + warUnitName(g.turn.deploy) + ": toca num hexágono livre junto ao teu Bastião";
+        status = t("game.deployUnit", { unit: warUnitName(g.turn.deploy) });
     else if (myTurn && GUERRA(g.mode) && selU != null && g.units[selU])
         status = warUnitName(g.units[selU].t) + (g.units[selU].t === "arqueiro"
-            ? " — toca num hexágono livre para mover ou num inimigo adjacente para disparar"
-            : " — toca num hexágono livre para mover ou num inimigo que venças para atacar") + " · " + milLeft(g) + "/2 ações";
+            ? t("game.archerCommand")
+            : t("game.meleeCommand")) + t("game.militaryActions", { count: milLeft(g) });
     else if (myTurn && !g.turn.rolled)
         status = null;
     else if (!myTurn)
-        status = "Vez de " + pname(g, cur) + (g.turn.rolled ? "" : " — a lançar os dados") + "…";
+        status = t("game.turnOf", { name: pname(g, cur) }) + (g.turn.rolled ? "" : t("game.rollingDice")) + "…";
     else if (mode === "mover" && wsel)
         status = wsel.mv > 0
-            ? wsel.mv + " movimento" + (wsel.mv > 1 ? "s" : "") + " — toca num hexágono vizinho" + (wsel.cargo ? " (com colonos)" : "")
-            : "Esta carruagem já não anda mais este turno";
+            ? t("game.movesLeft", { count: wsel.mv, cargo: wsel.cargo ? t("game.withColonistsSuffix") : "" })
+            : t("game.wagonSpent");
     else if (mode)
         status = {
-            estrada: "Toca numa aresta dourada",
-            aldeia: "Toca num ponto dourado",
-            palacio: "Toca numa aldeia tua para a elevar",
-            carruagem: "Toca num hexágono junto a uma construção tua",
-            fundar: "Toca num canto do hexágono — a carruagem é desmantelada para erguer a aldeia",
-            suborno: "Escolhe a unidade que queres subornar",
+            estrada: t("game.tapGoldenEdge"),
+            aldeia: t("game.tapGoldenPoint"),
+            palacio: t("game.upgradeVillage"),
+            carruagem: t("game.placeWagon"),
+            fundar: t("game.foundRemote"),
+            suborno: t("game.chooseBribe"),
         }[mode];
-    return  <AppShell data-testid="game-screen" data-game-mode={g.mode} data-game-phase={g.phase}><div style={{ position: "fixed", inset: 0, zIndex: 0 }}><Suspense fallback={<SceneLoading label="A preparar o tabuleiro…" />}><Board3D g={g} gr={gr} spotsV={spotsV} spotsE={spotsE} spotsH={spotsH} onVert={onVert} onEdge={onEdge} onHex={onHex} graphicsQuality={graphicsQuality}/></Suspense></div>{toast &&  <div className={"toast"}>{toast.msg}</div>}<GameHud
+    return  <AppShell data-testid="game-screen" data-game-mode={g.mode} data-game-phase={g.phase}><div style={{ position: "fixed", inset: 0, zIndex: 0 }}><Suspense fallback={<SceneLoading label={t("game.preparingBoard")} />}><Board3D g={g} gr={gr} spotsV={spotsV} spotsE={spotsE} spotsH={spotsH} onVert={onVert} onEdge={onEdge} onHex={onHex} graphicsQuality={graphicsQuality}/></Suspense></div>{toast &&  <div className={"toast"}>{toast.msg}</div>}<GameHud
         code={g.code}
         round={g.round}
         dice={g.turn.dice}
@@ -422,7 +442,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
         status={status}
         fullscreen={fullscreen}
         onToggleFullscreen={onToggleFullscreen}
-    />{playersRow}{GUERRA(g.mode) && g.troll && g.troll.awake && !g.troll.defeated && g.troll.giant &&  <div className={"trollhud"}><div className={"th-top"}>{"Troll Gigante"}<span className={"th-hp"}>{g.troll.giant.hp + "/" + g.troll.giant.maxHp}</span></div><div className={"th-bar"}><div className={"th-fill"} style={{ width: Math.max(0, 100 * g.troll.giant.hp / g.troll.giant.maxHp) + "%" }}/></div><div className={"th-dmg"}>{g.players.map((pp, i) =>  <span key={i} className={"th-c"} title={pname(g, i) + ": " + (g.troll.dmg[i] || 0) + " dano"}><i style={{ background: GLOW[pp.ch] }}/>{g.troll.dmg[i] || 0}</span>)}</div>{g.troll.giant.at === "0,0" &&  <div className={"th-warn"}>{"Domina o Coração — a horda repõe-se"}</div>}</div>}{GUERRA(g.mode) && g.troll && !g.troll.awake && g.troll.rush > 0 &&  <div className={"trollhud omen"}><div className={"th-top"}>{"O pântano agita-se"}<span className={"th-hp"}>{g.troll.rush + "/" + g.players.length}</span></div></div>}
+    />{playersRow}{GUERRA(g.mode) && g.troll && g.troll.awake && !g.troll.defeated && g.troll.giant &&  <div className={"trollhud"}><div className={"th-top"}>{t("game.giantTroll")}<span className={"th-hp"}>{g.troll.giant.hp + "/" + g.troll.giant.maxHp}</span></div><div className={"th-bar"}><div className={"th-fill"} style={{ width: Math.max(0, 100 * g.troll.giant.hp / g.troll.giant.maxHp) + "%" }}/></div><div className={"th-dmg"}>{g.players.map((pp, i) =>  <span key={i} className={"th-c"} title={t("game.damage", { name: pname(g, i), count: g.troll.dmg[i] || 0 })}><i style={{ background: GLOW[pp.ch] }}/>{g.troll.dmg[i] || 0}</span>)}</div>{g.troll.giant.at === "0,0" &&  <div className={"th-warn"}>{t("game.giantHeart")}</div>}</div>}{GUERRA(g.mode) && g.troll && !g.troll.awake && g.troll.rush > 0 &&  <div className={"trollhud omen"}><div className={"th-top"}>{t("game.swampStirs")}<span className={"th-hp"}>{g.troll.rush + "/" + g.players.length}</span></div></div>}
     <GameUtilityRail
         game={g}
         chat={chat || []}
@@ -461,7 +481,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
         const playReason = developmentCardPlayReason(g, gr, seat, c, { isNew: !!zoomCard.nov, isLibrary: !!zoomCard.lib, myTurn });
         const playable = playReason == null;
         const playFromZoom = () => beginDevCard(c);
-        return  <Modal center={true} onClose={() => setZoomCard(null)}><div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}><div style={{ width: 235 }}><DevelopmentCard card={c} characterId={me.ch} /></div>{zoomCard.nov &&  <p className={"quote"}>{"Nova \u2014 jog\xE1vel a partir do pr\xF3ximo turno."}</p>}{c.kind === "vp" &&  <p className={"quote"}>{"Guarda-a em segredo: vale 1 Ponto de Vit\xF3ria."}</p>}{zoomCard.lib &&  <p className={"quote"}>{"P\xE1gina do Grim\xF3rio \u2014 assim ser\xE1 quando a comprares."}</p>}{c.kind !== "vp" && !zoomCard.nov && !zoomCard.lib && playReason &&  <p style={{ color: "#e08a8a", fontSize: 14, textAlign: "center" }}>{playReason}</p>}{c.kind !== "vp" && !zoomCard.nov && !zoomCard.lib &&  <button className={"btn gold rd-card-play-button"} style={{ width: "100%" }} disabled={!playable} onClick={playFromZoom}><GameIcon name={GAME_ACTION_ICONS.card} size={24} alt="" />Jogar Carta</button>}</div></Modal>;
+        return  <Modal center={true} onClose={() => setZoomCard(null)}><div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}><div style={{ width: 235 }}><DevelopmentCard card={c} characterId={me.ch} /></div>{zoomCard.nov &&  <p className={"quote"}>{t("game.newCardNextTurn")}</p>}{c.kind === "vp" &&  <p className={"quote"}>{t("game.secretVpCard")}</p>}{zoomCard.lib &&  <p className={"quote"}>{t("game.grimoirePreview")}</p>}{c.kind !== "vp" && !zoomCard.nov && !zoomCard.lib && playReason &&  <p style={{ color: "#e08a8a", fontSize: 14, textAlign: "center" }}>{playReason}</p>}{c.kind !== "vp" && !zoomCard.nov && !zoomCard.lib &&  <button className={"btn gold rd-card-play-button"} style={{ width: "100%" }} disabled={!playable} onClick={playFromZoom}><GameIcon name={GAME_ACTION_ICONS.card} size={24} alt="" />{t("game.playCard")}</button>}</div></Modal>;
     })()}{<GameDecisionSystem
         game={g}
         graph={gr}
@@ -474,10 +494,10 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
         onCloseLocalDecision={closeDecision}
         onSelectionChange={setSel}
         onTradeOfferChange={setOffer}
-    />}{showCards &&  <Modal onClose={() => setShowCards(false)}><div style={{ display: "flex", alignItems: "center", marginBottom: 10, gap: 8 }}><h3 className={"f-t"} style={{ color: "#e0b23a", flex: 1 }}>As tuas Cartas</h3><button className={"btn sm ghost"} onClick={() => setShowLib(true)}>Grimório</button></div>{me.devOld.length + me.devNew.length === 0 &&  <p className={"quote"}>{"Ainda n\xE3o tens cartas de desenvolvimento."}</p>}{me.devOld.map((c) => {
+    />}{showCards &&  <Modal onClose={() => setShowCards(false)}><div style={{ display: "flex", alignItems: "center", marginBottom: 10, gap: 8 }}><h3 className={"f-t"} style={{ color: "#e0b23a", flex: 1 }}>{t("game.yourCards")}</h3><button className={"btn sm ghost"} onClick={() => setShowLib(true)}>{t("game.grimoire")}</button></div>{me.devOld.length + me.devNew.length === 0 &&  <p className={"quote"}>{t("game.noDevelopmentCards")}</p>}{me.devOld.map((c) => {
         const playReason = developmentCardPlayReason(g, gr, seat, c, { myTurn });
         return <DevelopmentCardListItem key={c.id} card={c} characterId={me.ch} status={playReason} disabled={playReason != null} onPlay={c.kind === "vp" ? null : () => beginDevCard(c)} />;
-    })}{me.devNew.map((c) => <DevelopmentCardListItem key={c.id} card={c} characterId={me.ch} status="Nova — jogável no próximo turno" dim />)}<div className="rd-army-summary" style={{ marginTop: 10 }}><span><GameIcon name={GAME_ACTION_ICONS.cavaleiro} size={22} alt="" /><b>{me.troops.cavaleiro}</b></span><span><GameIcon name={GAME_ACTION_ICONS.catapulta} size={22} alt="" /><b>{me.troops.catapulta}</b></span><span><GameIcon name={GAME_ACTION_ICONS.arqueiro} size={22} alt="" /><b>{me.troops.arqueiro}</b></span>{me.immune && <strong>Trindade das Armas</strong>}</div></Modal>}{g.trade && g.trade.from === seat &&  <div className={"toast"} style={{ top: 52 }}>{"\xC0 espera de "}{g.trade.to === "all" ? "todos" : pname(g, g.trade.to)}{"\u2026 "}<button className={"btn sm ghost"} onClick={() => void runGameAction(GAME_ACTION.CANCEL_TRADE, { tradeId: g.trade.id })}>{"Cancelar"}</button></div>}{cardVisible && <DevelopmentCardReveal
+    })}{me.devNew.map((c) => <DevelopmentCardListItem key={c.id} card={c} characterId={me.ch} status={t("game.newCardNextTurn")} dim />)}<div className="rd-army-summary" style={{ marginTop: 10 }}><span><GameIcon name={GAME_ACTION_ICONS.cavaleiro} size={22} alt="" /><b>{me.troops.cavaleiro}</b></span><span><GameIcon name={GAME_ACTION_ICONS.catapulta} size={22} alt="" /><b>{me.troops.catapulta}</b></span><span><GameIcon name={GAME_ACTION_ICONS.arqueiro} size={22} alt="" /><b>{me.troops.arqueiro}</b></span>{me.immune && <strong>{t("hud.weaponTrinity")}</strong>}</div></Modal>}{g.trade && g.trade.from === seat &&  <div className={"toast"} style={{ top: 52 }}>{t("game.waitingTrade", { name: g.trade.to === "all" ? t("game.tradeEveryone") : pname(g, g.trade.to) })}{" "}<button className={"btn sm ghost"} onClick={() => void runGameAction(GAME_ACTION.CANCEL_TRADE, { tradeId: g.trade.id })}>{t("game.cancelTrade")}</button></div>}{cardVisible && <DevelopmentCardReveal
         event={cardEvent}
         game={g}
         playerName={pname(g, cardEvent.pi)}
@@ -507,7 +527,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
         player={me}
         onClose={closeUtility}
         onOpenLibrary={() => { closeUtility(); setShowLib(true); }}
-    />}{showLib &&  <Modal onClose={() => setShowLib(false)}><h3 className={"f-t"} style={{ color: "#e0b23a", marginBottom: 4 }}>Grimório das Cartas</h3><p style={{ fontSize: 13, color: "#a8905c", marginBottom: 10 }}>{"Baralho de 25 cartas \xB7 restam "}{g.deck.length}{" por comprar."}</p>{CLASSICO(g.mode) &&  <p style={{ fontSize: 13, color: "#7db4d8", marginBottom: 10 }}>{"Regras clássicas: todas as tropas s\xE3o Cavaleiros e n\xE3o h\xE1 desastres."}</p>}{GUERRA(g.mode) &&  <p style={{ fontSize: 13, color: "#e08a8a", marginBottom: 10 }}>{"Guerra dos Reinos: as cartas de tropa destacam unidades para o tabuleiro (1 a\xE7\xE3o militar por turno: destacar, mover 1 hex\xE1gono ou atacar). Cavaleiro vence Catapulta · Catapulta vence Arqueiro · Arqueiro vence Cavaleiro (\xE0 dist\xE2ncia). Uma Catapulta junto a uma aldeia rival (duas para pal\xE1cio) OCUPA-A no in\xEDcio do teu turno: a produ\xE7\xE3o passa a ser tua e vale +1 ponto. Matar a catapulta liberta o edif\xEDcio. A primeira ocupa\xE7\xE3o de cada edif\xEDcio rival vale +1 ponto PERMANENTE. As tropas novas chegam SEMPRE a hex\xE1gonos livres junto ao teu Basti\xE3o (a primeira aldeia) e s\xF3 agem no turno seguinte. O Cora\xE7\xE3o do Reino (hex\xE1gono central) tem o \xFAnico 6/8 do mapa e a flor \xE0 sua volta os n\xFAmeros m\xE9dios \u2014 as prov\xEDncias s\xE3o modestas e id\xEAnticas. Ter uma tropa no Cora\xE7\xE3o no in\xEDcio do teu turno rende 1 recurso \xE0 escolha. Podes jogar v\xE1rias cartas por turno, mas s\xF3 1 tropa. No 7, o Drag\xE3o aben\xE7oa: todos escolhem 1 recurso, quem rolou escolhe 2. Um porto 3:1 por prov\xEDncia. O jogo acaba por rondas: vence quem tiver mais pontos."}</p>}{EXPL(g) &&  <p style={{ fontSize: 13, color: "#e8a06b", marginBottom: 10 }}>{"Um cinturão de Terras Ardidas cerca a ilha por completo. Nenhuma estrada o atravessa. S\xF3 se sai daqui de carruagem \u2014 e s\xF3 a carruagem revela o que h\xE1 do outro lado."}</p>}<div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>{[
+    />}{showLib &&  <Modal onClose={() => setShowLib(false)}><h3 className={"f-t"} style={{ color: "#e0b23a", marginBottom: 4 }}>{t("game.cardGrimoire")}</h3><p style={{ fontSize: 13, color: "#a8905c", marginBottom: 10 }}>{t("game.deckRemainingShort", { count: g.deck.length })}</p>{CLASSICO(g.mode) &&  <p style={{ fontSize: 13, color: "#7db4d8", marginBottom: 10 }}>{t("game.classicRules")}</p>}{GUERRA(g.mode) && <p style={{ fontSize: 13, color: "#e08a8a", marginBottom: 10 }}>{t("game.warRules")}</p>}{EXPL(g) &&  <p style={{ fontSize: 13, color: "#e8a06b", marginBottom: 10 }}>{t("game.explorationGrimoireDetail")}</p>}<div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>{[
         { kind: "tropa", sub: "cavaleiro" },
         { kind: "tropa", sub: "catapulta" },
         { kind: "tropa", sub: "arqueiro" },
@@ -515,5 +535,5 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
         { kind: "monopolio" },
         { kind: "descoberta" },
         { kind: "estradas" }
-    ].map((c, i) =>  <div key={i} style={{ width: "30%", minWidth: 94, cursor: "pointer" }} onClick={() => setZoomCard({ c: { ...c, id: "lib" + i }, nov: false, lib: true })}><DevelopmentCard card={c} characterId={me.ch} mini /></div>)}</div><p style={{ fontSize: 13, color: "#a8905c", marginTop: 10, textAlign: "center" }}>{"14 tropas (tipo sorteado) \xB7 5 atributos (1 PV cada) \xB7 2 Monop\xF3lio \xB7 2 Trabalhadores \xB7 2 Construtor de Estradas."}<br />{"Toca numa carta para a ver em grande. Junta 1 tropa de cada tipo e ganha a Trindade das Armas."}</p></Modal>}{utilityPanel === HUD_UTILITY.HISTORY &&  <ChronicleLog game={g} entries={gameLog} onClose={closeUtility}/>}</AppShell>;
+    ].map((c, i) =>  <div key={i} style={{ width: "30%", minWidth: 94, cursor: "pointer" }} onClick={() => setZoomCard({ c: { ...c, id: "lib" + i }, nov: false, lib: true })}><DevelopmentCard card={c} characterId={me.ch} mini /></div>)}</div><p style={{ fontSize: 13, color: "#a8905c", marginTop: 10, textAlign: "center" }}>{t("game.deckComposition")}<br />{t("game.touchCard")}</p></Modal>}{utilityPanel === HUD_UTILITY.HISTORY &&  <ChronicleLog game={g} entries={gameLog} onClose={closeUtility}/>}</AppShell>;
 }

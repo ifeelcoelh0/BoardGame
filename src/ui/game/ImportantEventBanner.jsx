@@ -1,6 +1,7 @@
 import { gameEventArtUrl } from "../../assets/gameEventArt.js";
 import { cleanGameUiText } from "./gameTextPresentation.js";
 import GameRichText from "./GameRichText.jsx";
+import { t } from "../../locales/i18n.js";
 import "../../styles/important-event-banner.css";
 
 export default function ImportantEventBanner({ model, onDismiss, renderPlayerPortrait = null, embedded = false }) {
@@ -26,7 +27,7 @@ export default function ImportantEventBanner({ model, onDismiss, renderPlayerPor
           </div>
         )}
         {hasPlayer && (
-          <div className="rd-event-banner__holders" aria-label="Titular do acontecimento">
+          <div className="rd-event-banner__holders" aria-label={t("story.eventHolder")}>
             {hasPrevious && (
               <>
                 <div className="rd-event-banner__holder rd-event-banner__holder--previous">
@@ -42,9 +43,9 @@ export default function ImportantEventBanner({ model, onDismiss, renderPlayerPor
             </div>
           </div>
         )}
-        {model.signature && <div className="rd-event-banner__signature" aria-label={`Assinatura de ${model.signature}`}>{model.signature}</div>}
+        {model.signature && <div className="rd-event-banner__signature" aria-label={t("story.signature", { name: model.signature })}>{model.signature}</div>}
       </div>
-      {!embedded && <button className="rd-event-banner__continue" type="button" onClick={onDismiss}>Toca para continuar</button>}
+      {!embedded && <button className="rd-event-banner__continue" type="button" onClick={onDismiss}>{t("story.tapContinue")}</button>}
     </article>
   );
 
