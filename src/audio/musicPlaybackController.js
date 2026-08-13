@@ -181,7 +181,7 @@ export class MusicPlaybackController {
     if (scene === MUSIC_SCENE.FINALE) {
       this.duck = 1;
       this.#applyMaster(false, 900);
-      return this.#switchTo(MUSIC_TRACK.FINALE_9VP, { loop: true, durationMs: immediate ? 0 : 2400 });
+      return this.#switchTo(MUSIC_TRACK.ENDGAME, { loop: true, durationMs: immediate ? 0 : 2400 });
     }
 
     this.duck = 1;

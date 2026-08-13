@@ -45,7 +45,10 @@ const requiredHostFragments = [
   "message.expectedRevision !== (current.v || 0)",
   'reason: "STALE_STATE"',
   "authenticatedPlayerId(runtimeOf(), connection)",
-  "applyGame(current, actorId, message.action)",
+  "createActionExecutionTrace({ rng, createId })",
+  "applyGame(current, actorId, message.action, {",
+  "rng: trace.rng",
+  "createId: trace.createId",
 ];
 for (const fragment of requiredHostFragments) {
   if (!hostActions.includes(fragment)) failures.push(`Fragmento obrigatório ausente no hostActionController: ${fragment}`);

@@ -1,7 +1,9 @@
 import { applyGameAction } from "../game/gameActionReducer.js";
+import { ACTION_SOURCE, appendAcceptedGameAction, createActionExecutionTrace } from "../game/actionJournal.js";
 import { chooseBotAction } from "../game/botPolicy.js";
 import { createGameStateView } from "../game/gameStateView.js";
 import { PLAYER_CONTROLLER } from "../game/playerPresence.js";
+import { createStableId } from "../game/playerIdentity.js";
 import { requiredGameActorIndex } from "../game/mandatoryDecisionReducer.js";
 
 export const HOST_BOT_CONTROLLER_VERSION = 1;
@@ -46,6 +48,7 @@ export function scheduleHostBotAction({
   onGameApplied = () => {},
   rng = Math.random,
   now = Date.now,
+  createId = createStableId,
   delayMs = DEFAULT_BOT_ACTION_DELAY_MS,
   onError = () => {},
 } = {}) {
@@ -64,13 +67,33 @@ export function scheduleHostBotAction({
       const view = createGameStateView(current, player.playerId);
       const action = chooseBotAction(view, actorIndex, { rng });
       if (!action) return false;
-      const applied = applyGameAction(current, player.playerId, action, { rng, now });
+      const occurredAt = Number(now());
+      const trace = createActionExecutionTrace({ rng, createId });
+      const applied = applyGameAction(current, player.playerId, action, {
+        rng: trace.rng,
+        now: () => occurredAt,
+        createId: trace.createId,
+      });
       if (!applied.ok) {
         onError({ actorIndex, action, reason: applied.reason });
         return false;
       }
-      await onGameApplied(applied.game, applied);
-      await commit(applied.game);
+      const journaled = appendAcceptedGameAction(current, applied.game, {
+        actionId: createId("game"),
+        source: ACTION_SOURCE.BOT,
+        playerId: player.playerId,
+        actorIndex: applied.actorIndex,
+        action,
+        revisionBefore: current.v || 0,
+        revisionAfter: (current.v || 0) + 1,
+        occurredAt,
+        trace: trace.snapshot(),
+        events: applied.events,
+        privateResult: applied.privateResult,
+      });
+      const journaledApplied = { ...applied, game: journaled.game, actionJournalEntry: journaled.entry };
+      await onGameApplied(journaled.game, journaledApplied);
+      await commit(journaled.game);
       return true;
     });
   }, Math.max(0, Number(delayMs) || 0));

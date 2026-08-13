@@ -40,7 +40,7 @@ for (const fragment of forbiddenReducer) {
 
 const requiredHostIntegration = [
   'import { applyGameAction } from "../game/gameActionReducer.js";',
-  "applyGame(current, actorId, message.action)",
+  "applyGame(current, actorId, message.action",
 ];
 for (const fragment of requiredHostIntegration) {
   if (!hostActions.includes(fragment)) failures.push(`Integração ausente no hostActionController: ${fragment}`);

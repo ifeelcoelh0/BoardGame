@@ -5,6 +5,7 @@ import { assertGameInvariants, validateGameInvariants } from "../src/game/gameIn
 import { migrateSave } from "../src/game/migrations/migrateSave.js";
 import { loadGameFromStorage, parseGameSave, saveGameToStorage } from "../src/game/saveStore.js";
 import { SAVE_SCHEMA_VERSION } from "../src/game/saveSchema.js";
+import { ACTION_SOURCE, appendAcceptedGameAction } from "../src/game/actionJournal.js";
 
 function ids(prefix) { let i = 0; return () => `${prefix}_${String(i++).padStart(24, "0")}`; }
 function game() {
@@ -36,6 +37,29 @@ test("save atual recebe schema e passa invariantes", () => {
   assert.equal(loaded.game.saveSchemaVersion, SAVE_SCHEMA_VERSION);
   assert.equal(loaded.game.appVersion, "test");
   assert.doesNotThrow(() => assertGameInvariants(loaded.game));
+});
+
+
+test("action journal privado é guardado e retomado com o reino", () => {
+  const storage = memoryStorage();
+  const current = game();
+  const changed = structuredClone(current);
+  changed.perksOn = false;
+  const journaled = appendAcceptedGameAction(current, changed, {
+    actionId: `game_${"a".repeat(24)}`,
+    source: ACTION_SOURCE.LOCAL_HUMAN,
+    playerId: current.players[0].playerId,
+    actorIndex: 0,
+    action: { type: "TEST_ACTION" },
+    revisionBefore: current.v,
+    revisionAfter: current.v + 1,
+    occurredAt: 1000,
+  }).game;
+  assert.equal(saveGameToStorage(journaled, storage).ok, true);
+  const loaded = loadGameFromStorage(storage);
+  assert.equal(loaded.ok, true);
+  assert.equal(loaded.game.actionJournal.entries.length, 1);
+  assert.equal(loaded.game.actionJournal.entries[0].actionType, "TEST_ACTION");
 });
 
 test("save antigo sem versão é migrado", () => {

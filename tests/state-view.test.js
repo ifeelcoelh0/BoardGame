@@ -70,3 +70,23 @@ test("presentation state crosses multiplayer views as one synchronized slice", (
     assert.equal(legacyField in view, false);
   }
 });
+
+test("the authoritative action journal never leaves the host, including after the match", () => {
+  for (const phase of ["play", "ended"]) {
+    const game = makeGame({
+      phase,
+      actionJournal: {
+        version: 1,
+        startedAt: 1,
+        initialRevision: 12,
+        initialState: { privateDeck: ["secret"] },
+        entries: [{ privateResult: { resource: "ouro" } }],
+      },
+    });
+    const view = createGameStateView(game, IDS.host);
+    const publicView = createPublicGameStateView(game);
+    assert.equal("actionJournal" in view, false);
+    assert.equal("actionJournal" in publicView, false);
+    assert.equal("actionJournal" in game, true);
+  }
+});
