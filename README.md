@@ -893,7 +893,7 @@ A Parte 14A acrescenta cenários completos em `tests/integration-flow.test.js`. 
 
 ## Browser E2E
 
-A Parte 14B adiciona Playwright. `npm run test:e2e` inicia automaticamente o build/preview e testa o lobby em Chromium headless usando `?transport=mock`. Consulte `TESTING.md` para modos visual, UI e PeerJS real.
+A camada E2E atual usa Cypress. O servidor Vite é arrancado separadamente com `npm run e2e:serve`; noutro terminal, `npm run test:e2e` valida o lobby e o arranque de Clássico, Cerco Relâmpago e Dragão com `?transport=mock`. `npm run test:e2e:open` abre o runner visual para diagnóstico. Fluxos que exigem dois browsers humanos em simultâneo permanecem cobertos pelos testes de integração e pela matriz manual, porque o Cypress controla um browser de cada vez.
 
 
 ## v0.88.0
@@ -904,9 +904,9 @@ A criação e entrada numa sala conduzem agora a uma etapa explícita de seleç�
 
 ## v0.92.0
 
-- Suite Playwright atualizada para o fluxo atual do salão e do livro.
-- Testes browser para criação, entrada, escolha de casa, recuperação após refresh, prontidão, início e expulsão com reentrada.
-- GitHub Actions usa instalação determinística com `npm ci` e guarda relatório, traces, vídeos e screenshots em caso de falha.
+- A antiga suite Playwright foi a primeira camada E2E do salão e do livro.
+- Na v0.99.37, a camada ativa migrou para Cypress devido a bloqueios persistentes do runner Playwright no ambiente Windows de desenvolvimento.
+- GitHub Actions usa `npm ci`, arranca Vite separadamente e guarda screenshots/log do Cypress em caso de falha.
 - A compatibilidade de sessão mantém-se em `1`, porque esta versão não altera o protocolo de rede.
 
 ## v0.91.0

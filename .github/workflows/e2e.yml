@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  playwright:
+  cypress:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -26,19 +26,19 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Instalar Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Executar fluxos base no browser
+        run: |
+          npm run e2e:serve > vite-e2e.log 2>&1 &
+          npm run test:e2e
 
-      - name: Executar fluxo completo no browser
-        run: npm run test:e2e
-
-      - name: Guardar relatório e provas de falha
+      - name: Guardar provas de falha
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: cypress-e2e-failure
           path: |
-            playwright-report/
-            test-results/
+            cypress/screenshots/
+            cypress/videos/
+            vite-e2e.log
           if-no-files-found: ignore
           retention-days: 14
