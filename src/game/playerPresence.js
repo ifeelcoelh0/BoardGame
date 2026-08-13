@@ -1,8 +1,9 @@
 export const LOBBY_RECONNECT_GRACE_MS = 30_000;
-export const GAME_FIRST_AFK_GRACE_MS = 90_000;
+export const GAME_BOT_TAKEOVER_GRACE_MS = 90_000;
+// Aliases mantidos para compatibilidade com código/saves da política AFK anterior.
+export const GAME_FIRST_AFK_GRACE_MS = GAME_BOT_TAKEOVER_GRACE_MS;
 export const GAME_REPEAT_AFK_GRACE_MS = 30_000;
-// Alias mantido para compatibilidade com código e saves da fase anterior.
-export const GAME_TURN_RECONNECT_GRACE_MS = GAME_FIRST_AFK_GRACE_MS;
+export const GAME_TURN_RECONNECT_GRACE_MS = GAME_BOT_TAKEOVER_GRACE_MS;
 
 export const PLAYER_CONTROLLER = Object.freeze({
   HUMAN: "human",
@@ -77,9 +78,7 @@ export function markPlayerDisconnected(player, {
 
 export function gameAfkGraceMs(player) {
   ensurePlayerPresence(player);
-  return player.afkSkipCount > 0
-    ? GAME_REPEAT_AFK_GRACE_MS
-    : GAME_FIRST_AFK_GRACE_MS;
+  return GAME_BOT_TAKEOVER_GRACE_MS;
 }
 
 export function beginGameTurnReconnectWindow(player, {
@@ -88,7 +87,7 @@ export function beginGameTurnReconnectWindow(player, {
 } = {}) {
   ensurePlayerPresence(player);
   if (player.connected !== false) return player;
-  const effectiveGraceMs = Number.isFinite(graceMs) ? graceMs : gameAfkGraceMs(player);
+  const effectiveGraceMs = Number.isFinite(graceMs) ? graceMs : GAME_BOT_TAKEOVER_GRACE_MS;
   if (!Number.isFinite(player.turnReconnectDeadline))
     player.turnReconnectDeadline = now + Math.max(0, effectiveGraceMs);
   player.controlStatus = PLAYER_CONTROL_STATUS.WAITING_RECONNECT;
@@ -124,12 +123,19 @@ export function activateBotController(player, { now = Date.now() } = {}) {
   player.turnReconnectDeadline = null;
   player.controlStatus = PLAYER_CONTROL_STATUS.ACTIVE;
   player.botActivatedAt = now;
+  player.afkSkipCount = 0;
+  player.lastAfkSkipAt = null;
+  player.humanReconnectPending = false;
+  player.botActionInProgress = false;
   return player;
 }
 
 export function restoreHumanController(player) {
   ensurePlayerPresence(player);
   player.controller = PLAYER_CONTROLLER.HUMAN;
+  player.botActivatedAt = null;
+  player.humanReconnectPending = false;
+  player.botActionInProgress = false;
   player.turnReconnectDeadline = null;
   player.controlStatus = player.connected
     ? PLAYER_CONTROL_STATUS.ACTIVE

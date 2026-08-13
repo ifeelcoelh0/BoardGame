@@ -8,9 +8,8 @@ import { GAME_ACTION, GAME_PROTOCOL_VERSION } from "../game/gameProtocol.js";
 import { finalizeRematchIfReady } from "../game/rematch.js";
 import { STATE_VIEW_VERSION } from "../game/gameStateView.js";
 import { RESOURCE_KEYS as RKEYS } from "../game/resources.js";
-import { advanceSetupState } from "../game/constructionReducer.js";
 import { reduceTurnAdvance } from "../game/turnCycleReducer.js";
-import { reduceMandatoryQueueSkip, requiredGameActorIndex } from "../game/mandatoryDecisionReducer.js";
+import { requiredGameActorIndex } from "../game/mandatoryDecisionReducer.js";
 import { reduceRoundLimitVictory } from "../game/scoringReducer.js";
 import { makeBoardGraph as makeGraph } from "../game/boardGeometry.js";
 import { createInitialGame, createPlayer } from "../game/gameFactory.js";
@@ -25,8 +24,7 @@ import {
 } from "../game/playerIdentity.js";
 import {
   LOBBY_RECONNECT_GRACE_MS, beginGameTurnReconnectWindow, clearGameTurnReconnectWindow,
-  ensurePlayerPresence, gameAfkGraceMs, isGameTurnReconnectExpired, isLobbyReservationExpired,
-  markAfkActionSkipped, markPlayerConnected, markPlayerDisconnected
+  ensurePlayerPresence, isLobbyReservationExpired, markPlayerConnected, markPlayerDisconnected
 } from "../game/playerPresence.js";
 import { forgetPlayerSession, loadPlayerSession, savePlayerSession } from "../multiplayer/sessionStore.js";
 import { createMultiplayerRuntimeState, destroyMultiplayerRuntime, enqueueAuthorityTask as enqueueRuntimeAuthorityTask } from "../multiplayer/runtimeState.js";
@@ -36,6 +34,7 @@ import { createBrowserClientPeerRuntime, createBrowserHostPeerRuntime } from "..
 import { createHostMessageController } from "../multiplayer/hostMessageController.js";
 import { createClientMessageController } from "../multiplayer/clientMessageController.js";
 import { createHostSessionPresenceController } from "../multiplayer/hostSessionPresenceController.js";
+import { createHostGamePresenceController } from "../multiplayer/hostGamePresenceController.js";
 import { createClientSessionPresenceController } from "../multiplayer/clientSessionPresenceController.js";
 import { createHostActionController } from "../multiplayer/hostActionController.js";
 import { scheduleHostBotAction } from "../multiplayer/hostBotController.js";
@@ -88,7 +87,7 @@ export default function useRealmSession({ stage, navigate, book }) {
     const pendingLobbyActions = useRef(createPendingActionStore());
     const pendingGameActions = useRef(createPendingActionStore());
     const lobbyPresenceTimers = useRef(new Map());
-    const gamePresenceTimers = useRef(new Map());
+    const hostGamePresence = useRef(null);
     gref.current = game;
     const setLocalIdentity = (identity) => {
         myPlayerId.current = identity?.playerId || null;
@@ -148,8 +147,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         pendingGameActions.current.clearAll(false);
         for (const timer of lobbyPresenceTimers.current.values()) clearTimeout(timer);
         lobbyPresenceTimers.current.clear();
-        for (const timer of gamePresenceTimers.current.values()) clearTimeout(timer);
-        gamePresenceTimers.current.clear();
+        hostGamePresence.current?.dispose();
         socialController.current?.clear();
     }, []);
     const relayEmote = (m, from) => {
@@ -225,9 +223,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         for (const timer of lobbyPresenceTimers.current.values())
             clearTimeout(timer);
         lobbyPresenceTimers.current.clear();
-        for (const timer of gamePresenceTimers.current.values())
-            clearTimeout(timer);
-        gamePresenceTimers.current.clear();
+        hostGamePresence.current?.dispose();
         pendingGameActions.current.clearAll(false);
         clearLocalIdentity();
         book.resetHome();
@@ -338,7 +334,7 @@ export default function useRealmSession({ stage, navigate, book }) {
             ensurePlayerPresence(player);
             const requiredNow = index === requiredIndex;
             if (requiredNow && player.connected === false)
-                beginGameTurnReconnectWindow(player, { now, graceMs: gameAfkGraceMs(player) });
+                beginGameTurnReconnectWindow(player, { now });
             else
                 clearGameTurnReconnectWindow(player);
         });
@@ -362,7 +358,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         hostBroadcast(gg);
         saveLocal(gg);
         syncLobbyPresenceTimers(gg);
-        syncGamePresenceTimers(gg);
+        hostGamePresence.current?.sync(gg);
         return gg;
     };
     const enqueueAuthorityTask = (task) => enqueueRuntimeAuthorityTask(net.current, task);
@@ -423,97 +419,17 @@ export default function useRealmSession({ stage, navigate, book }) {
                 clearLobbyPresenceTimer(playerId);
         }
     };
-    const clearGamePresenceTimer = (playerId) => {
-        const timer = gamePresenceTimers.current.get(playerId);
-        if (timer)
-            clearTimeout(timer);
-        gamePresenceTimers.current.delete(playerId);
-    };
-    const skipAfkRequiredAction = (state, actorIndex) => {
-        let next = clone(state);
-        const player = next.players?.[actorIndex];
-        if (!player)
-            return { ok: false, game: state, label: "ação" };
-        let label = "ação";
-        const mandatorySkip = reduceMandatoryQueueSkip(next, actorIndex);
-        if (mandatorySkip.handled) {
-            next = mandatorySkip.game;
-            label = mandatorySkip.event.label;
-        }
-        else if (next.phase === "setup") {
-            label = next.setup?.needRoad ? "estrada da fundação" : "fundação inicial";
-            next = advanceSetupState(next).game;
-        }
-        else if (next.phase === "play") {
-            label = "turno";
-            next.trade = null;
-            if (next.turn) {
-                next.turn.mustDragon = false;
-                next.turn.steal = null;
-                next.turn.deploy = null;
-            }
-            next = advanceTurn(next);
-        }
-        else {
-            return { ok: false, game: state, label };
-        }
-        const skippedPlayer = next.players?.[actorIndex];
-        if (skippedPlayer)
-            markAfkActionSkipped(skippedPlayer, { now: Date.now() });
-        return { ok: true, game: next, label };
-    };
-    const skipAfkAfterReconnectTimeout = async (playerId, expectedDeadline = null) => {
-        const current = gref.current;
-        if (!net.current.host || !current || !["setup", "play"].includes(current.phase) || current.winner != null)
-            return false;
-        const requiredIndex = requiredGameActorIndex(current);
-        const idx = findPlayerIndexById(current, playerId);
-        if (idx < 0 || idx !== requiredIndex)
-            return false;
-        const player = current.players[idx];
-        if (expectedDeadline != null && player.turnReconnectDeadline !== expectedDeadline)
-            return false;
-        if (!isGameTurnReconnectExpired(player, Date.now()))
-            return false;
-        const skipped = skipAfkRequiredAction(current, idx);
-        if (!skipped.ok)
-            return false;
-        const skippedPlayer = skipped.game.players[idx];
-        addLog(skipped.game, "⏭ " + charOf(skippedPlayer.ch).n + " não regressou a tempo. A sua " + skipped.label + " foi saltada; a próxima espera será de 30 segundos.", idx);
-        clearGamePresenceTimer(playerId);
-        await commit(skipped.game);
-        return true;
-    };
-    const scheduleGamePresenceTimer = (playerId, deadline) => {
-        clearGamePresenceTimer(playerId);
-        if (!Number.isFinite(deadline))
-            return;
-        const delay = Math.max(0, deadline - Date.now()) + 25;
-        const timer = setTimeout(() => {
-            gamePresenceTimers.current.delete(playerId);
-            void enqueueAuthorityTask(() => skipAfkAfterReconnectTimeout(playerId, deadline));
-        }, delay);
-        gamePresenceTimers.current.set(playerId, timer);
-    };
-    const syncGamePresenceTimers = (state) => {
-        if (!net.current.host || !state || !["setup", "play"].includes(state.phase) || state.winner != null) {
-            for (const playerId of [...gamePresenceTimers.current.keys()])
-                clearGamePresenceTimer(playerId);
-            return;
-        }
-        const requiredIndex = requiredGameActorIndex(state);
-        const requiredPlayer = requiredIndex >= 0 ? state.players[requiredIndex] : null;
-        const activeTimerPlayerIds = new Set();
-        if (requiredPlayer?.connected === false
-            && Number.isFinite(requiredPlayer.turnReconnectDeadline)) {
-            activeTimerPlayerIds.add(requiredPlayer.playerId);
-            scheduleGamePresenceTimer(requiredPlayer.playerId, requiredPlayer.turnReconnectDeadline);
-        }
-        for (const playerId of [...gamePresenceTimers.current.keys()]) {
-            if (!activeTimerPlayerIds.has(playerId))
-                clearGamePresenceTimer(playerId);
-        }
-    };
+    if (!hostGamePresence.current) {
+        hostGamePresence.current = createHostGamePresenceController({
+            getGame: () => gref.current,
+            commit,
+            enqueueAuthorityTask,
+            clone,
+            addLog,
+            characterName: (characterId) => charOf(characterId)?.n || characterId,
+            isHost: () => net.current.host,
+        });
+    }
     const hostSessionPresence = createHostSessionPresenceController({
         getRuntime: () => net.current,
         identityProtocolVersion: IDENTITY_PROTOCOL_VERSION,
@@ -527,7 +443,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         addLog,
         characterName: (characterId) => charOf(characterId)?.n || characterId,
         clearLobbyPresenceTimer,
-        clearGamePresenceTimer,
+        clearGamePresenceTimer: (playerId) => hostGamePresence.current?.clear(playerId),
         scheduleLobbyPresenceTimer,
         presentTradeEvent,
         giveTestResources: (player) => RKEYS.forEach((resource) => { player.res[resource] = 99; })
@@ -823,7 +739,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         syncSeatFromGame(nextGame);
         saveLocal(nextGame);
         syncLobbyPresenceTimers(nextGame);
-        syncGamePresenceTimers(nextGame);
+        hostGamePresence.current?.sync(nextGame);
         const nextStage = stageForAuthenticatedGame(nextGame, hostIndex);
         /* A página do livro é decidida pelo clamp de âmbito quando o stage muda,
            portanto aqui basta fechá-lo. Um `goToBookPage(REALM)` neste ponto
