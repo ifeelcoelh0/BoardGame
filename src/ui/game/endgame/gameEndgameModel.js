@@ -1,6 +1,6 @@
 import { handSize } from "../../../game/resources.js";
 import { longestRoadLength, scoreBreakdown, troopTotal } from "../../../game/scoringReducer.js";
-import { isWarMode } from "../../../game/gameModes.js";
+import { isWarMode, usesDisasters } from "../../../game/gameModes.js";
 import { characterById } from "../../../game/characterCatalog.js";
 import { t } from "../../../locales/i18n.js";
 
@@ -16,6 +16,7 @@ export function buildEndgameModel(game, graph, seat) {
   if (!game || game.phase !== "ended" || !Number.isSafeInteger(game.winner) || !game.players?.[game.winner]) return null;
   const stats = game.stats || {};
   const warMode = isWarMode(game.mode);
+  const disasterMode = usesDisasters(game.mode);
   const roadLengths = game.players.map((_, index) => longestRoadLength(game, graph, index));
   const standings = game.players.map((player, index) => {
     let villages = 0;
@@ -64,6 +65,7 @@ export function buildEndgameModel(game, graph, seat) {
   return {
     round: game.round,
     warMode,
+    disasterMode,
     winner: {
       playerIndex: game.winner,
       characterId: game.players[game.winner].ch,

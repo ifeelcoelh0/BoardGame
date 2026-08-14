@@ -5,6 +5,7 @@ import {
   isResourceKey,
 } from "./resources.js";
 import { reduceScoringAwards } from "./scoringReducer.js";
+import { isClassicMode, isWarMode } from "./gameModes.js";
 
 export const DEVELOPMENT_CARD_KINDS = Object.freeze({
   TROOP: "tropa",
@@ -17,14 +18,6 @@ export const DEVELOPMENT_CARD_KINDS = Object.freeze({
 });
 
 const TROOP_TYPES = new Set(["cavaleiro", "catapulta", "arqueiro"]);
-
-function isWarMode(mode) {
-  return mode === "guerra";
-}
-
-function isClassicModeFamily(mode) {
-  return mode === "classico" || mode === "exploracao";
-}
 
 function cloneResources(resources) {
   return Object.fromEntries(RESOURCE_KEYS.map((resource) => [resource, resources?.[resource] || 0]));
@@ -94,7 +87,7 @@ function assertResource(resource) {
 
 function trinityState(game, actorIndex) {
   const player = game.players[actorIndex];
-  const complete = !isClassicModeFamily(game.mode)
+  const complete = !isClassicMode(game.mode)
     && (player.troops?.cavaleiro || 0) >= 1
     && (player.troops?.catapulta || 0) >= 1
     && (player.troops?.arqueiro || 0) >= 1;
@@ -163,7 +156,7 @@ export function reduceDevelopmentCardPlay(game, actorIndex, cardId, choices = {}
 
   if (card.kind === DEVELOPMENT_CARD_KINDS.TROOP) {
     if (!TROOP_TYPES.has(card.sub)) throw new TypeError("Tipo de tropa inválido na carta.");
-    const trinityWasComplete = !isClassicModeFamily(game.mode)
+    const trinityWasComplete = !isClassicMode(game.mode)
       && (player.troops?.cavaleiro || 0) >= 1
       && (player.troops?.catapulta || 0) >= 1
       && (player.troops?.arqueiro || 0) >= 1;

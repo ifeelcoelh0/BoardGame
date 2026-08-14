@@ -1,16 +1,9 @@
 import { reduceProduction } from "./productionReducer.js";
 import { handSize } from "./resources.js";
+import { isWarMode, usesDisasters } from "./gameModes.js";
 
 const DICE_SIDES = 6;
 const DISASTER_ROLLS = new Set([2, 12]);
-
-function isWarMode(mode) {
-  return mode === "guerra";
-}
-
-function isClassicFamily(mode) {
-  return mode === "classico" || mode === "exploracao";
-}
 
 function activeHousePerk(game, playerIndex, characterId) {
   return isWarMode(game.mode)
@@ -158,7 +151,7 @@ export function reduceDiceRoll(game, graph, actorIndex, dice) {
       dice: [first, second],
       total,
       triggerTrollOmen,
-      triggerDisaster: DISASTER_ROLLS.has(total) && !isClassicFamily(base.mode) && !isWarMode(base.mode),
+      triggerDisaster: DISASTER_ROLLS.has(total) && usesDisasters(base.mode),
       production: {
         gains: production.gains,
         dragonBlocked: production.dragonBlocked,

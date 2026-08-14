@@ -17,6 +17,7 @@ import { makeBoardGraph, ringCoords } from "./boardGeometry.js";
 import { pickRandom, shuffleWithRng } from "./random.js";
 import { APP_VERSION, SAVE_SCHEMA_VERSION } from "./saveSchema.js";
 import { createInitialGamePresentationState } from "./presentationState.js";
+import { createPlayTurnState } from "./turnState.js";
 
 export const VICTORY_POINT_ATTRIBUTES = Object.freeze([
   "🧠 Inteligência",
@@ -256,18 +257,7 @@ export function generateDevelopmentDeck(mode = DEFAULT_GAME_MODE, { rng = Math.r
 }
 
 export function createInitialTurnState() {
-  return {
-    pos: 0,
-    rolled: false,
-    dice: null,
-    devPlayed: false,
-    mustDragon: false,
-    steal: null,
-    milN: 0,
-    acted: {},
-    deploy: null,
-    troopPlayed: false,
-  };
+  return createPlayTurnState();
 }
 
 export function createPlayer(characterId = null, identity = {}, { idFactory = createStableId } = {}) {

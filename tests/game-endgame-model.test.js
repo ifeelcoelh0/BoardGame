@@ -30,3 +30,15 @@ test("metric ranking is derived from the same standings instead of rebuilding pl
 test("endgame model is absent before a valid winner exists", () => {
   const game = endedGame(); const graph = makeBoardGraph(game.board.hexes); game.phase = "play"; assert.equal(buildEndgameModel(game, graph, 0), null); game.phase = "ended"; game.winner = null; assert.equal(buildEndgameModel(game, graph, 0), null);
 });
+
+test("endgame exposes disaster statistics only for modes that actually use disasters", () => {
+  const dragon = endedGame();
+  dragon.mode = "dragao";
+  const dragonModel = buildEndgameModel(dragon, makeBoardGraph(dragon.board.hexes), 0);
+  assert.equal(dragonModel.disasterMode, true);
+
+  const classic = endedGame();
+  classic.mode = "classico";
+  const classicModel = buildEndgameModel(classic, makeBoardGraph(classic.board.hexes), 0);
+  assert.equal(classicModel.disasterMode, false);
+});

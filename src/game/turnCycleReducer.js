@@ -5,6 +5,8 @@ import {
   reduceWarStartTurnAutomation,
 } from "./warAutomationReducer.js";
 import { giantHex } from "./warReducer.js";
+import { isWarMode } from "./gameModes.js";
+import { createPlayTurnState } from "./turnState.js";
 
 export const ICE_DRAGON_WAKE_TURNS = 12;
 export const WAR_GAME_TURNS = 40;
@@ -56,18 +58,10 @@ export function currentTurnPlayerIndex(game) {
 }
 
 export function createFreshTurn(previousTurn, position) {
-  return {
-    pos: position,
-    rolled: false,
-    dice: previousTurn?.dice ?? null,
-    devPlayed: false,
-    mustDragon: false,
-    steal: null,
-    milN: 0,
-    acted: {},
-    deploy: null,
-    troopPlayed: false,
-  };
+  return createPlayTurnState({
+    position,
+    previousDice: previousTurn?.dice ?? null,
+  });
 }
 
 export function reduceIncomingPlayerEffects(game, playerIndex) {
@@ -99,7 +93,7 @@ export function reduceTurnAdvance(game, graph, actorIndex, { rng = Math.random }
 
   let next = cloneGame(game);
   const events = [];
-  const isWar = next.mode === "guerra";
+  const isWar = isWarMode(next.mode);
 
   if (isWar && next.troll?.awake) {
     const sweep = reduceWarEndTurnSweep(next, graph, actorIndex);

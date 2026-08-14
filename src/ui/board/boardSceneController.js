@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { RESOURCE_DEFINITIONS as RES } from "../../game/resources.js";
 import { HEX_CORNER_OFFSETS as CORNER_OFF, HEX_SIZE as SIZE } from "../../game/boardGeometry.js";
-import { isClassicMode as CLASSICO, isWarMode as GUERRA } from "../../game/gameModes.js";
+import { isWarMode as GUERRA, usesDisasters } from "../../game/gameModes.js";
 import { isTrollUnit as isTroll } from "../../game/warReducer.js";
 import { disposeObjectTree } from "../three/disposeThree.js";
 import { createVisibilityAwareFrameLoop } from "../three/visibilityAwareFrameLoop.js";
@@ -722,7 +722,7 @@ export function createBoardScene(container, gr, board, players, mode, options = 
         return sp;
     }
     function tokenSprite(num) {
-        const omen = (num === 2 || num === 12) && !CLASSICO(mode) && !GUERRA(mode), red = num === 6 || num === 8;
+        const omen = (num === 2 || num === 12) && usesDisasters(mode), red = num === 6 || num === 8;
         let omenIcon = null;
         const draw = (ctx) => {
             ctx.beginPath();

@@ -1,21 +1,8 @@
 import { BUILD_COSTS, RESOURCE_KEYS } from "./resources.js";
+import { isRapidMode } from "./gameModes.js";
+import { INITIAL_PLAY_TURN, createPlayTurnState } from "./turnState.js";
 
-export const INITIAL_PLAY_TURN = Object.freeze({
-  pos: 0,
-  rolled: false,
-  dice: null,
-  devPlayed: false,
-  mustDragon: false,
-  steal: null,
-  milN: 0,
-  acted: Object.freeze({}),
-  deploy: null,
-  troopPlayed: false,
-});
-
-function copyTurnTemplate() {
-  return { ...INITIAL_PLAY_TURN, acted: {} };
-}
+export { INITIAL_PLAY_TURN };
 
 function subtractCost(resources, cost) {
   const next = { ...resources };
@@ -48,7 +35,7 @@ export function advanceSetupState(game) {
     next = {
       ...next,
       phase: "play",
-      turn: copyTurnTemplate(),
+      turn: createPlayTurnState(),
     };
   }
   return { game: next, setupCompleted };
@@ -91,7 +78,7 @@ export function reduceRoadConstruction(game, actorIndex, edge) {
 }
 
 export function reduceVillageConstruction(game, graph, actorIndex, vertex) {
-  const rapidMode = game.mode === "rapido";
+  const rapidMode = isRapidMode(game.mode);
   const currentPlayer = game.players[actorIndex];
   const player = clonePlayerWithResources(currentPlayer);
 
