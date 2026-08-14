@@ -8,6 +8,8 @@ import { BOOK_SCOPE } from "./bookPages.js";
 import { CODEX_PHASE, codexLeaving, codexVisible, completeCodexRitual, initialCodexPhase, syncCodexPhase } from "./lobbyCodexFlow.js";
 import "../../styles/dragon-lobby.css";
 import { t } from "../../locales/i18n.js";
+import WizardGuide from "../tutorial/WizardGuide.jsx";
+import { WIZARD_SCOPE } from "../../tutorial/wizardJourney.js";
 import "../../styles/lobby-codex.css";
 
 /**
@@ -285,6 +287,20 @@ export default function LobbyExperience({
           onCopyCode={copyRoomCode}
         />
       )}
+
+      <WizardGuide
+        scope={game ? WIZARD_SCOPE.REALM : WIZARD_SCOPE.FOYER}
+        bookPage={bookPage}
+        bookOpen={bookOpen}
+        disabled={Boolean(bookStatus) || isStarting}
+        isSelectingCharacter={isSelectingCharacter}
+        previewCharacterId={previewCharacterId}
+        hasConfirmedCharacter={viewModel.hasConfirmedCharacter}
+        onShowBookPage={(page) => {
+          if (page !== bookPage) changePage(page);
+          if (!bookOpen) openBook(true);
+        }}
+      />
     </main>
   );
 }

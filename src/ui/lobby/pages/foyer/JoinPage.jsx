@@ -28,33 +28,35 @@ export default function JoinPage({ foyer }) {
   return (
     <>
       <Leaf page={BOOK_PAGE.JOIN} side="left" chapter={t("lobby.joinChapter")} title={t("lobby.realmCodeTitle")}>
-        <Opening>{t("lobby.joinOpening")}</Opening>
-        <label className="rd-lobby-book-ui__field-label" htmlFor="rd-room-code">{t("lobby.realmCodeTitle")}</label>
-        <input
-          id="rd-room-code"
-          data-testid="room-code-input"
-          className="rd-lobby-book-ui__code-input"
-          maxLength={ROOM_CODE_LENGTH}
-          autoCapitalize="characters"
-          autoComplete="off"
-          spellCheck="false"
-          value={foyer.codeIn}
-          onChange={(event) => {
-            foyer.setErr("");
-            foyer.setCodeIn(sanitizeRoomCodeInput(event.target.value));
-          }}
-          placeholder="ABCDEF"
-          aria-label={t("lobby.realmCodeTitle")}
-        />
-        <div className={`rd-lobby-book-ui__status is-${status.tone}`} role="status" aria-live="polite">
-          <span aria-hidden="true">{status.tone === "error" ? "!" : status.tone === "working" ? "…" : validCode ? "✓" : "i"}</span>
-          <p>{status.label}</p>
-        </div>
-        <div className="rd-lobby-book-ui__actions is-single-column">
-          <button data-testid="join-submit" className="is-primary" type="button" disabled={busy || !validCode} onClick={foyer.onJoin}>
-            <GameIcon name="I_Key01" size={21} alt="" />
-            {busy ? t("lobby.entering") : t("lobby.enterRealm")}
-          </button>
+        <div data-tutorial-anchor="join-panel">
+          <Opening>{t("lobby.joinOpening")}</Opening>
+          <label className="rd-lobby-book-ui__field-label" htmlFor="rd-room-code">{t("lobby.realmCodeTitle")}</label>
+          <input
+            id="rd-room-code"
+            data-testid="room-code-input"
+            className="rd-lobby-book-ui__code-input"
+            maxLength={ROOM_CODE_LENGTH}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck="false"
+            value={foyer.codeIn}
+            onChange={(event) => {
+              foyer.setErr("");
+              foyer.setCodeIn(sanitizeRoomCodeInput(event.target.value));
+            }}
+            placeholder="ABCDEF"
+            aria-label={t("lobby.realmCodeTitle")}
+          />
+          <div className={`rd-lobby-book-ui__status is-${status.tone}`} role="status" aria-live="polite">
+            <span aria-hidden="true">{status.tone === "error" ? "!" : status.tone === "working" ? "…" : validCode ? "✓" : "i"}</span>
+            <p>{status.label}</p>
+          </div>
+          <div className="rd-lobby-book-ui__actions is-single-column">
+            <button data-testid="join-submit" className="is-primary" type="button" disabled={busy || !validCode} onClick={foyer.onJoin}>
+              <GameIcon name="I_Key01" size={21} alt="" />
+              {busy ? t("lobby.entering") : t("lobby.enterRealm")}
+            </button>
+          </div>
         </div>
       </Leaf>
       <Leaf page={BOOK_PAGE.JOIN} side="right" chapter={t("lobby.afterJoin")} title={t("lobby.afterJoinTitle")}>
