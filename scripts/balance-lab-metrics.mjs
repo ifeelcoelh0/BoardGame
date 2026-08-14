@@ -1,6 +1,7 @@
 import { APP_VERSION } from "../src/appVersion.js";
 import { BOT_POLICY_VERSION } from "../src/game/botPolicy.js";
 import { BOT_STRATEGY_VERSION } from "../src/game/botStrategy.js";
+import { BOT_PROFILE_VERSION, botProfile } from "../src/game/botProfiles.js";
 import { characterName } from "../src/game/characterCatalog.js";
 import { gameModeConfig } from "../src/game/gameModes.js";
 import { RESOURCE_KEYS } from "../src/game/resources.js";
@@ -282,6 +283,9 @@ function aggregatePlayerCohort(entries, { id, label, playerCount }) {
     cardsPlayed,
     averageBankTrades: round2(average(entries.map((entry) => entry.bankTrades))),
     averageP2pTrades: round2(average(entries.map((entry) => entry.p2pTrades))),
+    averageTradeProposals: round2(average(entries.map((entry) => Number(entry.actionsByType?.PROPOSE_TRADE) || 0))),
+    averageTradeAcceptances: round2(average(entries.map((entry) => Number(entry.actionsByType?.ACCEPT_TRADE) || 0))),
+    averageTradeDeclines: round2(average(entries.map((entry) => Number(entry.actionsByType?.DECLINE_TRADE) || 0))),
     averageDragonMoves: round2(average(entries.map((entry) => entry.dragonMoves))),
     averageSteals: round2(average(entries.map((entry) => entry.steals))),
     averageRobbed: round2(average(entries.map((entry) => entry.robbed))),
@@ -324,6 +328,8 @@ function replayCase(record, reason, baseSeed) {
     gameIndex: record.gameIndex,
     seed: record.seed,
     roster: record.roster,
+    strategySet: record.strategySet || "balanced",
+    botProfiles: record.botProfiles || [],
     steps: record.steps,
     rounds: record.rounds,
     winnerCharacter: record.winnerCharacter,
@@ -334,6 +340,7 @@ function replayCase(record, reason, baseSeed) {
       baseSeed,
       startIndex: record.gameIndex,
       workers: 1,
+      strategies: record.strategySet || "balanced",
     },
   };
 }
@@ -345,6 +352,7 @@ export function summarizeBalanceLab(records, {
   baseSeed = null,
   startIndex = 0,
   characterIds = [],
+  strategySet = records[0]?.strategySet || "balanced",
 } = {}) {
   const completed = records.filter((record) => record.completed);
   const failures = records.filter((record) => !record.completed);
@@ -365,6 +373,37 @@ export function summarizeBalanceLab(records, {
       characterName: characterName(characterId),
     }))
     .sort((a, b) => (b.winRatePct ?? -Infinity) - (a.winRatePct ?? -Infinity));
+
+  const profileIds = [...new Set(players.map((entry) => entry.botProfileId || "balanced"))];
+  const strategies = profileIds
+    .map((profileId) => ({
+      ...aggregatePlayerCohort(
+        players.filter((entry) => (entry.botProfileId || "balanced") === profileId),
+        { id: profileId, label: botProfile(profileId).label, playerCount },
+      ),
+      profileId,
+      profileName: botProfile(profileId).label,
+    }))
+    .sort((a, b) => (b.winRatePct ?? -Infinity) - (a.winRatePct ?? -Infinity));
+
+  const strategyCharacterCounts = Object.fromEntries(characterIds.map((characterId) => [
+    characterId,
+    Object.fromEntries(profileIds.map((profileId) => [
+      profileId,
+      players.filter((entry) => entry.characterId === characterId && (entry.botProfileId || "balanced") === profileId).length,
+    ])),
+  ]));
+  const strategySeatCounts = Object.fromEntries(Array.from({ length: playerCount || 0 }, (_, seatIndex) => [
+    seatIndex,
+    Object.fromEntries(profileIds.map((profileId) => [
+      profileId,
+      players.filter((entry) => entry.seatIndex === seatIndex && (entry.botProfileId || "balanced") === profileId).length,
+    ])),
+  ]));
+  const characterProfileSpreads = Object.values(strategyCharacterCounts).map((counts) => {
+    const values = Object.values(counts);
+    return values.length ? Math.max(...values) - Math.min(...values) : 0;
+  });
 
   const seats = Array.from({ length: playerCount || 0 }, (_, seatIndex) => aggregatePlayerCohort(
     players.filter((entry) => entry.seatIndex === seatIndex),
@@ -416,6 +455,8 @@ export function summarizeBalanceLab(records, {
       appVersion: APP_VERSION,
       botPolicyVersion: BOT_POLICY_VERSION,
       botStrategyVersion: BOT_STRATEGY_VERSION,
+      botProfileVersion: BOT_PROFILE_VERSION,
+      strategySet,
       mode,
       modeFeatures: {
         classicRules: modeConfig.classicRules,
@@ -432,6 +473,14 @@ export function summarizeBalanceLab(records, {
       playerObservations: players.length,
     },
     sampling: samplingSummary({ requestedGames, startIndex, playerCount, characterIds }),
+    strategySampling: {
+      strategySet,
+      profileIds,
+      characterProfileExactlyBalanced: characterProfileSpreads.every((spread) => spread === 0),
+      maximumCharacterProfileSpread: characterProfileSpreads.length ? Math.max(...characterProfileSpreads) : 0,
+      byCharacter: strategyCharacterCounts,
+      bySeat: strategySeatCounts,
+    },
     duration: {
       averageActions: round2(average(durations)),
       medianActions: round2(percentile(durations, 0.5)),
@@ -451,6 +500,7 @@ export function summarizeBalanceLab(records, {
       placementDiagnostics,
     },
     characters,
+    strategies,
     actions,
     replayCases,
   };

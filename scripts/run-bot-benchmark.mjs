@@ -35,6 +35,7 @@ function parseArgs(argv) {
     startIndex: 0,
     workers: Math.max(1, Math.min(4, availableParallelism?.() || 1)),
     out: null,
+    strategySet: "balanced",
     quiet: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -48,6 +49,7 @@ function parseArgs(argv) {
     else if (arg === "--start-index") options.startIndex = parseInteger(next(), "--start-index", { min: 0, max: 100000000 });
     else if (arg === "--workers") options.workers = parseInteger(next(), "--workers", { min: 1, max: 32 });
     else if (arg === "--out") options.out = String(next() || "").trim() || null;
+    else if (arg === "--strategies") options.strategySet = String(next() || "").trim().toLowerCase() || "balanced";
     else if (arg === "--quiet") options.quiet = true;
     else if (arg === "--help" || arg === "-h") options.help = true;
     else throw new Error(`Argumento desconhecido: ${arg}`);
@@ -79,7 +81,8 @@ function printReport(summary) {
   console.log("\nREINOS DO DRAGÃO — BALANCE LAB");
   console.log("=".repeat(86));
   console.log(`Modo: ${meta.mode} | ${meta.playerCount} bots | jogos pedidos: ${meta.requestedGames} | seed base: ${meta.baseSeed} | índice inicial: ${meta.startIndex}`);
-  console.log(`App ${meta.appVersion} | Bot policy v${meta.botPolicyVersion} | estratégia v${meta.botStrategyVersion}`);
+  console.log(`App ${meta.appVersion} | Bot policy v${meta.botPolicyVersion} | estratégia v${meta.botStrategyVersion} | perfis v${meta.botProfileVersion} | RNG lab v${meta.benchmarkRngVersion}`);
+  console.log(`Perfis de bot: ${meta.strategySet}`);
   console.log(`Concluídos: ${meta.completedGames}/${meta.requestedGames} (${pct(meta.completionRatePct)}) | falhas: ${meta.failedGames} | observações: ${meta.playerObservations}`);
   console.log(`Duração — ações: média ${number(duration.averageActions)} · mediana ${number(duration.medianActions)} · p95 ${number(duration.p95Actions)} | rondas: média ${number(duration.averageRounds)} · mediana ${number(duration.medianRounds)} · p95 ${number(duration.p95Rounds)}`);
 
@@ -112,6 +115,17 @@ function printReport(summary) {
   console.log("Personagem             apar.    win%      Δ esperado   score   prod.   aldeias palácios estradas cartas");
   for (const row of summary.characters) {
     console.log(`${row.characterName.slice(0, 21).padEnd(21)} ${String(row.appearances).padStart(5)}  ${pct(row.winRatePct).padStart(8)}  ${pp(row.winRateDeltaPp).padStart(12)}  ${number(row.averageScore).padStart(6)}  ${number(row.averageProduction).padStart(6)}  ${number(row.averageVillages).padStart(7)} ${number(row.averagePalaces).padStart(8)} ${number(row.averageRoads).padStart(8)} ${number(row.averageCardsBought).padStart(6)}`);
+  }
+
+  if (summary.strategies?.length) {
+    console.log("\nPOR PERFIL DE BOT");
+    console.log("Perfil                 apar.    win%      Δ esperado   score   prod.   propostas  P2P");
+    for (const row of summary.strategies) {
+      console.log(`${row.profileName.slice(0, 21).padEnd(21)} ${String(row.appearances).padStart(5)}  ${pct(row.winRatePct).padStart(8)}  ${pp(row.winRateDeltaPp).padStart(12)}  ${number(row.averageScore).padStart(6)}  ${number(row.averageProduction).padStart(6)}  ${number(row.averageTradeProposals).padStart(9)}  ${number(row.averageP2pTrades).padStart(5)}`);
+    }
+    if (summary.strategySampling?.strategySet === "diverse") {
+      console.log(`Perfis × personagem exatamente equilibrados: ${summary.strategySampling.characterProfileExactlyBalanced ? "SIM" : "NÃO"} | spread máximo: ${summary.strategySampling.maximumCharacterProfileSpread}`);
+    }
   }
 
   console.log("\nAÇÕES MAIS FREQUENTES");
@@ -150,7 +164,7 @@ function printReport(summary) {
       console.log(`${item.reason.padEnd(20)} jogo ${item.gameIndex} | seed ${item.seed} | ${item.steps} ações / ${item.rounds} rondas | roster ${(item.roster || []).join(",")}`);
     }
     const first = summary.replayCases[0];
-    console.log(`Reproduzir primeiro caso: npm run benchmark:bots -- --mode ${first.replay.mode} --players ${first.replay.players} --games 1 --seed ${first.replay.baseSeed} --start-index ${first.replay.startIndex} --workers 1`);
+    console.log(`Reproduzir primeiro caso: npm run benchmark:bots -- --mode ${first.replay.mode} --players ${first.replay.players} --games 1 --seed ${first.replay.baseSeed} --start-index ${first.replay.startIndex} --workers 1 --strategies ${first.replay.strategies || "balanced"}`);
   }
 
   console.log("\nNota: win rates medem o desempenho da estratégia de bot atual. Não provam equilíbrio humano nem causalidade.\n");
@@ -172,7 +186,17 @@ function printCoreComparison(results) {
     const name = rows.find(Boolean)?.characterName || characterId;
     console.log(`${name.slice(0, 21).padEnd(21)} ${pct(rows[0]?.winRatePct).padStart(9)}  ${pct(rows[1]?.winRatePct).padStart(10)}  ${pct(rows[2]?.winRatePct).padStart(8)}`);
   }
-  console.log("\nUsa ciclos completos de sampling antes de interpretar diferenças pequenas entre personagens.\n");
+  if (results.some(({ summary }) => (summary.strategies || []).length > 1)) {
+    const profileIds = [...new Set(results.flatMap(({ summary }) => (summary.strategies || []).map((row) => row.profileId)))];
+    console.log("\nPerfil                 Clássico   Relâmpago   Dragão");
+    for (const profileId of profileIds) {
+      const rows = CORE_MODES.map((mode) => byMode[mode]?.strategies?.find((row) => row.profileId === profileId));
+      const name = rows.find(Boolean)?.profileName || profileId;
+      console.log(`${name.slice(0, 21).padEnd(21)} ${pct(rows[0]?.winRatePct).padStart(9)}  ${pct(rows[1]?.winRatePct).padStart(10)}  ${pct(rows[2]?.winRatePct).padStart(8)}`);
+    }
+  }
+
+  console.log("\nUsa ciclos completos de sampling antes de interpretar diferenças pequenas entre personagens/perfis.\n");
 }
 
 async function runParallel(options) {
@@ -185,6 +209,7 @@ async function runParallel(options) {
       baseSeed: options.baseSeed,
       maxSteps: options.maxSteps,
       startIndex: options.startIndex,
+      strategySet: options.strategySet,
       onProgress: options.quiet ? undefined : (done, total) => {
         if (done === total || done % Math.max(1, Math.floor(total / 10)) === 0) {
           process.stderr.write(`\rBenchmark: ${done}/${total}`);
@@ -211,6 +236,7 @@ async function runParallel(options) {
           playerCount: options.playerCount,
           baseSeed: options.baseSeed,
           maxSteps: options.maxSteps,
+          strategySet: options.strategySet,
           ...chunk,
         },
       },
@@ -253,6 +279,8 @@ if (!isMainThread && workerData?.benchmarkWorker) {
     }
     const allowedModes = new Set(["core", "classico", "dragao", "rapido", "guerra", "exploracao"]);
     if (!allowedModes.has(options.mode)) throw new Error(`Modo inválido: ${options.mode}`);
+    const allowedStrategySets = new Set(["balanced", "expander", "developer", "economist", "diverse"]);
+    if (!allowedStrategySets.has(options.strategySet)) throw new Error(`Conjunto de estratégias inválido: ${options.strategySet}`);
 
     const runMode = async (mode) => {
       const startedAt = Date.now();
@@ -264,6 +292,7 @@ if (!isMainThread && workerData?.benchmarkWorker) {
         playerCount: options.playerCount,
         baseSeed: options.baseSeed,
         startIndex: options.startIndex,
+        strategySet: options.strategySet,
       });
       summary.meta.elapsedSeconds = Math.round((Date.now() - startedAt) / 10) / 100;
       printReport(summary);
@@ -282,6 +311,7 @@ if (!isMainThread && workerData?.benchmarkWorker) {
             gamesPerMode: options.games,
             baseSeed: options.baseSeed,
             startIndex: options.startIndex,
+            strategySet: options.strategySet,
           },
           modes: Object.fromEntries(results.map(({ mode, summary, games }) => [mode, { summary, games }])),
         };

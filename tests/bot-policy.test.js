@@ -145,3 +145,35 @@ test("exploration bot prefers revealing fog over wandering across known terrain"
   assert.ok(hidden > visible);
   assert.ok(hidden > scoreBotAction(game, 1, { type: GAME_ACTION.END_TURN }));
 });
+
+test("bot profiles create materially different strategic priorities", () => {
+  const game = botGame();
+  game.turn.rolled = true;
+  const buyCard = { type: GAME_ACTION.BUY_DEV_CARD };
+  const village = { type: GAME_ACTION.BUILD_VILLAGE, vertex: "missing_vertex" };
+
+  assert.ok(
+    scoreBotAction(game, 1, buyCard, { profileId: "developer" })
+      > scoreBotAction(game, 1, village, { profileId: "developer" }),
+  );
+  assert.ok(
+    scoreBotAction(game, 1, village, { profileId: "expander" })
+      > scoreBotAction(game, 1, buyCard, { profileId: "expander" }),
+  );
+});
+
+test("bot trade memory prevents repeating proposals forever in the same turn", async () => {
+  const { createBotDecisionMemory } = await import("../src/game/botPolicy.js");
+  const game = botGame();
+  game.turn.rolled = true;
+  game.players[1].res = { madeira: 3, tijolo: 0, cavalos: 0, ouro: 0, obsidiana: 0 };
+  const memory = createBotDecisionMemory();
+  const view = createGameStateView(game, IDS.guest1);
+
+  const first = chooseBotAction(view, 1, { rng: () => 0, profileId: "economist", memory });
+  assert.equal(first.type, GAME_ACTION.PROPOSE_TRADE);
+  assert.equal(memory.tradeAttempts, 1);
+
+  const second = chooseBotAction(view, 1, { rng: () => 0, profileId: "economist", memory });
+  assert.notEqual(second.type, GAME_ACTION.PROPOSE_TRADE);
+});

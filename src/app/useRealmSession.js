@@ -84,6 +84,7 @@ export default function useRealmSession({ stage, navigate, book }) {
     const pendingGameActions = useRef(createPendingActionStore());
     const lobbyPresenceTimers = useRef(new Map());
     const hostGamePresence = useRef(null);
+    const botDecisionMemory = useRef(new Map());
     gref.current = game;
     const setLocalIdentity = (identity) => {
         myPlayerId.current = identity?.playerId || null;
@@ -465,6 +466,7 @@ export default function useRealmSession({ stage, navigate, book }) {
             commit,
             onGameApplied: (next, applied) => presentAppliedGameAction(next, applied),
             onError: ({ reason }) => console.warn("Bot action rejected:", reason),
+            botDecisionMemoryByPlayerId: botDecisionMemory.current,
         });
     }, [game?.v, game?.phase, game?.winner]);
 

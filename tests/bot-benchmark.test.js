@@ -12,6 +12,8 @@ import {
   recordBalanceEvents,
 } from "../scripts/balance-lab-metrics.mjs";
 
+import { DIVERSE_BOT_PROFILES, botProfilesForGame } from "../src/game/botProfiles.js";
+
 const IDS = ["vlad", "maria", "protheus", "romeo", "makuru", "artheria", "muriel", "bones"];
 
 test("benchmark samples every four-player combination and rotates every character through every seat", () => {
@@ -183,4 +185,35 @@ test("benchmark summary exposes turn-order and measured Trinity immunity diagnos
   assert.ok(Number.isFinite(summary.trinity.measuredImmunityValue.totalDisastersAvoided));
   assert.ok(Number.isFinite(summary.trinity.measuredImmunityValue.totalDragonStealsAvoided));
   assert.ok(Number.isFinite(summary.trinity.measuredImmunityValue.totalDragonProductionSaved));
+});
+
+
+test("diverse strategy schedule balances every character across all bot profiles in one 280-game roster cycle", () => {
+  const counts = new Map();
+  for (let gameIndex = 0; gameIndex < 280; gameIndex += 1) {
+    const roster = rosterForGame(gameIndex, 4);
+    const profiles = botProfilesForGame(gameIndex, 4, "diverse");
+    for (let seat = 0; seat < 4; seat += 1) {
+      const key = `${roster[seat]}:${profiles[seat]}`;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  }
+  for (const characterId of IDS) {
+    const values = DIVERSE_BOT_PROFILES.map((profileId) => counts.get(`${characterId}:${profileId}`) || 0);
+    assert.deepEqual(values, [35, 35, 35, 35]);
+  }
+});
+
+test("diverse benchmark produces executable player-to-player trades without simulation loops", () => {
+  const record = simulateBotGame({
+    mode: "classico",
+    playerCount: 4,
+    baseSeed: 24681357,
+    gameIndex: 0,
+    strategySet: "diverse",
+  });
+  assert.equal(record.completed, true);
+  assert.ok(record.players.some((player) => (player.actionsByType.PROPOSE_TRADE || 0) > 0));
+  assert.ok(record.players.reduce((sum, player) => sum + player.p2pTrades, 0) >= 2);
+  assert.deepEqual(record.botProfiles, ["balanced", "expander", "developer", "economist"]);
 });
