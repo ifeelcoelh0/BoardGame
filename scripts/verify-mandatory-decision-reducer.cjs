@@ -6,12 +6,13 @@ const root = path.resolve(__dirname, "..");
 const legacy = readRuntimeSource(root);
 const reducer = fs.readFileSync(path.join(root, "src/game/mandatoryDecisionReducer.js"), "utf8");
 const actionReducer = fs.readFileSync(path.join(root, "src/game/gameActionReducer.js"), "utf8");
+const hostGamePresence = fs.readFileSync(path.join(root, "src/multiplayer/hostGamePresenceController.js"), "utf8");
 const tests = fs.readFileSync(path.join(root, "tests/mandatory-decision-reducer.test.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const failures = [];
 
 for (const fragment of ['from "../game/mandatoryDecisionReducer.js"', "requiredGameActorIndex"]) {
-  if (!legacy.includes(fragment)) failures.push(`Integração de presença/UI obrigatória ausente: ${fragment}`);
+  if (!hostGamePresence.includes(fragment)) failures.push(`Integração de presença em jogo obrigatória ausente: ${fragment}`);
 }
 for (const fragment of ["reduceDiscardDecision", "reduceDragonPlacement", "reduceResourceSteal", "reduceTsunamiDecision", "reduceQueueResourceDecision"]) {
   if (!actionReducer.includes(fragment)) failures.push(`Integração de decisões obrigatórias ausente no reducer central: ${fragment}`);

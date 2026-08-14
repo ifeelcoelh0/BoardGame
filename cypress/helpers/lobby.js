@@ -1,7 +1,24 @@
 export const appUrl = "/?transport=mock";
 
+const CYPRESS_SETTINGS_KEY = "reinos_dragao_settings_v1";
+
+export function seedCypressRuntimeSettings(win) {
+  let current = {};
+  try {
+    current = JSON.parse(win.localStorage.getItem(CYPRESS_SETTINGS_KEY) || "{}");
+  } catch {}
+  win.localStorage.setItem(CYPRESS_SETTINGS_KEY, JSON.stringify({
+    ...current,
+    reducedMotion: true,
+  }));
+}
+
 export function openApp() {
-  cy.visit(appUrl);
+  cy.visit(appUrl, {
+    onBeforeLoad(win) {
+      seedCypressRuntimeSettings(win);
+    },
+  });
   cy.get('[data-testid="lobby-experience"]').should("be.visible");
   cy.contains("button", "Open codex").should("be.visible").click();
   cy.get('[data-testid="lobby-codex"]').should("be.visible");

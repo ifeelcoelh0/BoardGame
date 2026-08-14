@@ -8,11 +8,13 @@ const presencePath = path.join(root, "src/game/playerPresence.js");
 const bannerPath = path.join(root, "src/ui/game/PlayerBanner.jsx");
 const mandatoryPath = path.join(root, "src/game/mandatoryDecisionReducer.js");
 const takeoverPath = path.join(root, "src/multiplayer/hostGamePresenceController.js");
+const recoveryPath = path.join(root, "src/game/gameRecovery.js");
 const source = readRuntimeSource(root);
 const mandatory = fs.readFileSync(mandatoryPath, "utf8");
 const banner = fs.readFileSync(bannerPath, "utf8");
 const hostSession = fs.readFileSync(path.join(root, "src/multiplayer/hostSessionPresenceController.js"), "utf8");
 const takeover = fs.readFileSync(takeoverPath, "utf8");
+const recovery = fs.readFileSync(recoveryPath, "utf8");
 const failures = [];
 const requireText = (haystack, text, label) => {
   if (!haystack.includes(text)) failures.push(`Falta: ${label}`);
@@ -21,7 +23,8 @@ const rejectText = (haystack, text, label) => {
   if (haystack.includes(text)) failures.push(`Ainda existe: ${label}`);
 };
 
-requireText(source, "requiredGameActorIndex", "resolução do jogador que tem realmente de agir");
+requireText(recovery, "requiredGameActorIndex", "resolução do jogador que tem realmente de agir no recovery central");
+requireText(source, "normalizeGameTurnPresence", "integração da presença por turno no runtime");
 requireText(mandatory, "state.queue?.[0]?.p", "prioridade das decisões obrigatórias sobre o turno");
 requireText(source, 'from "../multiplayer/hostGamePresenceController.js"', "controller dedicado de presença em jogo");
 requireText(takeover, "activateBotAfterReconnectTimeout", "takeover autoritativo após o prazo");

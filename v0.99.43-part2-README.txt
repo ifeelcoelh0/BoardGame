@@ -1,0 +1,39 @@
+Reinos do Dragão — v0.99.43 Parte 2: Recovery Matrix (Cypress)
+
+Objetivo
+- Acrescenta uma matriz E2E real de save/reload/resume no browser.
+- Não altera regras nem o runtime de recovery; esta parte testa o comportamento atual antes de justificar novas correções.
+
+Cobertura nova
+- reload de um autosave real durante setup e resume do mesmo reino
+- preservação exata do passo de setup
+- decisões obrigatórias após resume
+- limpeza de trade dirigido a convidado desconectado
+- fim de partida + limpeza de readiness antigo de rematch
+- continuação do Action Journal com checkpoint após recovery
+- preservação de estado específico de Guerra e Exploração
+
+Ficheiros
+- cypress/e2e/recovery.cy.js (novo)
+- cypress/helpers/recovery.js (novo)
+- package.json
+- scripts/verify-browser-tests.cjs
+- scripts/verify-game-recovery.cjs
+
+Aplicação
+1) git apply --check reinos-do-dragao-v0.99.43-part2-recovery-matrix.patch
+2) git apply reinos-do-dragao-v0.99.43-part2-recovery-matrix.patch
+3) npm run checksums:update
+4) npm run check
+5) npm run e2e:serve
+6) noutro terminal: npm run test:e2e
+
+Validação feita sobre o ZIP-base exato recebido
+- git apply --check: OK
+- fixtures Cypress serializam como saves válidos: OK
+- verify-game-recovery.cjs: OK
+- 57/57 testes focados de recovery/save/journal/replay/presença/rematch: OK
+- suite Node alargada no ZIP reduzido: 565/570; as 5 falhas foram apenas por ficheiros que o ZIP-base não inclui (public/assets e api/turn-credentials.js)
+
+Nota
+O Cypress real deve ser executado no repositório completo do utilizador. Se um dos cenários E2E falhar, essa falha passa a ser a base objetiva para a próxima correção de runtime.

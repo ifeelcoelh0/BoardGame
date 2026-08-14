@@ -29,7 +29,7 @@ export default function HomePage({ foyer, goTo }) {
             <small>{t("lobby.lastSession")}</small>
             <strong>{t("lobby.realmCode", { code: latest.code })}</strong>
             <span>{latestSummary?.modeLabel} · {latestSummary?.updatedLabel}</span>
-            <button type="button" disabled={!latestSummary?.recoverable} onClick={() => foyer.onResume(latest.code)}>
+            <button data-testid="resume-last-realm" type="button" disabled={!latestSummary?.recoverable} onClick={() => foyer.onResume(latest.code)}>
               {t("lobby.resumeLast")}
             </button>
           </section>
