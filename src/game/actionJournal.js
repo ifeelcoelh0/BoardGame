@@ -111,7 +111,9 @@ function journalBase(before, occurredAt) {
       startedAt: normalizedTimestamp(existing.startedAt),
       initialRevision: Number.isSafeInteger(existing.initialRevision) ? existing.initialRevision : (before?.v || 0),
       initialState: stripActionJournal(existing.initialState),
-      entries: existing.entries.map((entry) => clone(entry)),
+      // Entries are append-only. Copy the array boundary, not every historical
+      // payload, so journal append cost does not grow with the full history.
+      entries: existing.entries.slice(),
     };
   }
   return {
@@ -140,6 +142,15 @@ export function appendAcceptedGameAction(before, after, metadata = {}) {
     ? metadata.revisionAfter
     : revisionBefore + 1;
   const trace = metadata.trace || {};
+  const stateHashBefore = hashReplayState(before);
+  const previousHashAfter = journal.entries.at(-1)?.stateHashAfter || null;
+  // State may legitimately change between accepted game actions (for example
+  // reconnect/takeover or trade cleanup after a disconnect). Those host-side
+  // transitions do not belong to a player action, so store a sparse full-state
+  // checkpoint only when the hash chain proves that one occurred.
+  const checkpointState = journal.entries.length > 0 && previousHashAfter !== stateHashBefore
+    ? stripActionJournal(before)
+    : null;
   const entry = {
     seq: journal.entries.length + 1,
     actionId: String(metadata.actionId || ""),
@@ -158,7 +169,8 @@ export function appendAcceptedGameAction(before, after, metadata = {}) {
       : [],
     events: normalizeJournalPayload(metadata.events || []),
     privateResult: metadata.privateResult == null ? null : normalizeJournalPayload(metadata.privateResult),
-    stateHashBefore: hashReplayState(before),
+    ...(checkpointState ? { checkpointState } : {}),
+    stateHashBefore,
     stateHashAfter: hashReplayState(after),
   };
   journal.entries.push(entry);
@@ -191,6 +203,14 @@ export function assertActionJournal(journal) {
     if (!Array.isArray(entry.randomValues) || entry.randomValues.some((value) => !Number.isFinite(value))) throw new TypeError("Action journal entry has invalid RNG trace.");
     if (!Array.isArray(entry.generatedIds)) throw new TypeError("Action journal entry has invalid generated ids.");
     if (!HASH_PATTERN.test(entry.stateHashBefore || "") || !HASH_PATTERN.test(entry.stateHashAfter || "")) throw new TypeError("Action journal entry has invalid state hashes.");
+    if (entry.checkpointState != null) {
+      if (!entry.checkpointState || typeof entry.checkpointState !== "object" || Array.isArray(entry.checkpointState))
+        throw new TypeError("Action journal entry has invalid checkpoint state.");
+      if (entry.checkpointState.actionJournal != null)
+        throw new TypeError("Action journal checkpoint cannot contain a journal.");
+      if (hashReplayState(entry.checkpointState) !== entry.stateHashBefore)
+        throw new TypeError("Action journal checkpoint does not match its before hash.");
+    }
   });
   return true;
 }

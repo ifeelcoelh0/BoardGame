@@ -95,3 +95,41 @@ test("accepted actions create an append-only host journal with a private initial
   assert.equal(second.entry.timestampMs, 250);
   assertActionJournal(second.game.actionJournal);
 });
+
+test("journal stores a sparse checkpoint when authoritative state changes between accepted actions", () => {
+  const before = state();
+  const firstAfter = state({ turn: { rolled: true, dice: [1, 2] } });
+  const first = appendAcceptedGameAction(before, firstAfter, {
+    actionId: `game_${"c".repeat(24)}`,
+    source: ACTION_SOURCE.LOCAL_HUMAN,
+    playerId: before.players[0].playerId,
+    actorIndex: 0,
+    action: { type: "ROLL_DICE" },
+    revisionBefore: 12,
+    revisionAfter: 13,
+    occurredAt: 2_000,
+  });
+  first.game.v = 13;
+
+  const externallyChanged = structuredClone(first.game);
+  externallyChanged.players[0].connected = false;
+  externallyChanged.v = 14;
+  const secondAfter = structuredClone(externallyChanged);
+  secondAfter.turn = { ...secondAfter.turn, ended: true };
+  const second = appendAcceptedGameAction(externallyChanged, secondAfter, {
+    actionId: `game_${"d".repeat(24)}`,
+    source: ACTION_SOURCE.LOCAL_HUMAN,
+    playerId: before.players[0].playerId,
+    actorIndex: 0,
+    action: { type: "END_TURN" },
+    revisionBefore: 14,
+    revisionAfter: 15,
+    occurredAt: 2_100,
+  });
+
+  assert.ok(second.entry.checkpointState);
+  assert.equal(second.entry.checkpointState.actionJournal, undefined);
+  assert.equal(second.entry.checkpointState.players[0].connected, false);
+  assert.equal(second.entry.stateHashBefore, hashReplayState(second.entry.checkpointState));
+  assertActionJournal(second.game.actionJournal);
+});

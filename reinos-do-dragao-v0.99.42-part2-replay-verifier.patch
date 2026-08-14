@@ -1,0 +1,739 @@
+diff --git a/package.json b/package.json
+index 5c4974e..4191c5d 100644
+--- a/package.json
++++ b/package.json
+@@ -12,7 +12,7 @@
+     "verify": "npm run verify:static && npm test",
+     "verify:static": "node scripts/verify-runtime-architecture.cjs && node scripts/verify-audio-assets.cjs && node scripts/verify-player-identity.cjs && node scripts/verify-direct-lobby-entry.cjs && node scripts/verify-persistent-lobby-entry.cjs && node scripts/verify-book-creation-flow.cjs && node scripts/verify-book-to-character-flow.cjs && node scripts/verify-character-confirmation-exit.cjs && node scripts/verify-character-selection-flow.cjs && node scripts/verify-pending-character-flow.cjs && node scripts/verify-lobby-book-controls.cjs && node scripts/verify-session-recovery.cjs && node scripts/verify-authoritative-lobby.cjs && node scripts/verify-authoritative-game-core.cjs && node scripts/verify-authoritative-game-remaining.cjs && node scripts/verify-private-state-views.cjs && node scripts/verify-lobby-presence.cjs && node scripts/verify-game-presence.cjs && node scripts/verify-action-recovery.cjs && node scripts/verify-action-hardening.cjs && node scripts/verify-extracted-resource-building-rules.cjs && node scripts/verify-construction-production-reducers.cjs && node scripts/verify-dice-reducer.cjs && node scripts/verify-disaster-reducer.cjs && node scripts/verify-development-card-reducer.cjs && node scripts/verify-trade-reducer.cjs && node scripts/verify-war-reducer.cjs && node scripts/verify-war-automation-reducer.cjs && node scripts/verify-exploration-reducer.cjs && node scripts/verify-mandatory-decision-reducer.cjs && node scripts/verify-turn-cycle-reducer.cjs && node scripts/verify-scoring-reducer.cjs && node scripts/verify-game-factory.cjs && node scripts/verify-game-action-reducer.cjs && node scripts/verify-multiplayer-runtime.cjs && node scripts/verify-message-routers.cjs && node scripts/verify-session-presence-controllers.cjs && node scripts/verify-action-controllers.cjs && node scripts/verify-action-journal.cjs && node scripts/verify-social-state-controllers.cjs && node scripts/verify-lobby-ui-split.cjs && node scripts/verify-lobby-experience-consolidation.cjs && node scripts/verify-functional-book-pagination.cjs && node scripts/verify-book-page-registry.cjs && node scripts/verify-book-leaf-stack.cjs && node scripts/verify-lifecycle-sanitation.cjs && node scripts/verify-board-ui-split.cjs && node scripts/verify-strict-mode.cjs && node scripts/verify-save-schema.cjs && node scripts/verify-save-index.cjs && node scripts/verify-saved-realms-book.cjs && node scripts/verify-integration-tests.cjs && node scripts/verify-checksums.cjs && node scripts/verify-browser-tests.cjs && node scripts/verify-core-modes-hardening.cjs && node scripts/verify-deployment-loading.cjs && node scripts/verify-production-diagnostics.cjs && node scripts/verify-environment-network-config.cjs",
+     "checksums:update": "node scripts/update-checksums.cjs",
+-    "test": "node --test --test-reporter=spec tests/app-version.test.js tests/game-visual-language.test.js tests/game-hud.test.js tests/game-ui-composition.test.js tests/architecture-boundaries.test.js tests/visibility-aware-frame-loop.test.js tests/performance-probe-registry.test.js tests/graphics-quality-profiles.test.js tests/lobby-codex-flow.test.js tests/lobby-selection-interaction.test.js tests/game-action-model.test.js tests/game-interaction-guards.test.js tests/game-action-dispatch-gate.test.js tests/game-decision-model.test.js tests/game-ui-state.test.js tests/game-endgame-model.test.js tests/development-card-art.test.js tests/game-event-catalog.test.js tests/game-labels.test.js tests/pixel-palette.test.js tests/audio-buffer-cache.test.js tests/audio-playback-policy.test.js tests/game-audio-selectors.test.js tests/social-iconography.test.js tests/room-code.test.js tests/presentation-state.test.js tests/game-presenter.test.js tests/app-flow.test.js tests/lobby-experience-state.test.js tests/lobby-overlay-contract.test.js tests/book-entry-flow.test.js tests/diagnostics.test.js tests/multiplayer-config.test.js tests/turn-credentials.test.js tests/module-preload.test.js tests/protocol.test.js tests/identity.test.js tests/lobby.test.js tests/presence.test.js tests/state-view.test.js tests/action-result-cache.test.js tests/resources-building.test.js tests/construction-production-reducers.test.js tests/dice-reducer.test.js tests/disaster-reducer.test.js tests/development-card-reducer.test.js tests/trade-reducer.test.js tests/war-reducer.test.js tests/war-automation-reducer.test.js tests/exploration-reducer.test.js tests/mandatory-decision-reducer.test.js tests/turn-cycle-reducer.test.js tests/scoring-reducer.test.js tests/game-factory.test.js tests/game-action-reducer.test.js tests/multiplayer-runtime.test.js tests/message-router.test.js tests/session-presence-controller.test.js tests/host-game-presence-controller.test.js tests/action-controller.test.js tests/action-journal.test.js tests/social-state-controller.test.js tests/sanitation.test.js tests/board-ui.test.js tests/strict-mode.test.js tests/save-store.test.js tests/saved-realms-model.test.js tests/integration-flow.test.js tests/core-modes-hardening.test.js tests/character-audio.test.js tests/game-settings.test.js tests/rematch.test.js tests/legal-actions.test.js tests/bot-policy.test.js tests/host-bot-controller.test.js tests/bot-simulation.test.js tests/bot-benchmark.test.js tests/music-system.test.js tests/game-screen-runtime.test.js tests/localization.test.js tests/player-banner-score.test.js tests/performance-health.test.js tests/accessibility-localization-contract.test.js",
++    "test": "node --test --test-reporter=spec tests/app-version.test.js tests/game-visual-language.test.js tests/game-hud.test.js tests/game-ui-composition.test.js tests/architecture-boundaries.test.js tests/visibility-aware-frame-loop.test.js tests/performance-probe-registry.test.js tests/graphics-quality-profiles.test.js tests/lobby-codex-flow.test.js tests/lobby-selection-interaction.test.js tests/game-action-model.test.js tests/game-interaction-guards.test.js tests/game-action-dispatch-gate.test.js tests/game-decision-model.test.js tests/game-ui-state.test.js tests/game-endgame-model.test.js tests/development-card-art.test.js tests/game-event-catalog.test.js tests/game-labels.test.js tests/pixel-palette.test.js tests/audio-buffer-cache.test.js tests/audio-playback-policy.test.js tests/game-audio-selectors.test.js tests/social-iconography.test.js tests/room-code.test.js tests/presentation-state.test.js tests/game-presenter.test.js tests/app-flow.test.js tests/lobby-experience-state.test.js tests/lobby-overlay-contract.test.js tests/book-entry-flow.test.js tests/diagnostics.test.js tests/multiplayer-config.test.js tests/turn-credentials.test.js tests/module-preload.test.js tests/protocol.test.js tests/identity.test.js tests/lobby.test.js tests/presence.test.js tests/state-view.test.js tests/action-result-cache.test.js tests/resources-building.test.js tests/construction-production-reducers.test.js tests/dice-reducer.test.js tests/disaster-reducer.test.js tests/development-card-reducer.test.js tests/trade-reducer.test.js tests/war-reducer.test.js tests/war-automation-reducer.test.js tests/exploration-reducer.test.js tests/mandatory-decision-reducer.test.js tests/turn-cycle-reducer.test.js tests/scoring-reducer.test.js tests/game-factory.test.js tests/game-action-reducer.test.js tests/multiplayer-runtime.test.js tests/message-router.test.js tests/session-presence-controller.test.js tests/host-game-presence-controller.test.js tests/action-controller.test.js tests/action-journal.test.js tests/replay-verifier.test.js tests/social-state-controller.test.js tests/sanitation.test.js tests/board-ui.test.js tests/strict-mode.test.js tests/save-store.test.js tests/saved-realms-model.test.js tests/integration-flow.test.js tests/core-modes-hardening.test.js tests/character-audio.test.js tests/game-settings.test.js tests/rematch.test.js tests/legal-actions.test.js tests/bot-policy.test.js tests/host-bot-controller.test.js tests/bot-simulation.test.js tests/bot-benchmark.test.js tests/music-system.test.js tests/game-screen-runtime.test.js tests/localization.test.js tests/player-banner-score.test.js tests/performance-health.test.js tests/accessibility-localization-contract.test.js",
+     "check": "npm run verify && npm run build",
+     "test:e2e": "cypress run --browser electron --spec \"cypress/e2e/lobby.cy.js,cypress/e2e/core-modes.cy.js\"",
+     "test:e2e:headed": "cypress run --headed --browser electron --spec \"cypress/e2e/lobby.cy.js,cypress/e2e/core-modes.cy.js\"",
+diff --git a/scripts/verify-action-journal.cjs b/scripts/verify-action-journal.cjs
+index 1a0f0af..89f864a 100644
+--- a/scripts/verify-action-journal.cjs
++++ b/scripts/verify-action-journal.cjs
+@@ -6,9 +6,11 @@ const journalPath = path.join(root, "src", "game", "actionJournal.js");
+ const hostPath = path.join(root, "src", "multiplayer", "hostActionController.js");
+ const botPath = path.join(root, "src", "multiplayer", "hostBotController.js");
+ const viewPath = path.join(root, "src", "game", "gameStateView.js");
++const replayPath = path.join(root, "src", "game", "replayVerifier.js");
+ const testPath = path.join(root, "tests", "action-journal.test.js");
++const replayTestPath = path.join(root, "tests", "replay-verifier.test.js");
+ 
+-for (const file of [journalPath, hostPath, botPath, viewPath, testPath]) {
++for (const file of [journalPath, hostPath, botPath, viewPath, replayPath, testPath, replayTestPath]) {
+   if (!fs.existsSync(file)) throw new Error(`Ficheiro em falta: ${file}`);
+ }
+ 
+@@ -16,6 +18,7 @@ const journal = fs.readFileSync(journalPath, "utf8");
+ const host = fs.readFileSync(hostPath, "utf8");
+ const bot = fs.readFileSync(botPath, "utf8");
+ const view = fs.readFileSync(viewPath, "utf8");
++const replay = fs.readFileSync(replayPath, "utf8");
+ 
+ for (const symbol of [
+   "ACTION_JOURNAL_VERSION",
+@@ -38,4 +41,19 @@ if (!bot.includes("appendAcceptedGameAction") || !bot.includes("ACTION_SOURCE.BO
+ if (!view.includes('key !== "actionJournal"')) {
+   throw new Error("O action journal privado pode escapar pelas vistas multiplayer.");
+ }
+-console.log("Action journal verificado: ações humanas/bots, RNG/IDs, fingerprints e redacção host-private.");
++for (const symbol of [
++  "ACTION_REPLAY_FORMAT",
++  "ACTION_REPLAY_VISIBILITY",
++  "createActionReplayPackage",
++  "parseActionReplayPackage",
++  "verifyActionReplay",
++  "RNG_TRACE_EXHAUSTED",
++  "STATE_AFTER_MISMATCH",
++  "checkpointState",
++]) {
++  if (!replay.includes(symbol)) throw new Error(`Replay verifier incompleto: ${symbol}`);
++}
++if (!journal.includes("checkpointState")) {
++  throw new Error("O action journal não preserva checkpoints para mutações autoritativas entre ações.");
++}
++console.log("Action journal/replay verificado: ações humanas/bots, RNG/IDs, fingerprints, checkpoints, replay determinístico e redacção host-private.");
+diff --git a/src/game/actionJournal.js b/src/game/actionJournal.js
+index 328a8da..b724480 100644
+--- a/src/game/actionJournal.js
++++ b/src/game/actionJournal.js
+@@ -111,7 +111,9 @@ function journalBase(before, occurredAt) {
+       startedAt: normalizedTimestamp(existing.startedAt),
+       initialRevision: Number.isSafeInteger(existing.initialRevision) ? existing.initialRevision : (before?.v || 0),
+       initialState: stripActionJournal(existing.initialState),
+-      entries: existing.entries.map((entry) => clone(entry)),
++      // Entries are append-only. Copy the array boundary, not every historical
++      // payload, so journal append cost does not grow with the full history.
++      entries: existing.entries.slice(),
+     };
+   }
+   return {
+@@ -140,6 +142,15 @@ export function appendAcceptedGameAction(before, after, metadata = {}) {
+     ? metadata.revisionAfter
+     : revisionBefore + 1;
+   const trace = metadata.trace || {};
++  const stateHashBefore = hashReplayState(before);
++  const previousHashAfter = journal.entries.at(-1)?.stateHashAfter || null;
++  // State may legitimately change between accepted game actions (for example
++  // reconnect/takeover or trade cleanup after a disconnect). Those host-side
++  // transitions do not belong to a player action, so store a sparse full-state
++  // checkpoint only when the hash chain proves that one occurred.
++  const checkpointState = journal.entries.length > 0 && previousHashAfter !== stateHashBefore
++    ? stripActionJournal(before)
++    : null;
+   const entry = {
+     seq: journal.entries.length + 1,
+     actionId: String(metadata.actionId || ""),
+@@ -158,7 +169,8 @@ export function appendAcceptedGameAction(before, after, metadata = {}) {
+       : [],
+     events: normalizeJournalPayload(metadata.events || []),
+     privateResult: metadata.privateResult == null ? null : normalizeJournalPayload(metadata.privateResult),
+-    stateHashBefore: hashReplayState(before),
++    ...(checkpointState ? { checkpointState } : {}),
++    stateHashBefore,
+     stateHashAfter: hashReplayState(after),
+   };
+   journal.entries.push(entry);
+@@ -191,6 +203,14 @@ export function assertActionJournal(journal) {
+     if (!Array.isArray(entry.randomValues) || entry.randomValues.some((value) => !Number.isFinite(value))) throw new TypeError("Action journal entry has invalid RNG trace.");
+     if (!Array.isArray(entry.generatedIds)) throw new TypeError("Action journal entry has invalid generated ids.");
+     if (!HASH_PATTERN.test(entry.stateHashBefore || "") || !HASH_PATTERN.test(entry.stateHashAfter || "")) throw new TypeError("Action journal entry has invalid state hashes.");
++    if (entry.checkpointState != null) {
++      if (!entry.checkpointState || typeof entry.checkpointState !== "object" || Array.isArray(entry.checkpointState))
++        throw new TypeError("Action journal entry has invalid checkpoint state.");
++      if (entry.checkpointState.actionJournal != null)
++        throw new TypeError("Action journal checkpoint cannot contain a journal.");
++      if (hashReplayState(entry.checkpointState) !== entry.stateHashBefore)
++        throw new TypeError("Action journal checkpoint does not match its before hash.");
++    }
+   });
+   return true;
+ }
+diff --git a/src/game/replayVerifier.js b/src/game/replayVerifier.js
+new file mode 100644
+index 0000000..48d3357
+--- /dev/null
++++ b/src/game/replayVerifier.js
+@@ -0,0 +1,292 @@
++import { applyGameAction } from "./gameActionReducer.js";
++import {
++  assertActionJournal,
++  canonicalJournalJson,
++  hashReplayState,
++  stripActionJournal,
++} from "./actionJournal.js";
++
++export const ACTION_REPLAY_FORMAT = "reinos-do-dragao-action-replay";
++export const ACTION_REPLAY_VERSION = 1;
++export const ACTION_REPLAY_VISIBILITY = "host-private";
++
++function clone(value) {
++  if (value == null) return value;
++  return globalThis.structuredClone
++    ? structuredClone(value)
++    : JSON.parse(JSON.stringify(value));
++}
++
++function failure(code, entry = null, details = {}) {
++  return {
++    ok: false,
++    code,
++    seq: entry?.seq ?? null,
++    actionId: entry?.actionId ?? null,
++    actionType: entry?.actionType ?? null,
++    ...details,
++  };
++}
++
++function sameCanonical(first, second) {
++  return canonicalJournalJson(first) === canonicalJournalJson(second);
++}
++
++class ReplayTraceError extends Error {
++  constructor(code, details = {}) {
++    super(code);
++    this.name = "ReplayTraceError";
++    this.code = code;
++    this.details = details;
++  }
++}
++
++function createReplayTrace(entry) {
++  let randomIndex = 0;
++  let idIndex = 0;
++  const randomValues = entry.randomValues || [];
++  const generatedIds = entry.generatedIds || [];
++
++  return {
++    rng() {
++      if (randomIndex >= randomValues.length) {
++        throw new ReplayTraceError("RNG_TRACE_EXHAUSTED", {
++          consumed: randomIndex,
++          available: randomValues.length,
++        });
++      }
++      return randomValues[randomIndex++];
++    },
++    createId(prefix) {
++      if (idIndex >= generatedIds.length) {
++        throw new ReplayTraceError("ID_TRACE_EXHAUSTED", {
++          consumed: idIndex,
++          available: generatedIds.length,
++          requestedPrefix: String(prefix || ""),
++        });
++      }
++      const expected = generatedIds[idIndex++];
++      const requestedPrefix = String(prefix || "");
++      if (expected.prefix !== requestedPrefix) {
++        throw new ReplayTraceError("ID_PREFIX_MISMATCH", {
++          index: idIndex - 1,
++          expected: expected.prefix,
++          actual: requestedPrefix,
++        });
++      }
++      return expected.value;
++    },
++    assertFullyConsumed() {
++      if (randomIndex !== randomValues.length) {
++        throw new ReplayTraceError("RNG_TRACE_UNUSED", {
++          consumed: randomIndex,
++          available: randomValues.length,
++        });
++      }
++      if (idIndex !== generatedIds.length) {
++        throw new ReplayTraceError("ID_TRACE_UNUSED", {
++          consumed: idIndex,
++          available: generatedIds.length,
++        });
++      }
++    },
++  };
++}
++
++function journalFrom(value) {
++  if (value?.format === ACTION_REPLAY_FORMAT && value?.version === ACTION_REPLAY_VERSION) {
++    return value.journal;
++  }
++  if (value?.actionJournal) return value.actionJournal;
++  return value;
++}
++
++export function createActionReplayPackage(game, { createdAt = Date.now() } = {}) {
++  const journal = game?.actionJournal;
++  assertActionJournal(journal);
++  if (!journal) throw new TypeError("No authoritative action journal is available to export.");
++  const entries = journal.entries || [];
++  return {
++    format: ACTION_REPLAY_FORMAT,
++    version: ACTION_REPLAY_VERSION,
++    visibility: ACTION_REPLAY_VISIBILITY,
++    createdAt: Math.max(0, Math.floor(Number(createdAt) || 0)),
++    summary: {
++      code: String(journal.initialState?.code || game?.code || ""),
++      mode: String(journal.initialState?.mode || game?.mode || ""),
++      initialRevision: journal.initialRevision,
++      finalRevision: entries.at(-1)?.revisionAfter ?? journal.initialRevision,
++      entryCount: entries.length,
++      checkpointCount: entries.filter((entry) => entry.checkpointState != null).length,
++      finalStateHash: entries.at(-1)?.stateHashAfter ?? hashReplayState(journal.initialState),
++    },
++    journal: clone(journal),
++  };
++}
++
++export function serializeActionReplayPackage(value) {
++  const replayPackage = value?.actionJournal && value?.format !== ACTION_REPLAY_FORMAT
++    ? createActionReplayPackage(value)
++    : value;
++  const parsed = parseActionReplayPackage(
++    typeof replayPackage === "string" ? replayPackage : JSON.stringify(replayPackage),
++  );
++  if (!parsed.ok) throw new TypeError(parsed.reason);
++  return JSON.stringify(parsed.replay, null, 2);
++}
++
++export function parseActionReplayPackage(text) {
++  if (typeof text !== "string" || !text.trim()) return { ok: false, reason: "EMPTY_REPLAY" };
++  try {
++    const replay = JSON.parse(text);
++    if (!replay || replay.format !== ACTION_REPLAY_FORMAT || replay.version !== ACTION_REPLAY_VERSION) {
++      return { ok: false, reason: "UNSUPPORTED_REPLAY_FORMAT" };
++    }
++    if (replay.visibility !== ACTION_REPLAY_VISIBILITY) {
++      return { ok: false, reason: "INVALID_REPLAY_VISIBILITY" };
++    }
++    if (!replay.journal) return { ok: false, reason: "MISSING_ACTION_JOURNAL" };
++    assertActionJournal(replay.journal);
++    return { ok: true, replay };
++  } catch (error) {
++    return { ok: false, reason: "INVALID_REPLAY", error };
++  }
++}
++
++/**
++ * Replays the authoritative journal without re-deciding bot strategy or RNG.
++ * The recorded player action is the input; the recorded RNG values, IDs and
++ * action timestamp are injected back into the same central reducer.
++ *
++ * Sparse checkpointState values represent host-side state changes that happened
++ * between accepted actions (for example disconnect/reconnect or bot takeover).
++ * They are used only when the hash chain proves such a transition occurred.
++ */
++export function verifyActionReplay(value, { applyGame = applyGameAction } = {}) {
++  let journal;
++  try {
++    journal = journalFrom(value);
++    assertActionJournal(journal);
++  } catch (error) {
++    return failure("INVALID_JOURNAL", null, { reason: error?.message || String(error) });
++  }
++  if (!journal) return failure("INVALID_JOURNAL", null, { reason: "Missing action journal." });
++  if (typeof applyGame !== "function") return failure("INVALID_APPLY_FUNCTION");
++
++  let game = stripActionJournal(journal.initialState);
++  let revision = journal.initialRevision;
++  let checkpointsApplied = 0;
++  let revisionGaps = 0;
++
++  for (const entry of journal.entries) {
++    if (entry.revisionAfter !== entry.revisionBefore + 1 || entry.revisionBefore < revision) {
++      return failure("REVISION_CHAIN_MISMATCH", entry, {
++        expectedMinimumRevisionBefore: revision,
++        actualRevisionBefore: entry.revisionBefore,
++        actualRevisionAfter: entry.revisionAfter,
++      });
++    }
++    if (entry.revisionBefore > revision) revisionGaps += 1;
++    if (entry.payload?.type !== entry.actionType) {
++      return failure("ACTION_TYPE_MISMATCH", entry, {
++        payloadType: entry.payload?.type || null,
++      });
++    }
++    if (entry.timestampMs !== Math.max(0, entry.occurredAt - journal.startedAt)) {
++      return failure("TIMESTAMP_MISMATCH", entry, {
++        expectedTimestampMs: Math.max(0, entry.occurredAt - journal.startedAt),
++        actualTimestampMs: entry.timestampMs,
++      });
++    }
++
++    let beforeHash = hashReplayState(game);
++    if (beforeHash !== entry.stateHashBefore) {
++      if (!entry.checkpointState) {
++        return failure("STATE_BEFORE_MISMATCH", entry, {
++          expected: entry.stateHashBefore,
++          actual: beforeHash,
++          hint: "The journal predates sparse external-state checkpoints or has been altered.",
++        });
++      }
++      const checkpointHash = hashReplayState(entry.checkpointState);
++      if (checkpointHash !== entry.stateHashBefore) {
++        return failure("CHECKPOINT_HASH_MISMATCH", entry, {
++          expected: entry.stateHashBefore,
++          actual: checkpointHash,
++        });
++      }
++      game = stripActionJournal(entry.checkpointState);
++      beforeHash = checkpointHash;
++      checkpointsApplied += 1;
++    } else if (entry.checkpointState) {
++      const checkpointHash = hashReplayState(entry.checkpointState);
++      if (checkpointHash !== entry.stateHashBefore) {
++        return failure("CHECKPOINT_HASH_MISMATCH", entry, {
++          expected: entry.stateHashBefore,
++          actual: checkpointHash,
++        });
++      }
++    }
++
++    const trace = createReplayTrace(entry);
++    let applied;
++    try {
++      applied = applyGame(game, entry.playerId, clone(entry.payload), {
++        rng: trace.rng,
++        now: () => entry.occurredAt,
++        createId: trace.createId,
++      });
++      trace.assertFullyConsumed();
++    } catch (error) {
++      if (error instanceof ReplayTraceError) {
++        return failure(error.code, entry, error.details);
++      }
++      return failure("APPLY_ERROR", entry, { reason: error?.message || String(error) });
++    }
++
++    if (!applied?.ok) {
++      return failure("ACTION_REJECTED", entry, { reason: applied?.reason || "UNKNOWN" });
++    }
++    if (applied.actorIndex !== entry.actorIndex) {
++      return failure("ACTOR_MISMATCH", entry, {
++        expected: entry.actorIndex,
++        actual: applied.actorIndex ?? null,
++      });
++    }
++    if (!sameCanonical(applied.events || [], entry.events || [])) {
++      return failure("EVENTS_MISMATCH", entry, {
++        expected: clone(entry.events || []),
++        actual: clone(applied.events || []),
++      });
++    }
++    if (!sameCanonical(applied.privateResult ?? null, entry.privateResult ?? null)) {
++      return failure("PRIVATE_RESULT_MISMATCH", entry, {
++        expected: clone(entry.privateResult ?? null),
++        actual: clone(applied.privateResult ?? null),
++      });
++    }
++
++    const afterHash = hashReplayState(applied.game);
++    if (afterHash !== entry.stateHashAfter) {
++      return failure("STATE_AFTER_MISMATCH", entry, {
++        expected: entry.stateHashAfter,
++        actual: afterHash,
++      });
++    }
++
++    game = stripActionJournal(applied.game);
++    game.v = entry.revisionAfter;
++    revision = entry.revisionAfter;
++  }
++
++  return {
++    ok: true,
++    code: "REPLAY_VERIFIED",
++    entriesVerified: journal.entries.length,
++    checkpointsApplied,
++    revisionGaps,
++    finalRevision: revision,
++    finalStateHash: journal.entries.at(-1)?.stateHashAfter ?? hashReplayState(game),
++    game,
++  };
++}
+diff --git a/tests/action-journal.test.js b/tests/action-journal.test.js
+index 74c5f5a..c051069 100644
+--- a/tests/action-journal.test.js
++++ b/tests/action-journal.test.js
+@@ -95,3 +95,41 @@ test("accepted actions create an append-only host journal with a private initial
+   assert.equal(second.entry.timestampMs, 250);
+   assertActionJournal(second.game.actionJournal);
+ });
++
++test("journal stores a sparse checkpoint when authoritative state changes between accepted actions", () => {
++  const before = state();
++  const firstAfter = state({ turn: { rolled: true, dice: [1, 2] } });
++  const first = appendAcceptedGameAction(before, firstAfter, {
++    actionId: `game_${"c".repeat(24)}`,
++    source: ACTION_SOURCE.LOCAL_HUMAN,
++    playerId: before.players[0].playerId,
++    actorIndex: 0,
++    action: { type: "ROLL_DICE" },
++    revisionBefore: 12,
++    revisionAfter: 13,
++    occurredAt: 2_000,
++  });
++  first.game.v = 13;
++
++  const externallyChanged = structuredClone(first.game);
++  externallyChanged.players[0].connected = false;
++  externallyChanged.v = 14;
++  const secondAfter = structuredClone(externallyChanged);
++  secondAfter.turn = { ...secondAfter.turn, ended: true };
++  const second = appendAcceptedGameAction(externallyChanged, secondAfter, {
++    actionId: `game_${"d".repeat(24)}`,
++    source: ACTION_SOURCE.LOCAL_HUMAN,
++    playerId: before.players[0].playerId,
++    actorIndex: 0,
++    action: { type: "END_TURN" },
++    revisionBefore: 14,
++    revisionAfter: 15,
++    occurredAt: 2_100,
++  });
++
++  assert.ok(second.entry.checkpointState);
++  assert.equal(second.entry.checkpointState.actionJournal, undefined);
++  assert.equal(second.entry.checkpointState.players[0].connected, false);
++  assert.equal(second.entry.stateHashBefore, hashReplayState(second.entry.checkpointState));
++  assertActionJournal(second.game.actionJournal);
++});
+diff --git a/tests/replay-verifier.test.js b/tests/replay-verifier.test.js
+new file mode 100644
+index 0000000..ab9d04e
+--- /dev/null
++++ b/tests/replay-verifier.test.js
+@@ -0,0 +1,274 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++
++import {
++  ACTION_SOURCE,
++  appendAcceptedGameAction,
++  createActionExecutionTrace,
++} from "../src/game/actionJournal.js";
++import { applyGameAction } from "../src/game/gameActionReducer.js";
++import { createInitialGame, createPlayer } from "../src/game/gameFactory.js";
++import { GAME_ACTION } from "../src/game/gameProtocol.js";
++import {
++  ACTION_REPLAY_FORMAT,
++  ACTION_REPLAY_VISIBILITY,
++  createActionReplayPackage,
++  parseActionReplayPackage,
++  serializeActionReplayPackage,
++  verifyActionReplay,
++} from "../src/game/replayVerifier.js";
++import { IDS, TOKEN_HASHES } from "./fixtures.js";
++
++function fixedId(prefix) {
++  return `${prefix}_${"f".repeat(24)}`;
++}
++
++function richResources() {
++  return { madeira: 12, tijolo: 12, cavalos: 12, ouro: 12, obsidiana: 12 };
++}
++
++function playableGame() {
++  const game = createInitialGame({
++    code: "RPLY",
++    hostCharacterId: "vlad",
++    mode: "classico",
++    rng: () => 0.25,
++    idFactory: fixedId,
++    hostIdentity: {
++      playerId: IDS.host,
++      seatId: IDS.seatHost,
++      sessionTokenHash: TOKEN_HASHES.host,
++      characterConfirmed: true,
++      connected: true,
++    },
++  });
++  game.players.push(createPlayer("maria", {
++    playerId: IDS.guest1,
++    seatId: IDS.seat1,
++    sessionTokenHash: TOKEN_HASHES.guest1,
++    characterConfirmed: true,
++    connected: true,
++  }, { idFactory: fixedId }));
++  game.players.forEach((player) => {
++    player.res = richResources();
++    player.ready = true;
++  });
++  game.phase = "play";
++  game.v = 20;
++  game.order = [0, 1];
++  game.setup = null;
++  game.turn = {
++    pos: 0,
++    rolled: false,
++    dice: null,
++    devPlayed: false,
++    mustDragon: false,
++    steal: null,
++    milN: 0,
++    acted: {},
++    deploy: null,
++    troopPlayed: false,
++    bribed: false,
++    bonus: null,
++  };
++  game.queue = [];
++  game.trade = null;
++  game.stats = {};
++  return game;
++}
++
++function sequence(values) {
++  let index = 0;
++  return () => {
++    assert.ok(index < values.length, "test RNG exhausted");
++    return values[index++];
++  };
++}
++
++function record(game, actionId, playerId, action, {
++  randomValues = [],
++  generatedIds = [],
++  occurredAt,
++} = {}) {
++  let idIndex = 0;
++  const trace = createActionExecutionTrace({
++    rng: sequence(randomValues),
++    createId: (prefix) => {
++      const expected = generatedIds[idIndex++];
++      assert.ok(expected, `unexpected createId(${prefix})`);
++      assert.equal(expected.prefix, prefix);
++      return expected.value;
++    },
++  });
++  const applied = applyGameAction(game, playerId, action, {
++    rng: trace.rng,
++    now: () => occurredAt,
++    createId: trace.createId,
++  });
++  assert.equal(applied.ok, true, applied.reason);
++  const journaled = appendAcceptedGameAction(game, applied.game, {
++    actionId,
++    source: ACTION_SOURCE.LOCAL_HUMAN,
++    playerId,
++    actorIndex: applied.actorIndex,
++    action,
++    revisionBefore: game.v,
++    revisionAfter: game.v + 1,
++    occurredAt,
++    trace: trace.snapshot(),
++    events: applied.events,
++    privateResult: applied.privateResult,
++  });
++  journaled.game.v = game.v + 1;
++  return journaled.game;
++}
++
++function recordedRealGame() {
++  let game = playableGame();
++  game = record(
++    game,
++    `game_${"1".repeat(24)}`,
++    IDS.host,
++    { type: GAME_ACTION.ROLL_DICE },
++    { randomValues: [0.1, 0.2], occurredAt: 1_000 },
++  );
++  game = record(
++    game,
++    `game_${"2".repeat(24)}`,
++    IDS.host,
++    {
++      type: GAME_ACTION.PROPOSE_TRADE,
++      toPlayerId: IDS.guest1,
++      give: { madeira: 1 },
++      get: { ouro: 1 },
++    },
++    {
++      generatedIds: [{ prefix: "trade", value: `trade_${"a".repeat(24)}` }],
++      occurredAt: 1_250,
++    },
++  );
++  return game;
++}
++
++test("real reducer replay reproduces recorded RNG, generated ids, events and final fingerprint", () => {
++  const game = recordedRealGame();
++  const result = verifyActionReplay(game);
++  assert.equal(result.ok, true, result.code);
++  assert.equal(result.entriesVerified, 2);
++  assert.equal(result.checkpointsApplied, 0);
++  assert.equal(result.finalRevision, 22);
++  assert.equal(result.finalStateHash, game.actionJournal.entries.at(-1).stateHashAfter);
++  assert.equal(result.game.trade.id, `trade_${"a".repeat(24)}`);
++});
++
++test("replay package is explicitly host-private, serializable and parseable", () => {
++  const game = recordedRealGame();
++  const replay = createActionReplayPackage(game, { createdAt: 9_999 });
++  assert.equal(replay.format, ACTION_REPLAY_FORMAT);
++  assert.equal(replay.visibility, ACTION_REPLAY_VISIBILITY);
++  assert.equal(replay.summary.entryCount, 2);
++  assert.equal(replay.summary.checkpointCount, 0);
++  assert.equal(replay.summary.finalRevision, 22);
++
++  const serialized = serializeActionReplayPackage(game);
++  const parsed = parseActionReplayPackage(serialized);
++  assert.equal(parsed.ok, true, parsed.reason);
++  assert.equal(verifyActionReplay(parsed.replay).ok, true);
++  assert.equal(parseActionReplayPackage(JSON.stringify({
++    format: ACTION_REPLAY_FORMAT,
++    version: 1,
++    visibility: ACTION_REPLAY_VISIBILITY,
++  })).reason, "MISSING_ACTION_JOURNAL");
++});
++
++test("replay verifier detects tampered RNG and state fingerprints", () => {
++  const game = recordedRealGame();
++  const rngTampered = structuredClone(game.actionJournal);
++  rngTampered.entries[0].randomValues[0] = 0.9;
++  const rngResult = verifyActionReplay(rngTampered);
++  assert.equal(rngResult.ok, false);
++  assert.equal(rngResult.seq, 1);
++  assert.ok(["EVENTS_MISMATCH", "STATE_AFTER_MISMATCH"].includes(rngResult.code), rngResult.code);
++
++  const hashTampered = structuredClone(game.actionJournal);
++  hashTampered.entries[1].stateHashAfter = "0000000000000000";
++  const hashResult = verifyActionReplay(hashTampered);
++  assert.equal(hashResult.ok, false);
++  assert.equal(hashResult.code, "STATE_AFTER_MISMATCH");
++  assert.equal(hashResult.seq, 2);
++});
++
++test("replay verifier detects trace shape corruption and action-type corruption", () => {
++  const game = recordedRealGame();
++  const unusedRng = structuredClone(game.actionJournal);
++  unusedRng.entries[1].randomValues.push(0.5);
++  const rngResult = verifyActionReplay(unusedRng);
++  assert.equal(rngResult.ok, false);
++  assert.equal(rngResult.code, "RNG_TRACE_UNUSED");
++  assert.equal(rngResult.seq, 2);
++
++  const typeTampered = structuredClone(game.actionJournal);
++  typeTampered.entries[1].actionType = GAME_ACTION.END_TURN;
++  const typeResult = verifyActionReplay(typeTampered);
++  assert.equal(typeResult.ok, false);
++  assert.equal(typeResult.code, "ACTION_TYPE_MISMATCH");
++  assert.equal(typeResult.seq, 2);
++});
++
++test("sparse checkpoints bridge authoritative host changes between accepted actions", () => {
++  const base = {
++    code: "CHKP",
++    mode: "classico",
++    phase: "play",
++    v: 5,
++    players: [{ playerId: IDS.host, connected: true }],
++    counter: 0,
++    presentation: { log: [] },
++  };
++  const applyCounter = (current, playerId, action) => ({
++    ok: true,
++    actorIndex: 0,
++    actionType: action.type,
++    events: [{ type: "COUNTER_CHANGED", value: current.counter + action.amount }],
++    game: { ...structuredClone(current), counter: current.counter + action.amount },
++  });
++
++  const firstApplied = applyCounter(base, IDS.host, { type: "INC", amount: 1 });
++  const first = appendAcceptedGameAction(base, firstApplied.game, {
++    actionId: `game_${"3".repeat(24)}`,
++    playerId: IDS.host,
++    actorIndex: 0,
++    action: { type: "INC", amount: 1 },
++    revisionBefore: 5,
++    revisionAfter: 6,
++    occurredAt: 2_000,
++    events: firstApplied.events,
++  });
++  first.game.v = 6;
++
++  // Simulate a host-side presence/recovery mutation that is not a player action.
++  const external = structuredClone(first.game);
++  external.players[0].connected = false;
++  external.hostRecoveryMarker = "disconnect";
++  external.v = 7;
++  const secondApplied = applyCounter(external, IDS.host, { type: "INC", amount: 2 });
++  const second = appendAcceptedGameAction(external, secondApplied.game, {
++    actionId: `game_${"4".repeat(24)}`,
++    playerId: IDS.host,
++    actorIndex: 0,
++    action: { type: "INC", amount: 2 },
++    revisionBefore: 7,
++    revisionAfter: 8,
++    occurredAt: 2_500,
++    events: secondApplied.events,
++  });
++  second.game.v = 8;
++
++  assert.ok(second.entry.checkpointState);
++  assert.equal(second.entry.checkpointState.hostRecoveryMarker, "disconnect");
++  const verified = verifyActionReplay(second.game, { applyGame: applyCounter });
++  assert.equal(verified.ok, true, verified.code);
++  assert.equal(verified.checkpointsApplied, 1);
++  assert.equal(verified.game.counter, 3);
++  assert.equal(verified.game.hostRecoveryMarker, "disconnect");
++});

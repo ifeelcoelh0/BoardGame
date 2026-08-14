@@ -1,0 +1,36 @@
+Reinos do Dragão — v0.99.42 Parte 2 — Replay Verifier
+
+Base usada
+- Construído sobre boardgame-v0.99.42-part2-base.zip enviado depois do checkpoint da Parte 1.
+- Este ZIP contém apenas este README e o patch; não contém ficheiros src/ soltos para evitar sobrescritas acidentais.
+
+O que acrescenta
+- src/game/replayVerifier.js
+  - reproduz o Action Journal pelo reducer central;
+  - reutiliza os RNG, IDs e timestamps registados;
+  - verifica actor, eventos, privateResult e fingerprints antes/depois;
+  - devolve a sequência exacta e o motivo quando encontra divergência;
+  - cria/serializa/lê um pacote técnico de replay marcado host-private.
+- Checkpoints esparsos no Action Journal quando o estado autoritativo muda entre duas ações aceites (por exemplo disconnect/reconnect, takeover de bot ou limpeza de trade). Isto evita fingir que essas mutações externas foram ações do jogador.
+- Append do journal deixa de clonar todas as entradas históricas a cada ação; copia apenas o array append-only.
+- Testes de replay real com ROLL_DICE + PROPOSE_TRADE, RNG/ID determinísticos, corrupção deliberada e checkpoints.
+- O verificador estático existente passa a validar também a infraestrutura de replay.
+
+Aplicação
+1. Colocar o .patch na raiz C:\Users\plc39\BoardGame
+2. git apply --check reinos-do-dragao-v0.99.42-part2-replay-verifier.patch
+3. Se não houver erro:
+   git apply reinos-do-dragao-v0.99.42-part2-replay-verifier.patch
+4. npm run checksums:update
+5. npm run check
+6. Depois correr Cypress como habitualmente.
+
+Validação feita sobre a base recebida
+- git apply --check: OK numa cópia limpa da base exacta.
+- scripts/verify-action-journal.cjs: OK.
+- 9/9 testes específicos de Action Journal + Replay Verifier: OK.
+- 50/50 testes relacionados (controllers, bot, reducer, saves, state-view, journal/replay): OK.
+- Uma passagem alargada da suite executou 547 testes com sucesso; os 5 restantes falharam apenas porque o ZIP-base recebido deliberadamente não continha public/assets nem api/turn-credentials.js. Esses ficheiros existem no projeto local completo e devem ser validados por npm run check no PC.
+
+Nota
+- APP_VERSION/package version continua 0.99.40 de propósito. O bump final para 0.99.42 deve ser feito apenas depois de toda a versão estar verde no PC.
