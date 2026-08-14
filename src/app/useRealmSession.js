@@ -7,7 +7,7 @@ import { finalizeRematchIfReady } from "../game/rematch.js";
 import { STATE_VIEW_VERSION } from "../game/gameStateView.js";
 import { RESOURCE_KEYS as RKEYS } from "../game/resources.js";
 import { reduceTurnAdvance } from "../game/turnCycleReducer.js";
-import { requiredGameActorIndex } from "../game/mandatoryDecisionReducer.js";
+import { normalizeGameTurnPresence, recoverSavedGameForHost } from "../game/gameRecovery.js";
 import { reduceRoundLimitVictory } from "../game/scoringReducer.js";
 import { makeBoardGraph as makeGraph } from "../game/boardGeometry.js";
 import { createInitialGame, createPlayer } from "../game/gameFactory.js";
@@ -20,10 +20,7 @@ import {
   IDENTITY_PROTOCOL_VERSION, createSessionToken, createStableId, ensureGamePlayerIdentities,
   findPlayerIndexById, hashSessionToken, isSessionTokenHash
 } from "../game/playerIdentity.js";
-import {
-  LOBBY_RECONNECT_GRACE_MS, beginGameTurnReconnectWindow, clearGameTurnReconnectWindow,
-  ensurePlayerPresence, isLobbyReservationExpired, markPlayerConnected, markPlayerDisconnected
-} from "../game/playerPresence.js";
+import { isLobbyReservationExpired } from "../game/playerPresence.js";
 import { forgetPlayerSession, loadPlayerSession, savePlayerSession } from "../multiplayer/sessionStore.js";
 import { createMultiplayerRuntimeState, destroyMultiplayerRuntime, enqueueAuthorityTask as enqueueRuntimeAuthorityTask } from "../multiplayer/runtimeState.js";
 import { createPendingActionStore } from "../multiplayer/pendingActionStore.js";
@@ -291,20 +288,6 @@ export default function useRealmSession({ stage, navigate, book }) {
         }
         return false;
     };
-    const normalizeGameTurnPresence = (state, now = Date.now()) => {
-        if (!state || !Array.isArray(state.players))
-            return -1;
-        const requiredIndex = requiredGameActorIndex(state);
-        state.players.forEach((player, index) => {
-            ensurePlayerPresence(player);
-            const requiredNow = index === requiredIndex;
-            if (requiredNow && player.connected === false)
-                beginGameTurnReconnectWindow(player, { now });
-            else
-                clearGameTurnReconnectWindow(player);
-        });
-        return requiredIndex;
-    };
     const commit = async (g) => {
         // Apenas o host pode produzir o estado oficial. Convidados enviam intenções
         // através dos protocolos de lobby/jogo e nunca publicam snapshots.
@@ -532,39 +515,15 @@ export default function useRealmSession({ stage, navigate, book }) {
         return () => clearTimeout(timer);
     }, [game?.phase, game?.lobbyStarting?.actionId, game?.lobbyStarting?.introEndsAt]);
     const prepareHostIdentity = async (sourceGame) => {
-        const prepared = ensureGamePlayerIdentities(clone(sourceGame));
+        const recovered = recoverSavedGameForHost(sourceGame, {
+            now: Date.now,
+            createId: createStableId,
+        });
+        const prepared = recovered.game;
+        recovered.report.tradeEvents.forEach((event) => presentTradeEvent(prepared, event));
         prepared.lobbyProtocolVersion = LOBBY_PROTOCOL_VERSION;
         prepared.gameProtocolVersion = GAME_PROTOCOL_VERSION;
-        if (prepared.trade) {
-            if (!/^trade_[a-f0-9]{24}$/.test(prepared.trade.id || ""))
-                prepared.trade.id = createStableId("trade");
-            if (Number.isSafeInteger(prepared.trade.from) && prepared.players[prepared.trade.from])
-                prepared.trade.fromPlayerId = prepared.players[prepared.trade.from].playerId;
-            if (prepared.trade.to === "all")
-                prepared.trade.toPlayerId = "all";
-            else if (Number.isSafeInteger(prepared.trade.to) && prepared.players[prepared.trade.to])
-                prepared.trade.toPlayerId = prepared.players[prepared.trade.to].playerId;
-        }
-        if (!prepared.players.length)
-            throw new Error("O reino não tem anfitrião.");
-        const presenceNow = Date.now();
-        prepared.players.forEach((player) => ensurePlayerPresence(player));
-        markPlayerConnected(prepared.players[0]);
-        prepared.players.slice(1).forEach((player) => {
-            if (player.controller === "bot") {
-                markPlayerConnected(player);
-                if (prepared.phase === "lobby") player.ready = true;
-                return;
-            }
-            markPlayerDisconnected(player, {
-                now: presenceNow,
-                phase: prepared.phase,
-                graceMs: LOBBY_RECONNECT_GRACE_MS
-            });
-        });
         if (prepared.phase === "lobby") {
-            if (prepared.lobbyStarting)
-                delete prepared.lobbyStarting;
             const legacyGuests = prepared.players.slice(1).filter((player) => player.controller !== "bot" && !isSessionTokenHash(player.sessionTokenHash));
             if (legacyGuests.length) {
                 prepared.players = [prepared.players[0], ...prepared.players.slice(1).filter((player) => player.controller === "bot" || isSessionTokenHash(player.sessionTokenHash))];
@@ -594,8 +553,8 @@ export default function useRealmSession({ stage, navigate, book }) {
             hostPlayer.sessionTokenHash = await hashSessionToken(session.sessionToken);
             savePlayerSession(prepared.code, session);
         }
-        normalizeGameTurnPresence(prepared, presenceNow);
-        return { game: prepared, session, hostIndex };
+        normalizeGameTurnPresence(prepared, recovered.report.recoveredAt);
+        return { game: prepared, session, hostIndex, recovery: recovered.report };
     };
     const handleHostSessionAuth = hostSessionPresence.onSessionAuth;
     const handleHostClaimSeat = hostSessionPresence.onClaimSeat;

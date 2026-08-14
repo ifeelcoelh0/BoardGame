@@ -126,6 +126,66 @@ test("turno para jogador inexistente é recusado", () => {
   assert.equal(result.reason, "INVALID_TURN_PLAYER");
 });
 
+
+
+test("play saves with a broken turn order are rejected before resume", () => {
+  const corrupted = game();
+  corrupted.phase = "play";
+  corrupted.order = [];
+  const result = parseGameSave(JSON.stringify(corrupted));
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "INVALID_TURN_ORDER");
+});
+
+test("setup saves require a valid placement sequence and current step", () => {
+  const corrupted = game();
+  corrupted.phase = "setup";
+  corrupted.order = [0];
+  corrupted.setup = null;
+  const result = parseGameSave(JSON.stringify(corrupted));
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "INVALID_SETUP");
+});
+
+test("pending decisions cannot point at a missing player", () => {
+  const corrupted = game();
+  corrupted.phase = "play";
+  corrupted.order = [0];
+  corrupted.queue = [{ t: "descarte", p: 9, need: 1 }];
+  const result = parseGameSave(JSON.stringify(corrupted));
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "INVALID_QUEUE_PLAYER");
+});
+
+test("pending trades cannot reference a missing recipient", () => {
+  const corrupted = game();
+  corrupted.phase = "play";
+  corrupted.order = [0];
+  corrupted.trade = {
+    id: `trade_${"a".repeat(24)}`,
+    from: 0,
+    fromPlayerId: corrupted.players[0].playerId,
+    to: 7,
+    toPlayerId: "missing",
+    give: { madeira: 1 },
+    get: { tijolo: 1 },
+    declined: [],
+  };
+  const result = parseGameSave(JSON.stringify(corrupted));
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "INVALID_TRADE_PLAYER");
+});
+
+test("ended saves require a winner instead of reopening an ambiguous result", () => {
+  const corrupted = game();
+  corrupted.phase = "ended";
+  corrupted.order = [0];
+  corrupted.winner = null;
+  const result = parseGameSave(JSON.stringify(corrupted));
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "INVALID_WINNER_PHASE");
+});
+
 test("JSON corrompido não derruba o carregamento", () => {
   const result = parseGameSave("{não é json");
   assert.equal(result.ok, false);

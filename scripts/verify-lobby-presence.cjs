@@ -19,7 +19,7 @@ const requireText = (haystack, text, label) => { if (!haystack.includes(text)) f
 requireText(sessionSource, "sessionStorage", "sessões isoladas por separador");
 requireText(sessionSource, "setItem", "persistência da sessão por separador");
 requireText(source, "markAuthenticatedPlayerDisconnected", "tratamento de perda de ligação");
-requireText(source, "LOBBY_RECONNECT_GRACE_MS", "janela de reconexão do lobby");
+requireText(hostSessionSource, "LOBBY_RECONNECT_GRACE_MS", "janela de reconexão do lobby");
 requireText(source, "removeExpiredLobbyPlayer", "libertação automática do lugar expirado");
 requireText(hostSessionSource, 't: "kicked-from-lobby"', "notificação privada de kick");
 requireText(source, "LOBBY_ACTION.KICK_PLAYER", "ação autoritativa de kick");

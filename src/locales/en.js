@@ -98,7 +98,7 @@ const EN = {
 
   "lobby.openCodex": "Open codex", "lobby.closeConversation": "Close conversation", "lobby.start": "START", "lobby.choosePath": "Choose your path",
   "lobby.foundRealm": "Found Realm", "lobby.foundRealmDesc": "Create a new realm and become its host.", "lobby.joinRealm": "Join Realm", "lobby.joinRealmDesc": "Enter a six-letter realm code.",
-  "lobby.resumeRealm": "Resume Realm", "lobby.noSaved": "No saved realms on this device", "lobby.savedCount": "{count} saved realm(s)",
+  "lobby.resumeRealm": "Resume Realm", "lobby.resumeLast": "Resume last", "lobby.noSaved": "No saved realms on this device", "lobby.savedCount": "{count} saved realm(s)",
   "lobby.chooseMode": "Game mode", "lobby.chooseModeHint": "Choose a mode to read its rules and begin.", "lobby.advanced": "Advanced",
   "lobby.testMode": "Test mode", "lobby.testModeDesc": "Development-only options for faster validation.", "lobby.on": "On", "lobby.off": "Off", "lobby.founding": "Founding...",
   "lobby.sealPact": "Seal the pact with {name}", "lobby.viewHouse": "View {name}", "lobby.backGallery": "Back to the gallery",

@@ -2,8 +2,55 @@ import { isGameMode } from "./gameModes.js";
 import { isSessionTokenHash } from "./playerIdentity.js";
 import { GAME_LOG_LIMIT, GAME_PRESENTATION_VERSION } from "./presentationState.js";
 import { assertActionJournal } from "./actionJournal.js";
+import { MANDATORY_DECISION } from "./mandatoryDecisionReducer.js";
 
 const RESOURCE_KEYS = ["madeira", "tijolo", "cavalos", "ouro", "obsidiana"];
+
+function isPlayerPermutation(value, playerCount) {
+  if (!Array.isArray(value) || value.length !== playerCount) return false;
+  const seen = new Set(value);
+  return seen.size === playerCount
+    && value.every((index) => Number.isSafeInteger(index) && index >= 0 && index < playerCount);
+}
+
+function assertQueueInvariants(game) {
+  const validTypes = new Set(Object.values(MANDATORY_DECISION));
+  game.queue.forEach((entry, index) => {
+    requireCondition(entry && typeof entry === "object" && !Array.isArray(entry), "INVALID_QUEUE_ENTRY", `A decisão pendente ${index + 1} é inválida.`);
+    requireCondition(validTypes.has(entry.t), "INVALID_QUEUE_TYPE", `A decisão pendente ${index + 1} tem um tipo desconhecido.`, entry.t);
+    requireCondition(Number.isSafeInteger(entry.p) && entry.p >= 0 && entry.p < game.players.length, "INVALID_QUEUE_PLAYER", `A decisão pendente ${index + 1} aponta para um jogador inexistente.`, entry.p);
+    if (entry.t === MANDATORY_DECISION.DISCARD)
+      requireCondition(Number.isSafeInteger(entry.need) && entry.need >= 0, "INVALID_QUEUE_AMOUNT", "O descarte pendente tem uma quantidade inválida.", entry.need);
+    if ([MANDATORY_DECISION.TRIBUTE, MANDATORY_DECISION.BLESSING].includes(entry.t))
+      requireCondition(Number.isSafeInteger(entry.left) && entry.left > 0, "INVALID_QUEUE_AMOUNT", "A decisão de recursos pendente tem uma quantidade inválida.", entry.left);
+  });
+}
+
+function assertTradeInvariants(game) {
+  if (game.trade == null) return;
+  const trade = game.trade;
+  requireCondition(trade && typeof trade === "object" && !Array.isArray(trade), "INVALID_TRADE", "A troca pendente é inválida.");
+  requireCondition(Number.isSafeInteger(trade.from) && trade.from >= 0 && trade.from < game.players.length, "INVALID_TRADE_PLAYER", "O proponente da troca não existe.", trade.from);
+  const validTarget = trade.to === "all" || (Number.isSafeInteger(trade.to) && trade.to >= 0 && trade.to < game.players.length && trade.to !== trade.from);
+  requireCondition(validTarget, "INVALID_TRADE_PLAYER", "O destinatário da troca não existe.", trade.to);
+  requireCondition(trade.declined == null || Array.isArray(trade.declined), "INVALID_TRADE_DECLINED", "A lista de recusas da troca é inválida.");
+  const declined = new Set();
+  for (const playerIndex of trade.declined || []) {
+    requireCondition(Number.isSafeInteger(playerIndex) && playerIndex >= 0 && playerIndex < game.players.length && playerIndex !== trade.from, "INVALID_TRADE_DECLINED", "A troca contém uma recusa de jogador inválida.", playerIndex);
+    requireCondition(!declined.has(playerIndex), "INVALID_TRADE_DECLINED", "A troca contém recusas duplicadas.", playerIndex);
+    declined.add(playerIndex);
+  }
+  let bundleTotal = 0;
+  for (const bundle of [trade.give, trade.get]) {
+    requireCondition(bundle && typeof bundle === "object" && !Array.isArray(bundle), "INVALID_TRADE_BUNDLE", "A troca contém recursos inválidos.");
+    for (const [resource, amount] of Object.entries(bundle)) {
+      requireCondition(RESOURCE_KEYS.includes(resource), "INVALID_TRADE_RESOURCE", "A troca contém um recurso desconhecido.", resource);
+      requireCondition(Number.isSafeInteger(amount) && amount >= 0, "INVALID_TRADE_AMOUNT", "A troca contém uma quantidade inválida.", amount);
+      bundleTotal += amount;
+    }
+  }
+  requireCondition(bundleTotal > 0, "INVALID_TRADE_BUNDLE", "A troca pendente não contém recursos.");
+}
 
 function requireCondition(condition, code, message, details = null) {
   if (!condition) {
@@ -52,7 +99,20 @@ export function assertGameInvariants(game) {
   }
   requireCondition(game.turn && typeof game.turn === "object", "INVALID_TURN", "O turno guardado é inválido.");
   requireCondition(Number.isSafeInteger(game.turn.pos) && game.turn.pos >= 0 && game.turn.pos < game.players.length, "INVALID_TURN_PLAYER", "O jogador do turno não existe.", game.turn.pos);
+  if (game.phase !== "lobby") {
+    requireCondition(isPlayerPermutation(game.order, game.players.length), "INVALID_TURN_ORDER", "A ordem de turnos guardada é inválida.", game.order);
+  }
+  if (game.phase === "setup") {
+    requireCondition(game.setup && typeof game.setup === "object" && !Array.isArray(game.setup), "INVALID_SETUP", "O setup guardado é inválido.");
+    requireCondition(Array.isArray(game.setup.seq) && game.setup.seq.length === game.players.length * 2, "INVALID_SETUP_SEQUENCE", "A sequência do setup é inválida.", game.setup?.seq);
+    requireCondition(game.setup.seq.every((playerIndex) => Number.isSafeInteger(playerIndex) && playerIndex >= 0 && playerIndex < game.players.length), "INVALID_SETUP_SEQUENCE", "A sequência do setup aponta para jogadores inexistentes.");
+    requireCondition(Number.isSafeInteger(game.setup.i) && game.setup.i >= 0 && game.setup.i < game.setup.seq.length, "INVALID_SETUP_INDEX", "O passo atual do setup é inválido.", game.setup.i);
+    requireCondition(typeof game.setup.needRoad === "boolean", "INVALID_SETUP_STEP", "O estado de estrada do setup é inválido.");
+    requireCondition(!game.setup.needRoad || typeof game.setup.lastV === "string", "INVALID_SETUP_STEP", "O setup espera uma estrada sem ter uma aldeia de origem válida.", game.setup.lastV);
+  }
   requireCondition(Array.isArray(game.queue), "INVALID_QUEUE", "A fila de decisões é inválida.");
+  assertQueueInvariants(game);
+  assertTradeInvariants(game);
 
   requireCondition(game.presentation && typeof game.presentation === "object" && !Array.isArray(game.presentation), "INVALID_PRESENTATION", "O estado de apresentação do reino é inválido.");
   requireCondition(game.presentation.version === GAME_PRESENTATION_VERSION, "INVALID_PRESENTATION_VERSION", "A versão do estado de apresentação não é suportada.", game.presentation.version);
@@ -70,6 +130,7 @@ export function assertGameInvariants(game) {
   }
 
   requireCondition(game.winner == null || (Number.isSafeInteger(game.winner) && game.winner >= 0 && game.winner < game.players.length), "INVALID_WINNER", "O vencedor guardado não existe.");
+  requireCondition(game.phase === "ended" ? game.winner != null : game.winner == null, "INVALID_WINNER_PHASE", "O vencedor guardado não corresponde à fase da partida.", { phase: game.phase, winner: game.winner });
   try {
     assertActionJournal(game.actionJournal);
   } catch (error) {
