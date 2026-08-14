@@ -6,3 +6,10 @@ dist/
 .env
 .env*.local
 balance-reports/
+# Legacy delivery/release artifacts belong outside the source tree.
+/APPLY-v*.txt
+/README-v*.txt
+/v*-README.txt
+/boardgame-v*-base.zip
+/reinos-do-dragao-v*.patch
+/subtitle-current-files.zip
