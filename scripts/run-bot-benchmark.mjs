@@ -90,12 +90,22 @@ function printReport(summary) {
     console.log(`Sugestão: usa múltiplos de ${sampling.cycleGames} jogos (ex.: ${sampling.suggestedGameMultiples.join(", ")}) para igualdade exata de personagens/seats.`);
   }
 
-  console.log("\nVITÓRIA E SEATS");
+  console.log("\nVITÓRIA, PLAYER SLOT E ORDEM DE TURNO");
   console.log(`Motivos: ${Object.entries(victory.endReasons).map(([reason, count]) => `${reason}=${count}`).join(" · ") || "—"}`);
   console.log(`Score médio do vencedor: ${number(victory.averageWinnerScore)} | margem média: ${number(victory.averageScoreMargin)}`);
-  console.log("Seat   apar.    win%      Δ esperado   score    produção   ações");
+  console.log("Slot   apar.    win%      Δ esperado   score    setup pips   prod.");
   for (const row of summary.seats) {
-    console.log(`${String(Number(row.id) + 1).padStart(4)}  ${String(row.appearances).padStart(5)}  ${pct(row.winRatePct).padStart(8)}  ${pp(row.winRateDeltaPp).padStart(12)}  ${number(row.averageScore).padStart(7)}  ${number(row.averageProduction).padStart(9)}  ${number(row.averageActions).padStart(7)}`);
+    console.log(`${String(Number(row.id) + 1).padStart(4)}  ${String(row.appearances).padStart(5)}  ${pct(row.winRatePct).padStart(8)}  ${pp(row.winRateDeltaPp).padStart(12)}  ${number(row.averageScore).padStart(7)}  ${number(row.averageSetupPips).padStart(10)}  ${number(row.averageProduction).padStart(6)}`);
+  }
+  console.log("Ordem  apar.    win%      Δ esperado   score    setup pips   perda setup");
+  for (const row of summary.turnOrderPositions || []) {
+    console.log(`${String(Number(row.id) + 1).padStart(5)}  ${String(row.appearances).padStart(5)}  ${pct(row.winRatePct).padStart(8)}  ${pp(row.winRateDeltaPp).padStart(12)}  ${number(row.averageScore).padStart(7)}  ${number(row.averageSetupPips).padStart(10)}  ${number(row.averageSetupOpportunityLossScore).padStart(11)}`);
+  }
+  if (summary.setup?.placementDiagnostics?.length) {
+    console.log("Setup por colocação — escolha / melhor disponível / rank / candidatos / perda de score");
+    for (const row of summary.setup.placementDiagnostics) {
+      console.log(`  #${row.placementNumber}: pips ${number(row.averagePips)} / ${number(row.averageBestAvailablePips)} · rank ${number(row.averageChosenRank)} · candidatos ${number(row.averageCandidateCount)} · perda ${number(row.averageOpportunityLossScore)}`);
+    }
   }
 
   console.log("\nPOR PERSONAGEM");
@@ -127,6 +137,11 @@ function printReport(summary) {
     console.log(`Jogadores que completaram: ${pct(trinity.completedByPlayersPct)} | jogos com ≥1 Trindade: ${pct(trinity.gamesWithCompletionPct)}`);
     console.log(`Vencedores que completaram: ${pct(trinity.winnerCompletedPct)} | ronda média: ${number(trinity.averageCompletionRound)}`);
     console.log(comparisonLine("Win rate — Trind.", trinity.comparison));
+    const value = trinity.measuredImmunityValue;
+    if (value) {
+      console.log(`Valor medido da imunidade — desastres evitados: ${value.totalDisastersAvoided} (média ${number(value.averageDisastersAvoided)}) · roubos do Dragão evitados: ${value.totalDragonStealsAvoided} (média ${number(value.averageDragonStealsAvoided)}) · produção salva do Dragão: ${number(value.totalDragonProductionSaved, 0)} (média ${number(value.averageDragonProductionSaved)})`);
+      console.log(`Jogadores com Trindade que obtiveram ≥1 benefício medido: ${pct(value.playersWithAnyMeasuredBenefitPct)}`);
+    }
   }
 
   if (summary.replayCases.length) {

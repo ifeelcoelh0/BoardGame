@@ -7,6 +7,10 @@ import {
   simulateBotGame,
   summarizeBenchmark,
 } from "../scripts/bot-benchmark-core.mjs";
+import {
+  createBalancePlayerRecord,
+  recordBalanceEvents,
+} from "../scripts/balance-lab-metrics.mjs";
 
 const IDS = ["vlad", "maria", "protheus", "romeo", "makuru", "artheria", "muriel", "bones"];
 
@@ -108,4 +112,75 @@ test("benchmark CLI can run the three core modes as one comparison suite", () =>
   ], { cwd: process.cwd(), encoding: "utf8" });
   assert.match(output, /CORE MODES — COMPARAÇÃO/);
   assert.equal((output.match(/Concluídos: 1\/1/g) || []).length, 3);
+});
+
+
+test("benchmark records setup quality and randomized turn-order position separately from player slot", () => {
+  const record = simulateBotGame({ mode: "classico", playerCount: 4, baseSeed: 24680, gameIndex: 7 });
+  assert.equal(record.completed, true);
+  assert.deepEqual(record.players.map((player) => player.turnOrderPosition).slice().sort((a, b) => a - b), [0, 1, 2, 3]);
+  for (const player of record.players) {
+    assert.equal(player.setupPlacements.length, 2);
+    assert.ok(player.setupPips > 0);
+    assert.ok(player.setupWeightedPips > 0);
+    assert.ok(player.setupResourceDiversity >= 1);
+    assert.ok(player.setupNumberDiversity >= 1);
+    assert.ok(player.setupPlacements.every((placement) => placement.candidateCount > 0));
+    assert.ok(player.setupPlacements.every((placement) => placement.chosenRank === 1));
+    assert.ok(player.setupPlacements.every((placement) => placement.opportunityLossScore === 0));
+  }
+});
+
+test("disaster diagnostics distinguish exposure from an actually applied disaster", () => {
+  const record = {
+    players: [
+      createBalancePlayerRecord({ ch: "vlad" }, 0),
+      createBalancePlayerRecord({ ch: "maria" }, 1),
+    ],
+  };
+  recordBalanceEvents(record, [{
+    type: "DISASTER_RESOLVED",
+    outcome: "NO_PROTECTED",
+    protectedPlayers: [],
+    affectedPlayers: [0, 1],
+    immunePlayers: [],
+    effects: [],
+  }]);
+  assert.equal(record.players[0].disastersExposed, 1);
+  assert.equal(record.players[0].disastersAppliedToPlayer, 0);
+
+  recordBalanceEvents(record, [{
+    type: "DISASTER_RESOLVED",
+    outcome: "APPLIED",
+    protectedPlayers: [1],
+    affectedPlayers: [0],
+    immunePlayers: [],
+    effects: [{ type: "RESOURCE_LOST", playerIndex: 0, resource: "ouro" }],
+  }]);
+  assert.equal(record.players[0].disastersExposed, 2);
+  assert.equal(record.players[0].disastersAppliedToPlayer, 1);
+  assert.equal(record.players[0].disasterHarmEvents, 1);
+  assert.equal(record.players[1].disastersProtected, 1);
+});
+
+test("benchmark summary exposes turn-order and measured Trinity immunity diagnostics", () => {
+  const records = Array.from({ length: 8 }, (_, gameIndex) => simulateBotGame({
+    mode: "dragao",
+    playerCount: 4,
+    baseSeed: 13579,
+    gameIndex,
+  }));
+  const summary = summarizeBenchmark(records, {
+    requestedGames: records.length,
+    mode: "dragao",
+    playerCount: 4,
+    baseSeed: 13579,
+  });
+  assert.equal(summary.turnOrderPositions.length, 4);
+  assert.equal(summary.setup.placementDiagnostics.length, 2);
+  assert.ok(summary.setup.placementDiagnostics.every((row) => row.observations === records.length * 4));
+  assert.ok(summary.trinity.measuredImmunityValue);
+  assert.ok(Number.isFinite(summary.trinity.measuredImmunityValue.totalDisastersAvoided));
+  assert.ok(Number.isFinite(summary.trinity.measuredImmunityValue.totalDragonStealsAvoided));
+  assert.ok(Number.isFinite(summary.trinity.measuredImmunityValue.totalDragonProductionSaved));
 });

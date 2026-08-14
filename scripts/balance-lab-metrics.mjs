@@ -99,6 +99,7 @@ export function createBalancePlayerRecord(player, playerIndex) {
   return {
     playerIndex,
     seatIndex: playerIndex,
+    turnOrderPosition: null,
     characterId: player.ch,
     characterName: characterName(player.ch),
     winner: false,
@@ -114,8 +115,20 @@ export function createBalancePlayerRecord(player, playerIndex) {
     steals: 0,
     robbed: 0,
     disastersProtected: 0,
-    disastersAffected: 0,
+    disastersExposed: 0,
+    disastersAppliedToPlayer: 0,
     disastersImmune: 0,
+    disasterHarmEvents: 0,
+    dragonStealsAvoidedByImmunity: 0,
+    dragonProductionSavedByImmunity: 0,
+    setupPlacements: [],
+    setupPips: 0,
+    setupWeightedPips: 0,
+    setupResourceDiversity: 0,
+    setupNumberDiversity: 0,
+    setupInitialResources: 0,
+    setupAverageChosenRank: null,
+    setupAverageOpportunityLossScore: null,
   };
 }
 
@@ -163,10 +176,21 @@ export function recordBalanceEvents(record, events = []) {
         if (record.players[playerIndex]) record.players[playerIndex].disastersProtected += 1;
       }
       for (const playerIndex of event.affectedPlayers || []) {
-        if (record.players[playerIndex]) record.players[playerIndex].disastersAffected += 1;
+        const player = record.players[playerIndex];
+        if (!player) continue;
+        player.disastersExposed += 1;
+        if (event.outcome === "APPLIED") player.disastersAppliedToPlayer += 1;
       }
       for (const playerIndex of event.immunePlayers || []) {
         if (record.players[playerIndex]) record.players[playerIndex].disastersImmune += 1;
+      }
+      if (event.outcome === "APPLIED") {
+        const harmfulEffects = new Set(["RESOURCE_LOST", "QUARANTINED", "PORT_DISABLED", "PORT_CHOICE_REQUIRED"]);
+        const affected = new Set(event.affectedPlayers || []);
+        for (const effect of event.effects || []) {
+          if (!harmfulEffects.has(effect?.type) || !affected.has(effect?.playerIndex)) continue;
+          if (record.players[effect.playerIndex]) record.players[effect.playerIndex].disasterHarmEvents += 1;
+        }
       }
     }
   }
@@ -262,7 +286,19 @@ function aggregatePlayerCohort(entries, { id, label, playerCount }) {
     averageSteals: round2(average(entries.map((entry) => entry.steals))),
     averageRobbed: round2(average(entries.map((entry) => entry.robbed))),
     averageDisastersProtected: round2(average(entries.map((entry) => entry.disastersProtected))),
-    averageDisastersAffected: round2(average(entries.map((entry) => entry.disastersAffected))),
+    averageDisastersExposed: round2(average(entries.map((entry) => entry.disastersExposed))),
+    averageDisastersAppliedToPlayer: round2(average(entries.map((entry) => entry.disastersAppliedToPlayer))),
+    averageDisastersAvoidedByImmunity: round2(average(entries.map((entry) => entry.disastersImmune))),
+    averageDisasterHarmEvents: round2(average(entries.map((entry) => entry.disasterHarmEvents))),
+    averageDragonStealsAvoidedByImmunity: round2(average(entries.map((entry) => entry.dragonStealsAvoidedByImmunity))),
+    averageDragonProductionSavedByImmunity: round2(average(entries.map((entry) => entry.dragonProductionSavedByImmunity))),
+    averageSetupPips: round2(average(entries.map((entry) => entry.setupPips))),
+    averageSetupWeightedPips: round2(average(entries.map((entry) => entry.setupWeightedPips))),
+    averageSetupResourceDiversity: round2(average(entries.map((entry) => entry.setupResourceDiversity))),
+    averageSetupNumberDiversity: round2(average(entries.map((entry) => entry.setupNumberDiversity))),
+    averageSetupInitialResources: round2(average(entries.map((entry) => entry.setupInitialResources))),
+    averageSetupChosenRank: round2(average(entries.map((entry) => entry.setupAverageChosenRank))),
+    averageSetupOpportunityLossScore: round2(average(entries.map((entry) => entry.setupAverageOpportunityLossScore))),
   };
 }
 
@@ -335,6 +371,26 @@ export function summarizeBalanceLab(records, {
     { id: seatIndex, label: `Seat ${seatIndex + 1}`, playerCount },
   ));
 
+  const turnOrderPositions = Array.from({ length: playerCount || 0 }, (_, position) => aggregatePlayerCohort(
+    players.filter((entry) => entry.turnOrderPosition === position),
+    { id: position, label: `Ordem ${position + 1}`, playerCount },
+  ));
+
+  const placementDiagnostics = [1, 2].map((placementNumber) => {
+    const placements = players.flatMap((entry) => (entry.setupPlacements || [])
+      .filter((placement) => placement.placementNumber === placementNumber));
+    return {
+      placementNumber,
+      observations: placements.length,
+      averagePips: round2(average(placements.map((placement) => placement.pips))),
+      averageWeightedPips: round2(average(placements.map((placement) => placement.weightedPips))),
+      averageCandidateCount: round2(average(placements.map((placement) => placement.candidateCount))),
+      averageChosenRank: round2(average(placements.map((placement) => placement.chosenRank))),
+      averageBestAvailablePips: round2(average(placements.map((placement) => placement.bestAvailablePips))),
+      averageOpportunityLossScore: round2(average(placements.map((placement) => placement.opportunityLossScore))),
+    };
+  });
+
   const actionCounts = {};
   for (const record of completed) {
     for (const [type, count] of Object.entries(record.actionsByType || {})) increment(actionCounts, type, count);
@@ -390,6 +446,10 @@ export function summarizeBalanceLab(records, {
       averageScoreMargin: round2(average(completed.map((record) => record.scoreMargin))),
     },
     seats,
+    turnOrderPositions,
+    setup: {
+      placementDiagnostics,
+    },
     characters,
     actions,
     replayCases,
