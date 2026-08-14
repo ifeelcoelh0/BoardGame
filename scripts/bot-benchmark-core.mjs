@@ -1,5 +1,5 @@
 import { applyGameAction } from "../src/game/gameActionReducer.js";
-import { chooseBotAction } from "../src/game/botPolicy.js";
+import { chooseBotAction, createBotDecisionMemory } from "../src/game/botPolicy.js";
 import { listLegalActions } from "../src/game/legalActions.js";
 import { createInitialGame, createPlayer } from "../src/game/gameFactory.js";
 import { reduceLobbyToSetup } from "../src/game/gameSetupReducer.js";
@@ -10,6 +10,7 @@ import { vertexProductionProfile } from "../src/game/productionPotential.js";
 import { CHARACTERS, characterName } from "../src/game/characterCatalog.js";
 import { TERRAIN_RESOURCE_BY_TYPE } from "../src/game/constructionReducer.js";
 import { GAME_ACTION } from "../src/game/gameProtocol.js";
+import { botProfile, botProfilesForGame } from "../src/game/botProfiles.js";
 import { isRapidMode } from "../src/game/gameModes.js";
 import { handSize } from "../src/game/resources.js";
 import { nextBotActorIndex } from "../src/multiplayer/hostBotController.js";
@@ -24,6 +25,7 @@ import {
 
 export const DEFAULT_BENCHMARK_SEED = 0x5eed1234;
 export const DEFAULT_MAX_STEPS = 8000;
+export const BENCHMARK_RNG_VERSION = 2;
 
 export function seededRandom(initialSeed = DEFAULT_BENCHMARK_SEED) {
   let seed = initialSeed >>> 0;
@@ -55,6 +57,9 @@ export function rosterForGame(gameIndex, playerCount, characterIds = CHARACTERS.
 
 export function createBotTable({ mode = "dragao", seed = DEFAULT_BENCHMARK_SEED, playerCount = 4, roster } = {}) {
   const rng = seededRandom(seed);
+  const botRngs = Array.from({ length: playerCount }, (_, playerIndex) => (
+    seededRandom((seed ^ Math.imul(playerIndex + 1, 0x85ebca6b) ^ 0xc2b2ae35) >>> 0)
+  ));
   const makeId = idFactory();
   const characterIds = roster || rosterForGame(0, playerCount);
   const game = createInitialGame({
@@ -78,6 +83,7 @@ export function createBotTable({ mode = "dragao", seed = DEFAULT_BENCHMARK_SEED,
   return {
     game: reduceLobbyToSetup(game, { rng }).game,
     rng,
+    botRngs,
     makeId,
     roster: characterIds.slice(),
   };
@@ -254,10 +260,13 @@ export function simulateBotGame({
   gameIndex = 0,
   maxSteps = DEFAULT_MAX_STEPS,
   characterIds,
+  strategySet = "balanced",
 } = {}) {
   const roster = rosterForGame(gameIndex, playerCount, characterIds);
   const seed = gameSeed(baseSeed, gameIndex);
   const table = createBotTable({ mode, seed, playerCount, roster });
+  const botProfiles = botProfilesForGame(gameIndex, playerCount, strategySet);
+  const botMemories = Array.from({ length: playerCount }, () => createBotDecisionMemory());
   let game = table.game;
   let steps = 0;
 
@@ -267,6 +276,8 @@ export function simulateBotGame({
     mode,
     playerCount,
     roster: table.roster.slice(),
+    strategySet,
+    botProfiles: botProfiles.slice(),
     completed: false,
     steps: 0,
     rounds: 0,
@@ -278,6 +289,8 @@ export function simulateBotGame({
     twelve: { rolls: 0, productiveRolls: 0, resourcesProduced: 0, disasters: { applied: 0, noProtected: 0, noTargets: 0, byType: {} } },
     players: game.players.map((player, playerIndex) => ({
       ...createBalancePlayerRecord(player, playerIndex),
+      botProfileId: botProfiles[playerIndex] || "balanced",
+      botProfileName: botProfile(botProfiles[playerIndex]).label,
       built2: false,
       built12: false,
       built2Round: null,
@@ -309,7 +322,11 @@ export function simulateBotGame({
     }
     const player = game.players[actorIndex];
     const view = createGameStateView(game, player.playerId);
-    const action = chooseBotAction(view, actorIndex, { rng: table.rng });
+    const action = chooseBotAction(view, actorIndex, {
+      rng: table.botRngs[actorIndex],
+      profileId: botProfiles[actorIndex],
+      memory: botMemories[actorIndex],
+    });
     if (!action) {
       record.failure = { step: steps, actorIndex, reason: "LEGAL_BOT_ACTION_MISSING" };
       break;
@@ -360,12 +377,13 @@ export function runBenchmarkBatch({
   baseSeed = DEFAULT_BENCHMARK_SEED,
   maxSteps = DEFAULT_MAX_STEPS,
   characterIds,
+  strategySet = "balanced",
   onProgress,
 } = {}) {
   const records = [];
   for (let offset = 0; offset < games; offset += 1) {
     const gameIndex = startIndex + offset;
-    records.push(simulateBotGame({ mode, playerCount, baseSeed, gameIndex, maxSteps, characterIds }));
+    records.push(simulateBotGame({ mode, playerCount, baseSeed, gameIndex, maxSteps, characterIds, strategySet }));
     onProgress?.(offset + 1, games, gameIndex);
   }
   return records;
@@ -521,7 +539,7 @@ function aggregateCharacter(players, characterId) {
   };
 }
 
-export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCount, baseSeed, startIndex = 0, characterIds = CHARACTERS.map(({ id }) => id) } = {}) {
+export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCount, baseSeed, startIndex = 0, characterIds = CHARACTERS.map(({ id }) => id), strategySet = allRecords[0]?.strategySet || "balanced" } = {}) {
   const records = allRecords.filter((record) => record.completed);
   const failures = allRecords.filter((record) => !record.completed);
   const players = records.flatMap((record) => record.players);
@@ -558,13 +576,15 @@ export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCou
     baseSeed: baseSeed ?? null,
     startIndex,
     characterIds,
+    strategySet,
   });
   const legacyCharacterMetrics = new Map(observedCharacterIds
     .map((characterId) => [characterId, aggregateCharacter(players, characterId)]));
 
   return {
-    meta: balance.meta,
+    meta: { ...balance.meta, benchmarkRngVersion: BENCHMARK_RNG_VERSION },
     sampling: balance.sampling,
+    strategySampling: balance.strategySampling,
     duration: balance.duration,
     victory: balance.victory,
     seats: balance.seats,
@@ -613,6 +633,7 @@ export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCou
         .map(([order, count]) => ({ order, count, pct: round2(percentage(count, trinityPlayers.length)) }))
         .sort((a, b) => b.count - a.count),
     },
+    strategies: balance.strategies,
     characters: balance.characters.map((entry) => ({
       ...entry,
       ...(legacyCharacterMetrics.get(entry.id) || {}),

@@ -1,12 +1,12 @@
 import { applyGameAction } from "../game/gameActionReducer.js";
 import { ACTION_SOURCE, appendAcceptedGameAction, createActionExecutionTrace } from "../game/actionJournal.js";
-import { chooseBotAction } from "../game/botPolicy.js";
+import { chooseBotAction, createBotDecisionMemory } from "../game/botPolicy.js";
 import { createGameStateView } from "../game/gameStateView.js";
 import { PLAYER_CONTROLLER } from "../game/playerPresence.js";
 import { createStableId } from "../game/playerIdentity.js";
 import { requiredGameActorIndex } from "../game/mandatoryDecisionReducer.js";
 
-export const HOST_BOT_CONTROLLER_VERSION = 1;
+export const HOST_BOT_CONTROLLER_VERSION = 2;
 export const DEFAULT_BOT_ACTION_DELAY_MS = 650;
 
 function isBot(player) {
@@ -51,6 +51,8 @@ export function scheduleHostBotAction({
   createId = createStableId,
   delayMs = DEFAULT_BOT_ACTION_DELAY_MS,
   onError = () => {},
+  botDecisionMemoryByPlayerId = null,
+  botProfileForPlayer = () => "balanced",
 } = {}) {
   const initialActor = nextBotActorIndex(game);
   if (initialActor < 0 || typeof getGame !== "function" || typeof commit !== "function") return () => {};
@@ -65,7 +67,16 @@ export function scheduleHostBotAction({
       if (actorIndex < 0) return false;
       const player = current.players[actorIndex];
       const view = createGameStateView(current, player.playerId);
-      const action = chooseBotAction(view, actorIndex, { rng });
+      let memory = null;
+      if (botDecisionMemoryByPlayerId instanceof Map) {
+        memory = botDecisionMemoryByPlayerId.get(player.playerId);
+        if (!memory) {
+          memory = createBotDecisionMemory();
+          botDecisionMemoryByPlayerId.set(player.playerId, memory);
+        }
+      }
+      const profileId = botProfileForPlayer(player, actorIndex, current) || "balanced";
+      const action = chooseBotAction(view, actorIndex, { rng, profileId, memory });
       if (!action) return false;
       const occurredAt = Number(now());
       const trace = createActionExecutionTrace({ rng, createId });

@@ -72,3 +72,41 @@ Estas métricas ajudam a separar o valor mecânico da imunidade da simples corre
 O relatório mantém quatro coortes: `Nenhum`, `Só 2`, `Só 12` e `2 e 12`, bem como win rate dentro do número final de edifícios e uma comparação padronizada por esse estrato. Isso reduz parte do enviesamento de comparar jogadores que terminaram com quantidades muito diferentes de construções.
 
 "Construiu no 2/12" significa que, em algum momento da partida, o jogador teve um edifício num vértice adjacente ao número. A condição permanece registada mesmo que o edifício desapareça mais tarde.
+
+## Perfis de estratégia (v3)
+
+A lógica do bot continua a ser única; os perfis são dados de prioridade aplicados ao mesmo motor de scoring:
+
+- `balanced`: comportamento geral, próximo da estratégia histórica;
+- `expander`: favorece aldeias, estradas e expansão territorial;
+- `developer`: favorece compra/uso de cartas de desenvolvimento;
+- `economist`: favorece eficiência de recursos, palácios e trocas;
+- `diverse`: coloca os quatro perfis na mesma mesa e roda a associação às personagens.
+
+Exemplo:
+
+```bash
+npm run benchmark:bots -- --mode core --players 4 --games 280 --strategies diverse --out balance-reports/core-diverse-280.json
+```
+
+Num ciclo de 280 jogos com quatro jogadores, cada personagem aparece exatamente 35 vezes com cada um dos quatro perfis. O JSON também regista a distribuição de perfis por player slot para permitir controlar qualquer efeito residual de posição.
+
+Para isolar uma estratégia, usa diretamente `--strategies balanced`, `expander`, `developer` ou `economist`.
+
+## Trocas entre jogadores
+
+Os bots podem agora propor trocas P2P de forma limitada. As propostas são 1:1 e broadcast (`all`) porque o bot não conhece os recursos privados dos adversários. O proponente usa apenas a sua própria mão/objetivos; cada destinatário decide aceitar ou recusar através da sua própria visão censurada.
+
+A memória de negociação pertence à policy do bot e não ao `GameState`. Serve para limitar tentativas por turno e impedir ciclos de proposta → rejeição → proposta idêntica, sem adicionar flags artificiais aos reducers, saves ou regras disponíveis aos humanos.
+
+O relatório inclui propostas, aceitações/recusas e `p2pTrades` por personagem/perfil.
+
+## Streams de RNG
+
+A partir do RNG Lab v2, o benchmark separa:
+
+- RNG do motor/regras (tabuleiro, dados e efeitos aleatórios);
+- RNG de decisão dos bots;
+- um stream de decisão independente por player slot.
+
+Assim, uma alteração na personalidade do bot não desloca por si só a sequência aleatória usada pelas regras. A combinação `baseSeed + gameIndex + strategySet` continua a ser suficiente para reproduzir a experiência.
