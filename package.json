@@ -20,7 +20,8 @@
     "benchmark:bots": "node scripts/run-bot-benchmark.mjs",
     "test:core": "node --test --test-reporter=spec tests/core-modes-hardening.test.js tests/integration-flow.test.js tests/save-store.test.js tests/game-recovery.test.js tests/rematch.test.js tests/host-game-presence-controller.test.js",
     "e2e:serve": "vite --host 127.0.0.1 --port 4173",
-    "test:e2e:open": "cypress open --e2e --browser electron"
+    "test:e2e:open": "cypress open --e2e --browser electron",
+    "clean:artifacts": "node scripts/clean-release-artifacts.cjs"
   },
   "dependencies": {
     "peerjs": "1.5.4",
