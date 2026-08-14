@@ -6,6 +6,7 @@ import { migrateSave } from "../src/game/migrations/migrateSave.js";
 import { loadGameFromStorage, parseGameSave, saveGameToStorage } from "../src/game/saveStore.js";
 import { SAVE_SCHEMA_VERSION } from "../src/game/saveSchema.js";
 import { ACTION_SOURCE, appendAcceptedGameAction } from "../src/game/actionJournal.js";
+import { makeBoardGraph } from "../src/game/boardGeometry.js";
 
 function ids(prefix) { let i = 0; return () => `${prefix}_${String(i++).padStart(24, "0")}`; }
 function game() {
@@ -13,7 +14,14 @@ function game() {
 }
 function memoryStorage(initial = {}) {
   const values = new Map(Object.entries(initial));
-  return { getItem: (k) => values.get(k) ?? null, setItem: (k,v) => values.set(k,String(v)), removeItem: (k) => values.delete(k), values };
+  return {
+    get length() { return values.size; },
+    key: (index) => [...values.keys()][index] ?? null,
+    getItem: (k) => values.get(k) ?? null,
+    setItem: (k, v) => values.set(k, String(v)),
+    removeItem: (k) => values.delete(k),
+    values,
+  };
 }
 
 test("save store accepts both current six-letter rooms and legacy four-letter rooms", () => {
@@ -102,6 +110,34 @@ test("recursos negativos invalidam o save", () => {
   const result = validateGameInvariants(corrupted);
   assert.equal(result.ok, false);
   assert.equal(result.error.code, "INVALID_RESOURCE_COUNT");
+});
+
+
+test("saves recusam estradas e construções fora da geometria do tabuleiro", () => {
+  const invalidRoad = game();
+  invalidRoad.roads["edge_inexistente"] = 0;
+  let result = validateGameInvariants(invalidRoad);
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, "INVALID_ROAD_EDGE");
+
+  const invalidBuild = game();
+  invalidBuild.builds["vertex_inexistente"] = { p: 0, t: 1 };
+  result = validateGameInvariants(invalidBuild);
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, "INVALID_BUILD_VERTEX");
+});
+
+test("modos-base recusam saves que excedem o stock físico de peças", () => {
+  const corrupted = game();
+  corrupted.mode = "classico";
+  const graph = makeBoardGraph(corrupted.board.hexes);
+  corrupted.builds = Object.fromEntries(
+    Object.keys(graph.verts).slice(0, 6).map((vertex) => [vertex, { p: 0, t: 1 }]),
+  );
+
+  const result = validateGameInvariants(corrupted);
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, "PIECE_LIMIT");
 });
 
 test("presentation state corrompido é recusado antes de retomar o reino", () => {
@@ -243,4 +279,36 @@ test("inspeção do índice distingue reinos válidos e corrompidos", async () =
   assert.equal(inspected[0].valid, false);
   assert.equal(inspected[1].code, "ABCD");
   assert.equal(inspected[1].valid, true);
+});
+
+
+test("índice limitado remove o payload do reino expulso em vez de deixar saves órfãos", async () => {
+  const storage = memoryStorage();
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ";
+  const codes = Array.from({ length: 13 }, (_, index) => `AA${alphabet[index]}AAA`);
+
+  for (let index = 0; index < codes.length; index += 1) {
+    const current = game();
+    current.code = codes[index];
+    const result = saveGameToStorage(current, storage, {
+      updatedAt: `2026-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+    });
+    assert.equal(result.ok, true);
+  }
+
+  const { listGameSaves } = await import("../src/game/saveStore.js");
+  assert.equal(listGameSaves(storage).length, 12);
+  assert.equal(storage.getItem(`reinos_dragao_save_v2:${codes[0]}`), null);
+  assert.notEqual(storage.getItem(`reinos_dragao_save_v2:${codes[12]}`), null);
+});
+
+test("limpar todos os saves também remove payloads órfãos deixados por versões antigas", async () => {
+  const storage = memoryStorage();
+  const current = game();
+  assert.equal(saveGameToStorage(current, storage).ok, true);
+  storage.setItem("reinos_dragao_save_v2:WXYZ", JSON.stringify({ legacy: true }));
+
+  const { clearGameSave } = await import("../src/game/saveStore.js");
+  assert.equal(clearGameSave(storage), true);
+  assert.equal([...storage.values.keys()].some((key) => key.startsWith("reinos_dragao_save_v2:")), false);
 });

@@ -10,6 +10,12 @@ import { validRoads, validVillages } from "../src/game/buildingRules.js";
 import { parseGameSave, serializeGameSave } from "../src/game/saveStore.js";
 import { createGameStateView } from "../src/game/gameStateView.js";
 import { IDS, TOKEN_HASHES } from "./fixtures.js";
+import { chooseBotAction } from "../src/game/botPolicy.js";
+import { listLegalActions } from "../src/game/legalActions.js";
+import { assertGameInvariants } from "../src/game/gameInvariants.js";
+import { activateBotController } from "../src/game/playerPresence.js";
+import { nextBotActorIndex } from "../src/multiplayer/hostBotController.js";
+import { CHARACTERS as CHARACTER_CATALOG } from "../src/game/characterCatalog.js";
 
 const CORE_MODES = ["classico", "rapido", "dragao"];
 const CHARACTERS = ["vlad", "maria", "artheria", "bones"];
@@ -141,3 +147,103 @@ for (const mode of CORE_MODES) {
     });
   }
 }
+
+
+function seededRandom(initialSeed = 123456789) {
+  let seed = initialSeed >>> 0;
+  return () => {
+    seed = (1664525 * seed + 1013904223) >>> 0;
+    return seed / 2 ** 32;
+  };
+}
+
+function sequentialIdFactory() {
+  let sequence = 1;
+  return (prefix) => `${prefix}_${(sequence++).toString(16).padStart(24, "0")}`;
+}
+
+function createBotTable(mode, seed, rosterOffset) {
+  const rng = seededRandom(seed);
+  const createId = sequentialIdFactory();
+  const characterIds = CHARACTER_CATALOG.map((character) => character.id);
+  const roster = Array.from({ length: 4 }, (_, index) => (
+    characterIds[(rosterOffset + index) % characterIds.length]
+  ));
+  const game = createInitialGame({
+    code: "AUDITX",
+    mode,
+    hostCharacterId: roster[0],
+    rng,
+    idFactory: createId,
+    hostIdentity: { characterConfirmed: true, connected: true },
+  });
+  activateBotController(game.players[0]);
+  game.players[0].ready = true;
+  for (const characterId of roster.slice(1)) {
+    const player = createPlayer(characterId, {
+      characterConfirmed: true,
+      connected: true,
+    }, { idFactory: createId });
+    activateBotController(player);
+    player.ready = true;
+    game.players.push(player);
+  }
+  return {
+    game: reduceLobbyToSetup(game, { rng }).game,
+    rng,
+    createId,
+    roster,
+  };
+}
+
+test("core modes keep legal-action enumeration aligned with the authoritative reducer", () => {
+  const scenarios = [
+    { mode: "classico", seed: 0xC0FFEE, rosterOffset: 0 },
+    { mode: "rapido", seed: 0xBADC0DE, rosterOffset: 2 },
+    { mode: "dragao", seed: 0xD12A60, rosterOffset: 4 },
+  ];
+
+  for (const { mode, seed, rosterOffset } of scenarios) {
+    const table = createBotTable(mode, seed, rosterOffset);
+    let game = table.game;
+    let steps = 0;
+
+    while (game.phase !== "ended" && steps < 5000) {
+      assert.doesNotThrow(() => assertGameInvariants(game), `${mode}: invalid state at step ${steps}`);
+      const actorIndex = nextBotActorIndex(game);
+      assert.ok(actorIndex >= 0, `${mode}: missing bot actor at step ${steps}`);
+      const player = game.players[actorIndex];
+      const view = createGameStateView(game, player.playerId);
+      const legal = listLegalActions(view, actorIndex);
+      assert.ok(legal.length > 0, `${mode}: no legal action at step ${steps}`);
+
+      legal.forEach((action, actionIndex) => {
+        const probeRng = seededRandom((seed ^ ((steps + 1) * 2654435761) ^ actionIndex) >>> 0);
+        const probe = applyGameAction(game, player.playerId, action, {
+          rng: probeRng,
+          now: () => steps * 1000,
+          createId: (prefix) => `${prefix}_${(steps * 1000 + actionIndex + 1).toString(16).padStart(24, "0")}`,
+        });
+        assert.equal(
+          probe.ok,
+          true,
+          `${mode}: listLegalActions exposed a rejected action at step ${steps}: ${probe.reason || "unknown"} ${JSON.stringify(action)}`,
+        );
+      });
+
+      const action = chooseBotAction(view, actorIndex, { rng: table.rng });
+      assert.ok(action, `${mode}: bot could not choose an action at step ${steps}`);
+      const applied = applyGameAction(game, player.playerId, action, {
+        rng: table.rng,
+        now: () => steps * 1000,
+        createId: table.createId,
+      });
+      assert.equal(applied.ok, true, `${mode}: chosen action rejected: ${applied.reason || "unknown"}`);
+      game = applied.game;
+      steps += 1;
+    }
+
+    assert.equal(game.phase, "ended", `${mode}: audit simulation did not finish after ${steps} actions`);
+    assert.doesNotThrow(() => assertGameInvariants(game), `${mode}: final state violates invariants`);
+  }
+});
