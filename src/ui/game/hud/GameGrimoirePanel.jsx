@@ -4,7 +4,7 @@ import ResourceIcon from "./ResourceIcon.jsx";
 import { GAME_ACTION_ICONS } from "../../../assets/gameUiIcons.js";
 import { BUILD_COSTS, PIECE_LIMITS, RESOURCE_KEYS } from "../../../game/resources.js";
 import { MAX_WAGONS_PER_GAME, WAGON_COST } from "../../../game/explorationReducer.js";
-import { isClassicMode, isExplorationMode, isWarMode } from "../../../game/gameModes.js";
+import { isExplorationMode, isWarMode, usesDisasters } from "../../../game/gameModes.js";
 import { GameUtilityPanelShell } from "./GameUtilityPanel.jsx";
 import { t } from "../../../locales/i18n.js";
 import "../../../styles/game-grimoire.css";
@@ -19,7 +19,7 @@ const BUILD_ROWS = Object.freeze([
 export default function GameGrimoirePanel({ game, player, onOpenLibrary, onClose }) {
   const exploration = isExplorationMode(game.mode);
   const war = isWarMode(game.mode);
-  const classic = isClassicMode(game.mode);
+  const disasters = usesDisasters(game.mode);
   return (
     <GameUtilityPanelShell eyebrow={t("grimoire.freeReference")} title={t("grimoire.title")} onClose={onClose}>
       <p className="rd-ui-copy rd-grimoire__intro">{t("grimoire.intro")}</p>
@@ -32,7 +32,7 @@ export default function GameGrimoirePanel({ game, player, onOpenLibrary, onClose
       </div>
       <section className="rd-grimoire__rules"><h4>{t("grimoire.victoryPoints")}</h4><p>{t("grimoire.victoryRules")}</p></section>
       <section className="rd-grimoire__rules"><h4>{t("grimoire.bankTrades")}</h4><p>{t("grimoire.bankRules")}</p></section>
-      {!classic && <section className="rd-grimoire__rules"><h4>{t("grimoire.disasters")}</h4><p>{t("grimoire.disasterRules")}</p></section>}
+      {disasters && <section className="rd-grimoire__rules"><h4>{t("grimoire.disasters")}</h4><p>{t("grimoire.disasterRules")}</p></section>}
       {war && <section className="rd-grimoire__rules"><h4>{t("mode.guerra.name")}</h4><p>{t("grimoire.warRules")}</p></section>}
       {exploration && <section className="rd-grimoire__rules"><h4>{t("mode.exploracao.name")}</h4><p>{t("grimoire.explorationRules")}</p></section>}
       <button className="btn sm ghost rd-grimoire__library" type="button" onClick={onOpenLibrary}>{t("grimoire.openLibrary")}</button>

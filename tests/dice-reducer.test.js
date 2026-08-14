@@ -212,3 +212,17 @@ test("reduceDiceRoll rejects malformed dice", () => {
   assert.throws(() => reduceDiceRoll(game(), graph(), 0, [0, 7]), /dois dados/);
   assert.throws(() => reduceDiceRoll(game(), graph(), 0, [3]), /dois dados/);
 });
+
+test("2 and 12 trigger disasters only in modes whose canonical config enables them", () => {
+  for (const [mode, expected] of Object.entries({
+    dragao: true,
+    rapido: true,
+    classico: false,
+    exploracao: false,
+    guerra: false,
+  })) {
+    const original = game({ mode });
+    const result = reduceDiceRoll(original, graph(), 0, [1, 1]);
+    assert.equal(result.event.triggerDisaster, expected, mode);
+  }
+});

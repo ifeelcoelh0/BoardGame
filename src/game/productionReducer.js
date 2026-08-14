@@ -1,5 +1,6 @@
 import { RESOURCE_KEYS } from "./resources.js";
 import { terrainResource } from "./constructionReducer.js";
+import { isWarMode } from "./gameModes.js";
 
 const RAIDER_PLAYER_INDEX = -9;
 
@@ -27,7 +28,7 @@ function cloneProductionStats(stats, playerCount) {
 export function calculateProduction(game, graph, roll) {
   const gains = game.players.map(() => emptyGainMap());
   const dragonBlocked = game.players.map(() => 0);
-  const warMode = game.mode === "guerra";
+  const warMode = isWarMode(game.mode);
 
   for (const hex of game.board.hexes) {
     if (hex.num !== roll || hex.hid) continue;

@@ -9,6 +9,7 @@ export const GAME_MODE_CONFIG = Object.freeze({
     rapidSetup: false,
     war: false,
     exploration: false,
+    disasters: true,
   }),
   classico: Object.freeze({
     id: "classico",
@@ -18,6 +19,7 @@ export const GAME_MODE_CONFIG = Object.freeze({
     rapidSetup: false,
     war: false,
     exploration: false,
+    disasters: false,
   }),
   rapido: Object.freeze({
     id: "rapido",
@@ -27,6 +29,7 @@ export const GAME_MODE_CONFIG = Object.freeze({
     rapidSetup: true,
     war: false,
     exploration: false,
+    disasters: true,
   }),
   guerra: Object.freeze({
     id: "guerra",
@@ -36,6 +39,7 @@ export const GAME_MODE_CONFIG = Object.freeze({
     rapidSetup: false,
     war: true,
     exploration: false,
+    disasters: false,
   }),
   exploracao: Object.freeze({
     id: "exploracao",
@@ -45,6 +49,7 @@ export const GAME_MODE_CONFIG = Object.freeze({
     rapidSetup: false,
     war: false,
     exploration: true,
+    disasters: false,
   }),
 });
 
@@ -76,4 +81,8 @@ export function isWarMode(mode) {
 
 export function isExplorationMode(mode) {
   return gameModeConfig(mode).exploration;
+}
+
+export function usesDisasters(mode) {
+  return gameModeConfig(mode).disasters;
 }

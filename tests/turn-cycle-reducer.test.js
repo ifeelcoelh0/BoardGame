@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createPlayTurnState } from "../src/game/turnState.js";
 import {
   ICE_DRAGON_WAKE_TURNS,
   createFreshTurn,
@@ -257,4 +258,12 @@ test("semantic event describes the complete transition in deterministic order", 
   assert.equal(result.event.previousPlayerIndex, 0);
   assert.equal(result.event.playerIndex, 1);
   assert.equal(result.event.events.at(-1).type, "TURN_STARTED");
+});
+
+test("turn reducers share the canonical turn-state factory", () => {
+  const previous = { dice: [5, 3], bonus: "legacy-only", bribed: true };
+  assert.deepEqual(
+    createFreshTurn(previous, 2),
+    createPlayTurnState({ position: 2, previousDice: [5, 3] }),
+  );
 });

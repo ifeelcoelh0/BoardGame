@@ -9,7 +9,7 @@ import {
   generateDevelopmentDeck,
 } from "../src/game/gameFactory.js";
 import { makeBoardGraph, ringCoords } from "../src/game/boardGeometry.js";
-import { GAME_MODE_CONFIG, gameModeConfig, normalizeGameMode } from "../src/game/gameModes.js";
+import { GAME_MODE_CONFIG, gameModeConfig, normalizeGameMode, usesDisasters } from "../src/game/gameModes.js";
 import { reduceLobbyToSetup } from "../src/game/gameSetupReducer.js";
 import { GAME_PROTOCOL_VERSION } from "../src/game/gameProtocol.js";
 import { LOBBY_PROTOCOL_VERSION } from "../src/game/lobbyProtocol.js";
@@ -61,6 +61,10 @@ test("mode configuration is the single source of lobby capacity", () => {
   assert.equal(normalizeGameMode("unknown"), "dragao");
   assert.equal(gameModeConfig("exploracao").classicRules, true);
   assert.equal(gameModeConfig("guerra").war, true);
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(GAME_MODE_CONFIG).map((mode) => [mode, usesDisasters(mode)])),
+    { dragao: true, classico: false, rapido: true, guerra: false, exploracao: false },
+  );
 });
 
 test("hex rings have six times the radius unique coordinates", () => {

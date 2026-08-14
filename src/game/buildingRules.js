@@ -1,10 +1,4 @@
-function isExploration(game) {
-  return game?.mode === "exploracao";
-}
-
-function isWar(game) {
-  return game?.mode === "guerra";
-}
+import { isExplorationMode, isWarMode } from "./gameModes.js";
 
 function hexOf(game, key) {
   return game?.board?.hexes?.find((hex) => hex.k === key) || null;
@@ -15,12 +9,12 @@ function isHiddenHex(game, key) {
 }
 
 function vertexIsOpen(game, graph, vertexKey) {
-  return !isExploration(game)
+  return !isExplorationMode(game?.mode)
     || graph.verts[vertexKey].hexes.some((hexKey) => !isHiddenHex(game, hexKey));
 }
 
 function edgeIsOpen(game, graph, edgeKey) {
-  return !isExploration(game)
+  return !isExplorationMode(game?.mode)
     || graph.edges[edgeKey].hexes.some((hexKey) => !isHiddenHex(game, hexKey));
 }
 
@@ -38,7 +32,7 @@ export function validRoads(game, graph, playerIndex, onlyAtVertex = null) {
   return Object.keys(graph.edges).filter((edgeKey) => {
     if (game.roads[edgeKey] != null) return false;
     if (!edgeIsOpen(game, graph, edgeKey)) return false;
-    if ((isExploration(game) || isWar(game)) && isWasteEdge(game, graph, edgeKey)) return false;
+    if ((isExplorationMode(game?.mode) || isWarMode(game?.mode)) && isWasteEdge(game, graph, edgeKey)) return false;
 
     const { a, b } = graph.edges[edgeKey];
     if (onlyAtVertex) return a === onlyAtVertex || b === onlyAtVertex;
@@ -69,7 +63,7 @@ export function validVillages(game, graph, playerIndex, setup) {
     if (!vertexIsOpen(game, graph, vertexKey)) return false;
 
     if (setup) {
-      if (!isWar(game) || !game.board.prov) return true;
+      if (!isWarMode(game?.mode) || !game.board.prov) return true;
 
       const provinceByHex = game.board.prov;
       const claims = {};

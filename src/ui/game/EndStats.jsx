@@ -34,7 +34,7 @@ function Scoreboard({ model }) {
 }
 function DiceStats({ model }) {
   const entries = Object.entries(model.dice.rolls).map(([n,c]) => [Number(n),c]); const maximum = Math.max(1,...entries.map(([,c])=>c));
-  return <section className="rd-endstats__dice"><p>{t("end.rollSummary", { rolls: model.dice.total, sevens: model.dice.sevens })}{model.warMode ? "" : ` · ${t("end.disasters", { count: model.dice.disasters })}`}</p>{entries.map(([number,count]) => <div key={number} className={number===7?"is-seven":""}><strong>{number}</strong><i><b style={{width:`${count/maximum*100}%`}}/></i><span>{count}{model.dice.total ? ` · ${Math.round(count/model.dice.total*100)}%` : ""}</span></div>)}</section>;
+  return <section className="rd-endstats__dice"><p>{t("end.rollSummary", { rolls: model.dice.total, sevens: model.dice.sevens })}{model.disasterMode ? ` · ${t("end.disasters", { count: model.dice.disasters })}` : ""}</p>{entries.map(([number,count]) => <div key={number} className={number===7?"is-seven":""}><strong>{number}</strong><i><b style={{width:`${count/maximum*100}%`}}/></i><span>{count}{model.dice.total ? ` · ${Math.round(count/model.dice.total*100)}%` : ""}</span></div>)}</section>;
 }
 export default function EndStats({ model }) {
   const [tab,setTab]=useState("score"); const dragonLabel=model.warMode?t("end.tab.blessings"):t("end.tab.dragon"); const tabs=TABS.map(([id,key])=>id==="dragon"?[id,dragonLabel]:[id,t(key)]);

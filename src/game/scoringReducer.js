@@ -1,3 +1,5 @@
+import { isWarMode } from "./gameModes.js";
+
 export const STANDARD_VICTORY_TARGET = 10;
 export const LONGEST_ROAD_MINIMUM = 5;
 export const LARGEST_ARMY_MINIMUM = 3;
@@ -97,12 +99,12 @@ export function scoreBreakdown(game, playerIndex, { includeSecret = false } = {}
   const longestRoad = game.lr?.p === playerIndex ? 2 : 0;
   const largestArmy = game.la?.p === playerIndex ? 2 : 0;
   let occupations = 0;
-  if (game.mode === "guerra") {
+  if (isWarMode(game.mode)) {
     for (const [vertex, occupier] of Object.entries(game.occ || {})) {
       if (occupier === playerIndex && game.builds?.[vertex]) occupations += 1;
     }
   }
-  const glory = game.mode === "guerra" ? (Number(game.glory?.[playerIndex]) || 0) : 0;
+  const glory = isWarMode(game.mode) ? (Number(game.glory?.[playerIndex]) || 0) : 0;
   const secretVictoryPoints = includeSecret ? hiddenVictoryPointCount(game.players[playerIndex]) : 0;
   const publicTotal = buildings + longestRoad + largestArmy + occupations + glory;
   return {
@@ -175,7 +177,7 @@ export function reduceScoringAwards(game, { longestRoad = false, largestArmy = f
 export function reduceStandardVictory(game, actorIndex, { target = STANDARD_VICTORY_TARGET } = {}) {
   assertPlayer(game, actorIndex);
   const next = cloneGame(game);
-  if (next.mode === "guerra" || next.phase !== "play" || next.winner != null) {
+  if (isWarMode(next.mode) || next.phase !== "play" || next.winner != null) {
     return { game: next, event: { type: "VICTORY_NOT_REACHED", actorIndex, target } };
   }
   const score = calculateVictoryPoints(next, actorIndex, true);
@@ -193,7 +195,7 @@ export function reduceStandardVictory(game, actorIndex, { target = STANDARD_VICT
 }
 
 export function reduceRoundLimitVictory(game) {
-  if (game?.mode !== "guerra") throw new Error("O fim por rondas só existe no modo Guerra.");
+  if (!isWarMode(game?.mode)) throw new Error("O fim por rondas só existe no modo Guerra.");
   const next = cloneGame(game);
   const ranking = rankPlayers(next, { includeSecret: true });
   if (!ranking.length) throw new Error("Não existem jogadores para determinar o vencedor.");
