@@ -80,8 +80,15 @@ import {
 export const GAME_ACTION_REDUCER_VERSION = 1;
 
 function cloneGame(game) {
-  if (typeof structuredClone === "function") return structuredClone(game);
-  return JSON.parse(JSON.stringify(game));
+  // The host-private action journal is intentionally outside reducer state.
+  // Copying an ever-growing replay log on every game action would turn action
+  // reduction into O(history) work. The authority layer reattaches/appends the
+  // journal after the reducer accepts an action.
+  const source = game?.actionJournal
+    ? Object.fromEntries(Object.entries(game).filter(([key]) => key !== "actionJournal"))
+    : game;
+  if (typeof structuredClone === "function") return structuredClone(source);
+  return JSON.parse(JSON.stringify(source));
 }
 
 export function currentGameActorIndex(game) {

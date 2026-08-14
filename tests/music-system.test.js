@@ -26,7 +26,7 @@ test("soundtrack catalog keeps the lobby theme and four streamed game tracks exp
     musicFinale9vp: ["/finale.m4a"],
   });
   assert.equal(catalog[MUSIC_TRACK.MAIN_THEME].uri, "/main.m4a");
-  assert.equal(catalog[MUSIC_TRACK.FINALE_9VP].uri, "/finale.m4a");
+  assert.equal(catalog[MUSIC_TRACK.ENDGAME].uri, "/finale.m4a");
   assert.equal(GAME_MUSIC_TRACKS.length, 4);
   assert.ok(GAME_MUSIC_TRACKS.includes(MUSIC_TRACK.MAIN_THEME));
 });
@@ -36,14 +36,14 @@ test("game shuffle never repeats the track that just finished", () => {
   assert.notEqual(chooseNextGameTrack(MUSIC_TRACK.DUST_LUTE, () => 0.999), MUSIC_TRACK.DUST_LUTE);
 });
 
-test("finale music is triggered by nine public points, never by secret VP cards", () => {
-  assert.equal(highestPublicVictoryPoints(scoringGame({ publicPoints: 8, secretPoints: 5 })), 8);
-  assert.equal(shouldEnterFinaleMusic(scoringGame({ publicPoints: 8, secretPoints: 5 })), false);
-  assert.equal(shouldEnterFinaleMusic(scoringGame({ publicPoints: 9, secretPoints: 0 })), true);
-  assert.equal(shouldEnterFinaleMusic(scoringGame({ publicPoints: 9, phase: "lobby" })), false);
+test("endgame music is triggered by eight public points, never by secret VP cards", () => {
+  assert.equal(highestPublicVictoryPoints(scoringGame({ publicPoints: 7, secretPoints: 5 })), 7);
+  assert.equal(shouldEnterFinaleMusic(scoringGame({ publicPoints: 7, secretPoints: 5 })), false);
+  assert.equal(shouldEnterFinaleMusic(scoringGame({ publicPoints: 8, secretPoints: 0 })), true);
+  assert.equal(shouldEnterFinaleMusic(scoringGame({ publicPoints: 8, phase: "lobby" })), false);
 });
 
-test("music playback controller switches lobby → shuffle → 9VP finale without decoding tracks", async () => {
+test("music playback controller switches lobby → shuffle → endgame without decoding tracks", async () => {
   const originalAudio = globalThis.Audio;
   class FakeAudio {
     constructor() { this.listeners = {}; this.paused = true; this.src = ""; this.loop = false; this.currentTime = 0; this.duration = 120; }
@@ -80,7 +80,7 @@ test("music playback controller switches lobby → shuffle → 9VP finale withou
     player.setScene("game");
     assert.equal(player.snapshot().activeTrackId, MUSIC_TRACK.BLEEDING_IRON_VELVET);
     player.setScene("finale");
-    assert.equal(player.snapshot().activeTrackId, MUSIC_TRACK.FINALE_9VP);
+    assert.equal(player.snapshot().activeTrackId, MUSIC_TRACK.ENDGAME);
     player.stop();
   } finally {
     globalThis.Audio = originalAudio;

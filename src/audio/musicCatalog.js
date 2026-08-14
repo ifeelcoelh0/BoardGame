@@ -11,7 +11,9 @@ export const MUSIC_TRACK = Object.freeze({
   BLEEDING_IRON_VELVET: "bleeding-iron-and-velvet",
   DUST_LUTE: "dust-and-lute",
   VELVET_LUTE_FUZZ: "velvet-lute-and-fuzz",
-  FINALE_9VP: "finale-9vp",
+  ENDGAME: "endgame",
+  // Compatibility alias; the trigger is no longer tied to 9 VP.
+  FINALE_9VP: "endgame",
 });
 
 /* O tema original está a ~-13,6 LUFS. As novas faixas são entregues já
@@ -41,8 +43,8 @@ export function createMusicCatalog(sounds = AUDIO_SOUNDS) {
       uri: sounds.musicVelvetLuteFuzz?.[0] || null,
       level: 1,
     }),
-    [MUSIC_TRACK.FINALE_9VP]: Object.freeze({
-      id: MUSIC_TRACK.FINALE_9VP,
+    [MUSIC_TRACK.ENDGAME]: Object.freeze({
+      id: MUSIC_TRACK.ENDGAME,
       uri: sounds.musicFinale9vp?.[0] || null,
       level: 1,
     }),

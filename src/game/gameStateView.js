@@ -70,7 +70,13 @@ export function createGameStateView(game, viewerPlayerId = null) {
   if (!game || typeof game !== "object")
     return game;
 
-  const view = clone(game);
+  // The authoritative action journal can contain full private payloads, RNG
+  // traces and the initial unredacted state. It is host-only, even after the
+  // match ends; do not even clone it while producing client/bot views.
+  const source = game.actionJournal
+    ? Object.fromEntries(Object.entries(game).filter(([key]) => key !== "actionJournal"))
+    : game;
+  const view = clone(source);
   const revealAll = view.phase === "ended";
   view.stateViewVersion = STATE_VIEW_VERSION;
   view.viewerPlayerId = typeof viewerPlayerId === "string" ? viewerPlayerId : null;

@@ -57,6 +57,8 @@ test("host bot controller commits one authoritative bot action", async () => {
       getGame: () => game,
       delayMs: 0,
       rng: () => 0.1,
+      now: () => 5_000,
+      createId: (prefix) => `${prefix}_${"d".repeat(24)}`,
       enqueueAuthorityTask: async (task) => task(),
       commit: async (next) => {
         game = next;
@@ -71,4 +73,8 @@ test("host bot controller commits one authoritative bot action", async () => {
   await done;
   assert.equal(commits, 1);
   assert.equal(game.turn.rolled, true);
+  assert.equal(game.actionJournal.entries.length, 1);
+  assert.equal(game.actionJournal.entries[0].source, "bot");
+  assert.equal(game.actionJournal.entries[0].actionType, "ROLL_DICE");
+  assert.match(game.actionJournal.entries[0].actionId, /^game_[a-f0-9]{24}$/);
 });

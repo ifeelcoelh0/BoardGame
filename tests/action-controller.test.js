@@ -95,18 +95,26 @@ test("host action controller commits game reducer results and preserves private 
       privateResult: { type: "PRIVATE_TEST", value: 3 },
     }),
   });
-  const result = await harness.controller.processGameAction({
+  const message = {
     t: "game-action",
     protocolVersion: IDENTITY_PROTOCOL_VERSION,
     gameProtocolVersion: GAME_PROTOCOL_VERSION,
     actionId: actionId("game", 3),
     expectedRevision: 12,
     action: { type: GAME_ACTION.ROLL_DICE },
-  });
+  };
+  const result = await harness.controller.processGameAction(message);
+  const duplicate = await harness.controller.processGameAction(message);
   assert.equal(result.ok, true);
+  assert.deepEqual(duplicate, result);
   assert.equal(result.privateResult.type, "PRIVATE_TEST");
   assert.equal(harness.getGame().marker, `${IDS.host}:${GAME_ACTION.ROLL_DICE}`);
   assert.deepEqual(harness.gameApplied, ["TEST_EVENT"]);
+  assert.equal(harness.getGame().actionJournal.entries.length, 1);
+  assert.equal(harness.getGame().actionJournal.entries[0].actionId, actionId("game", 3));
+  assert.equal(harness.getGame().actionJournal.entries[0].source, "local-human");
+  assert.equal(harness.getGame().actionJournal.entries[0].privateResult.type, "PRIVATE_TEST");
+  assert.equal(harness.getCommits(), 1);
 });
 
 test("host state synchronization requires an authenticated compatible connection", () => {

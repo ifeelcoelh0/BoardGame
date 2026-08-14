@@ -1,6 +1,7 @@
 import { isGameMode } from "./gameModes.js";
 import { isSessionTokenHash } from "./playerIdentity.js";
 import { GAME_LOG_LIMIT, GAME_PRESENTATION_VERSION } from "./presentationState.js";
+import { assertActionJournal } from "./actionJournal.js";
 
 const RESOURCE_KEYS = ["madeira", "tijolo", "cavalos", "ouro", "obsidiana"];
 
@@ -69,6 +70,11 @@ export function assertGameInvariants(game) {
   }
 
   requireCondition(game.winner == null || (Number.isSafeInteger(game.winner) && game.winner >= 0 && game.winner < game.players.length), "INVALID_WINNER", "O vencedor guardado não existe.");
+  try {
+    assertActionJournal(game.actionJournal);
+  } catch (error) {
+    requireCondition(false, "INVALID_ACTION_JOURNAL", "O registo técnico de ações é inválido.", error?.message || null);
+  }
   return game;
 }
 

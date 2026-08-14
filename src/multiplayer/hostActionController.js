@@ -10,7 +10,12 @@ import {
 } from "../game/gameProtocol.js";
 import { applyGameAction } from "../game/gameActionReducer.js";
 import { STATE_VIEW_VERSION } from "../game/gameStateView.js";
-import { IDENTITY_PROTOCOL_VERSION } from "../game/playerIdentity.js";
+import { IDENTITY_PROTOCOL_VERSION, createStableId } from "../game/playerIdentity.js";
+import {
+  ACTION_SOURCE,
+  appendAcceptedGameAction,
+  createActionExecutionTrace,
+} from "../game/actionJournal.js";
 import {
   getAcceptedActionResult,
   rememberAcceptedActionResult,
@@ -50,6 +55,8 @@ export function createHostActionController(options = {}) {
     introDurationMs = LOBBY_START_INTRO_MS,
     applyLobby = applyLobbyAction,
     applyGame = applyGameAction,
+    rng = Math.random,
+    createId = createStableId,
   } = options;
 
   const runtimeOf = typeof getRuntime === "function" ? getRuntime : () => runtime;
@@ -147,7 +154,13 @@ export function createHostActionController(options = {}) {
       };
     }
 
-    const applied = applyGame(current, actorId, message.action);
+    const occurredAt = Number(now());
+    const trace = createActionExecutionTrace({ rng, createId });
+    const applied = applyGame(current, actorId, message.action, {
+      rng: trace.rng,
+      now: () => occurredAt,
+      createId: trace.createId,
+    });
     if (!applied.ok) {
       return {
         ...base,
@@ -157,8 +170,22 @@ export function createHostActionController(options = {}) {
       };
     }
 
-    await onGameApplied(applied.game, applied);
-    const committed = await commit(applied.game);
+    const journaled = appendAcceptedGameAction(current, applied.game, {
+      actionId: message.actionId,
+      source: sourceConnection ? ACTION_SOURCE.REMOTE_HUMAN : ACTION_SOURCE.LOCAL_HUMAN,
+      playerId: actorId,
+      actorIndex: applied.actorIndex,
+      action: message.action,
+      revisionBefore: current.v || 0,
+      revisionAfter: (current.v || 0) + 1,
+      occurredAt,
+      trace: trace.snapshot(),
+      events: applied.events,
+      privateResult: applied.privateResult,
+    });
+    const journaledApplied = { ...applied, game: journaled.game, actionJournalEntry: journaled.entry };
+    await onGameApplied(journaled.game, journaledApplied);
+    const committed = await commit(journaled.game);
     const accepted = {
       ...base,
       ok: true,
