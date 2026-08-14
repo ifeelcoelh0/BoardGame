@@ -4,6 +4,24 @@ import { SAVE_INDEX_STORAGE_KEY, SAVE_STORAGE_KEY, saveStorageKeyForCode, stampS
 import { isValidRoomCode, normalizeRoomCode } from "./roomCode.js";
 
 const MAX_INDEX_ENTRIES = 12;
+const SAVE_STORAGE_PREFIX = saveStorageKeyForCode("");
+
+function enumerableStorageKeys(storage) {
+  if (!Number.isSafeInteger(storage?.length) || typeof storage?.key !== "function") return [];
+  const keys = [];
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (typeof key === "string") keys.push(key);
+  }
+  return keys;
+}
+
+function prunePerRealmSaveKeys(storage, retainedEntries = []) {
+  const retained = new Set(retainedEntries.map((entry) => entry?.saveKey).filter(Boolean));
+  for (const key of enumerableStorageKeys(storage)) {
+    if (key.startsWith(SAVE_STORAGE_PREFIX) && !retained.has(key)) storage.removeItem(key);
+  }
+}
 
 function readIndex(storage) {
   try {
@@ -61,14 +79,26 @@ export function saveGameToStorage(game, storage = globalThis.localStorage, optio
     const saveKey = saveStorageKeyForCode(code);
     storage.setItem(saveKey, serialized);
     const existing = readIndex(storage).entries.filter((entry) => normalizeRoomCode(entry.code) !== code);
-    const entries = writeIndex(storage, [{
+    const candidates = [{
       code,
       saveKey,
       role: options.role || "host",
       phase: game?.phase || "lobby",
       updatedAt,
       appVersion: JSON.parse(serialized).appVersion,
-    }, ...existing]);
+    }, ...existing];
+    const entries = writeIndex(storage, candidates);
+
+    // The index is capped, so any realm evicted from it must also lose its
+    // per-realm payload. Otherwise long-lived browsers accumulate unreachable
+    // saves indefinitely. Sweep enumerable Web Storage as well to clean up
+    // orphaned keys left by older builds.
+    const retainedKeys = new Set(entries.map((entry) => entry.saveKey));
+    for (const entry of candidates) {
+      if (entry?.saveKey && !retainedKeys.has(entry.saveKey)) storage.removeItem(entry.saveKey);
+    }
+    prunePerRealmSaveKeys(storage, entries);
+
     // Keep the legacy slot current for older builds and one-step rollback.
     storage.setItem(SAVE_STORAGE_KEY, serialized);
     return { ok: true, code, updatedAt, entries };
@@ -124,6 +154,7 @@ export function clearGameSave(storage = globalThis.localStorage, { code } = {}) 
     const normalizedCode = normalizeRoomCode(code);
     if (!normalizedCode) {
       for (const entry of readIndex(storage).entries) storage.removeItem(entry.saveKey);
+      prunePerRealmSaveKeys(storage, []);
       storage.removeItem(SAVE_INDEX_STORAGE_KEY);
       storage.removeItem(SAVE_STORAGE_KEY);
       return true;
@@ -131,6 +162,7 @@ export function clearGameSave(storage = globalThis.localStorage, { code } = {}) 
     storage.removeItem(saveStorageKeyForCode(normalizedCode));
     const remaining = readIndex(storage).entries.filter((entry) => entry.code !== normalizedCode);
     writeIndex(storage, remaining);
+    prunePerRealmSaveKeys(storage, remaining);
     const latestRaw = remaining[0]?.saveKey ? storage.getItem(remaining[0].saveKey) : null;
     if (latestRaw) storage.setItem(SAVE_STORAGE_KEY, latestRaw);
     else storage.removeItem(SAVE_STORAGE_KEY);

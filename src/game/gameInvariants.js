@@ -3,8 +3,11 @@ import { isSessionTokenHash } from "./playerIdentity.js";
 import { GAME_LOG_LIMIT, GAME_PRESENTATION_VERSION } from "./presentationState.js";
 import { assertActionJournal } from "./actionJournal.js";
 import { MANDATORY_DECISION } from "./mandatoryDecisionReducer.js";
+import { makeBoardGraph } from "./boardGeometry.js";
+import { PIECE_LIMITS } from "./resources.js";
 
 const RESOURCE_KEYS = ["madeira", "tijolo", "cavalos", "ouro", "obsidiana"];
+const CORE_MODE_IDS = new Set(["classico", "rapido", "dragao"]);
 
 function isPlayerPermutation(value, playerCount) {
   if (!Array.isArray(value) || value.length !== playerCount) return false;
@@ -96,6 +99,41 @@ export function assertGameInvariants(game) {
   for (const hex of game.board.hexes) {
     requireCondition(hex && typeof hex.k === "string" && !hexKeys.has(hex.k), "INVALID_HEX", "O tabuleiro contém hexágonos inválidos ou repetidos.", hex?.k);
     hexKeys.add(hex.k);
+  }
+
+  let boardGraph = null;
+  try {
+    boardGraph = makeBoardGraph(game.board.hexes);
+  } catch (error) {
+    requireCondition(false, "INVALID_BOARD_GEOMETRY", "A geometria do tabuleiro guardado é inválida.", error?.message || null);
+  }
+
+  requireCondition(game.roads && typeof game.roads === "object" && !Array.isArray(game.roads), "INVALID_ROADS", "As estradas guardadas são inválidas.");
+  for (const [edge, owner] of Object.entries(game.roads)) {
+    requireCondition(Boolean(boardGraph.edges[edge]), "INVALID_ROAD_EDGE", "Uma estrada guardada não pertence ao tabuleiro.", edge);
+    requireCondition(Number.isSafeInteger(owner) && owner >= 0 && owner < game.players.length, "INVALID_ROAD_OWNER", "Uma estrada pertence a um jogador inexistente.", owner);
+  }
+
+  requireCondition(game.builds && typeof game.builds === "object" && !Array.isArray(game.builds), "INVALID_BUILDS", "As construções guardadas são inválidas.");
+  for (const [vertex, building] of Object.entries(game.builds)) {
+    requireCondition(Boolean(boardGraph.verts[vertex]), "INVALID_BUILD_VERTEX", "Uma construção guardada não pertence ao tabuleiro.", vertex);
+    requireCondition(building && typeof building === "object" && !Array.isArray(building), "INVALID_BUILD", "Uma construção guardada é inválida.", vertex);
+    requireCondition(Number.isSafeInteger(building.p) && building.p >= 0 && building.p < game.players.length, "INVALID_BUILD_OWNER", "Uma construção pertence a um jogador inexistente.", building.p);
+    requireCondition(building.t === 1 || building.t === 2, "INVALID_BUILD_TYPE", "Uma construção tem um tipo desconhecido.", building.t);
+  }
+
+  // Classical, Lightning and Dragon modes use only the physical base-game
+  // stock. Enforce those limits at the save/invariant boundary so an
+  // impossible state cannot silently become a new balance baseline.
+  if (CORE_MODE_IDS.has(game.mode)) {
+    game.players.forEach((_, playerIndex) => {
+      const roads = Object.values(game.roads).filter((owner) => owner === playerIndex).length;
+      const villages = Object.values(game.builds).filter((building) => building.p === playerIndex && building.t === 1).length;
+      const palaces = Object.values(game.builds).filter((building) => building.p === playerIndex && building.t === 2).length;
+      requireCondition(roads <= PIECE_LIMITS.estrada, "PIECE_LIMIT", "O reino excede o limite físico de estradas.", { playerIndex, roads });
+      requireCondition(villages <= PIECE_LIMITS.aldeia, "PIECE_LIMIT", "O reino excede o limite físico de aldeias.", { playerIndex, villages });
+      requireCondition(palaces <= PIECE_LIMITS.palacio, "PIECE_LIMIT", "O reino excede o limite físico de palácios.", { playerIndex, palaces });
+    });
   }
   requireCondition(game.turn && typeof game.turn === "object", "INVALID_TURN", "O turno guardado é inválido.");
   requireCondition(Number.isSafeInteger(game.turn.pos) && game.turn.pos >= 0 && game.turn.pos < game.players.length, "INVALID_TURN_PLAYER", "O jogador do turno não existe.", game.turn.pos);
