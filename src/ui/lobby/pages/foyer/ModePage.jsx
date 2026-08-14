@@ -14,7 +14,7 @@ export default function ModePage({ foyer }) {
   return (
     <>
       <Leaf page={BOOK_PAGE.MODE} side="left" chapter={t("lobby.foundChapter")} title={t("lobby.gameMode")}>
-        <div className="rd-lobby-book-ui__modes">
+        <div className="rd-lobby-book-ui__modes" data-tutorial-anchor="mode-list">
           {LOBBY_MODES.map((mode) => {
             const selected = mode.id === selectedModeId;
             return (

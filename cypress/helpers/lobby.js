@@ -1,6 +1,9 @@
+import { WIZARD_TUTORIAL_VERSION } from "../../src/tutorial/wizardJourney.js";
+
 export const appUrl = "/?transport=mock";
 
 const CYPRESS_SETTINGS_KEY = "reinos_dragao_settings_v1";
+const CYPRESS_WIZARD_KEY = "reinos_dragao_wizard_v1";
 
 export function seedCypressRuntimeSettings(win) {
   let current = {};
@@ -13,10 +16,15 @@ export function seedCypressRuntimeSettings(win) {
   }));
 }
 
+export function seedCypressWizardSkipped(win) {
+  win.localStorage.setItem(CYPRESS_WIZARD_KEY, JSON.stringify({ version: WIZARD_TUTORIAL_VERSION, status: "skipped", welcomed: true }));
+}
+
 export function openApp() {
   cy.visit(appUrl, {
     onBeforeLoad(win) {
       seedCypressRuntimeSettings(win);
+      seedCypressWizardSkipped(win);
     },
   });
   cy.get('[data-testid="lobby-experience"]').should("be.visible");

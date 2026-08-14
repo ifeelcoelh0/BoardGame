@@ -22,7 +22,7 @@ import { t } from "../../../locales/i18n.js";
 function ReadyActions({ realm }) {
   const { localPlayer, isHost, isStarting, hasConfirmedCharacter, allReady } = realm;
   return (
-    <div className="rd-lobby-book-ui__actions">
+    <div className="rd-lobby-book-ui__actions" data-tutorial-anchor="ready-actions">
       <button
         data-testid="ready-toggle"
         className={localPlayer?.ready ? "is-ready" : ""}
@@ -98,6 +98,7 @@ export function RealmPage({ realm }) {
         <div className="rd-lobby-book-ui__realm-actions">
           <button
             className={`rd-lobby-book-ui__realm-action${!hasConfirmedCharacter ? " is-primary" : ""}`}
+            data-tutorial-anchor="character-action"
             type="button"
             onClick={realm.onSwapCharacter}
             disabled={isStarting}
@@ -194,13 +195,15 @@ export function SettingsPage({ realm, scope, audio }) {
         </dl>
       </Leaf>
       <Leaf page={BOOK_PAGE.SETTINGS} side="right" chapter={t("lobby.thisDevice")} title={t("lobby.preferences")}>
-        <GameSettingsControls
+        <div data-tutorial-anchor="settings-panel">
+          <GameSettingsControls
           settings={audio?.settings}
           setSetting={audio?.setSetting}
           fullscreen={audio?.fullscreen}
           onToggleFullscreen={audio?.onToggleFullscreen}
           compact
         />
+        </div>
       </Leaf>
     </>
   );

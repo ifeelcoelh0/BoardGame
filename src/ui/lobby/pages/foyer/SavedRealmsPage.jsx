@@ -39,17 +39,19 @@ export default function SavedRealmsPage({ foyer, goTo }) {
   return (
     <>
       <Leaf page={BOOK_PAGE.SAVED_REALMS} side="left" chapter={t("lobby.savedChapter")} title={t("lobby.archives")}>
-        <dl className="rd-lobby-book-ui__facts">
-          <div><dt>{t("lobby.saved")}</dt><dd>{entries.length}</dd></div>
-          <div><dt>{t("lobby.recoverable")}</dt><dd>{recoverable}</dd></div>
-          <div><dt>{t("lobby.completed")}</dt><dd>{concluded}</dd></div>
-        </dl>
-        <Opening>
-          {t("lobby.archiveOpening")}
-        </Opening>
-        <p className="rd-lobby-book-ui__folio-copy is-muted">
-          {t("lobby.deleteLocalNote")}
-        </p>
+        <div data-tutorial-anchor="archives-panel">
+          <dl className="rd-lobby-book-ui__facts">
+            <div><dt>{t("lobby.saved")}</dt><dd>{entries.length}</dd></div>
+            <div><dt>{t("lobby.recoverable")}</dt><dd>{recoverable}</dd></div>
+            <div><dt>{t("lobby.completed")}</dt><dd>{concluded}</dd></div>
+          </dl>
+          <Opening>
+            {t("lobby.archiveOpening")}
+          </Opening>
+          <p className="rd-lobby-book-ui__folio-copy is-muted">
+            {t("lobby.deleteLocalNote")}
+          </p>
+        </div>
       </Leaf>
 
       <Leaf page={BOOK_PAGE.SAVED_REALMS} side="right" chapter={selected ? t("lobby.archiveDetails") : t("lobby.recover")} title={selected ? t("lobby.realmCode", { code: selected.summary.code }) : t("lobby.chooseRealm")}>

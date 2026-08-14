@@ -22,23 +22,25 @@ export default function BookPager({ page, scope = BOOK_SCOPE.FOYER, onPageChange
   return (
     <nav className={`rd-book-pager${compact ? " is-compact" : ""}`} aria-label={t("book.sections")}>
       <div className="rd-book-pager__sections">
-        {sections.map((section) => {
-          const sectionMeta = bookSectionMeta(section);
-          const target = firstBookPageForSection(section, scope);
-          const active = meta.section === section;
-          return (
-            <button
-              key={section}
-              type="button"
-              className={`rd-book-pager__section${active ? " is-active" : ""}`}
-              disabled={disabled || !target}
-              aria-current={active ? "page" : undefined}
-              onClick={() => target && onPageChange?.(target)}
-            >
-              {sectionMeta?.label ?? section}
-            </button>
-          );
-        })}
+        <div className="rd-book-pager__section-buttons" data-tutorial-anchor="book-sections">
+          {sections.map((section) => {
+            const sectionMeta = bookSectionMeta(section);
+            const target = firstBookPageForSection(section, scope);
+            const active = meta.section === section;
+            return (
+              <button
+                key={section}
+                type="button"
+                className={`rd-book-pager__section${active ? " is-active" : ""}`}
+                disabled={disabled || !target}
+                aria-current={active ? "page" : undefined}
+                onClick={() => target && onPageChange?.(target)}
+              >
+                {sectionMeta?.label ?? section}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="rd-book-pager__index">
