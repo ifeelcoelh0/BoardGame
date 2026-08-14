@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const checksumPath = path.join(root, "SHA256SUMS.txt");
-const ignoredRoots = new Set(["node_modules", "dist", ".git"]);
+const ignoredRoots = new Set(["node_modules", "dist", ".git", "balance-reports"]);
 const ignoredFiles = new Set(["package-lock.json"]);
 
 function walk(directory, relative = "") {

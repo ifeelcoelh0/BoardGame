@@ -7,6 +7,14 @@ import { activateBotController } from "../src/game/playerPresence.js";
 import { makeBoardGraph } from "../src/game/boardGeometry.js";
 import { CHARACTERS, characterName } from "../src/game/characterCatalog.js";
 import { nextBotActorIndex } from "../src/multiplayer/hostBotController.js";
+import {
+  balancedRosterForGame,
+  createBalancePlayerRecord,
+  finalizeBalanceRecord,
+  recordAcceptedAction,
+  recordBalanceEvents,
+  summarizeBalanceLab,
+} from "./balance-lab-metrics.mjs";
 
 export const DEFAULT_BENCHMARK_SEED = 0x5eed1234;
 export const DEFAULT_MAX_STEPS = 8000;
@@ -36,8 +44,7 @@ export function rosterForGame(gameIndex, playerCount, characterIds = CHARACTERS.
   if (!Array.isArray(characterIds) || characterIds.length < playerCount) {
     throw new RangeError("Não existem personagens suficientes para formar a mesa.");
   }
-  const start = gameIndex % characterIds.length;
-  return Array.from({ length: playerCount }, (_, offset) => characterIds[(start + offset) % characterIds.length]);
+  return balancedRosterForGame(gameIndex, playerCount, characterIds);
 }
 
 export function createBotTable({ mode = "dragao", seed = DEFAULT_BENCHMARK_SEED, playerCount = 4, roster } = {}) {
@@ -108,6 +115,7 @@ function recordRarePresence(game, players, vertices2, vertices12) {
 }
 
 function recordAppliedEvents(applied, gameAfter, record) {
+  recordBalanceEvents(record, applied.events || []);
   for (const event of applied.events || []) {
     if (event?.type === "DICE_ROLLED") {
       record.rolls += 1;
@@ -169,19 +177,18 @@ export function simulateBotGame({
     seed,
     mode,
     playerCount,
+    roster: table.roster.slice(),
     completed: false,
     steps: 0,
     rounds: 0,
     winnerIndex: null,
     winnerCharacter: null,
+    actionsByType: {},
     rolls: 0,
     two: { rolls: 0, productiveRolls: 0, resourcesProduced: 0, disasters: { applied: 0, noProtected: 0, noTargets: 0, byType: {} } },
     twelve: { rolls: 0, productiveRolls: 0, resourcesProduced: 0, disasters: { applied: 0, noProtected: 0, noTargets: 0, byType: {} } },
     players: game.players.map((player, playerIndex) => ({
-      playerIndex,
-      characterId: player.ch,
-      characterName: characterName(player.ch),
-      winner: false,
+      ...createBalancePlayerRecord(player, playerIndex),
       built2: false,
       built12: false,
       built2Round: null,
@@ -223,6 +230,7 @@ export function simulateBotGame({
       break;
     }
     game = applied.game;
+    recordAcceptedAction(record, actorIndex, action);
     recordAppliedEvents(applied, game, record);
     recordRarePresence(game, record.players, vertices2, vertices12);
     steps += 1;
@@ -239,10 +247,7 @@ export function simulateBotGame({
     record.failure = { step: steps, reason: "MAX_STEPS_REACHED" };
   }
 
-  for (let playerIndex = 0; playerIndex < record.players.length; playerIndex += 1) {
-    record.players[playerIndex].finalBuildingCount = Object.values(game.builds || {})
-      .filter((building) => building?.p === playerIndex).length;
-  }
+  finalizeBalanceRecord(record, game);
 
   // Internal working state is not part of exported benchmark data.
   for (const player of record.players) delete player.firstTroopOrder;
@@ -418,7 +423,7 @@ function aggregateCharacter(players, characterId) {
   };
 }
 
-export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCount, baseSeed } = {}) {
+export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCount, baseSeed, startIndex = 0, characterIds = CHARACTERS.map(({ id }) => id) } = {}) {
   const records = allRecords.filter((record) => record.completed);
   const failures = allRecords.filter((record) => !record.completed);
   const players = records.flatMap((record) => record.players);
@@ -447,22 +452,25 @@ export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCou
     orderCounts.set(key, (orderCounts.get(key) || 0) + 1);
   }
 
-  const characterIds = [...new Set(players.map((player) => player.characterId))];
+  const observedCharacterIds = [...new Set(players.map((player) => player.characterId))];
+  const balance = summarizeBalanceLab(allRecords, {
+    requestedGames: requestedGames ?? allRecords.length,
+    mode: mode || records[0]?.mode || null,
+    playerCount: playerCount || records[0]?.playerCount || null,
+    baseSeed: baseSeed ?? null,
+    startIndex,
+    characterIds,
+  });
+  const legacyCharacterMetrics = new Map(observedCharacterIds
+    .map((characterId) => [characterId, aggregateCharacter(players, characterId)]));
 
   return {
-    meta: {
-      mode: mode || records[0]?.mode || null,
-      playerCount: playerCount || records[0]?.playerCount || null,
-      requestedGames: requestedGames ?? allRecords.length,
-      completedGames: records.length,
-      failedGames: failures.length,
-      baseSeed: baseSeed ?? null,
-      playerObservations: players.length,
-    },
-    duration: {
-      averageActions: round2(average(records.map((record) => record.steps))),
-      averageRounds: round2(average(records.map((record) => record.rounds))),
-    },
+    meta: balance.meta,
+    sampling: balance.sampling,
+    duration: balance.duration,
+    victory: balance.victory,
+    seats: balance.seats,
+    actions: balance.actions,
     dice: {
       totalRolls,
       two: aggregateRareNumber(records, "two", totalRolls),
@@ -492,8 +500,11 @@ export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCou
         .map(([order, count]) => ({ order, count, pct: round2(percentage(count, trinityPlayers.length)) }))
         .sort((a, b) => b.count - a.count),
     },
-    characters: characterIds.map((characterId) => aggregateCharacter(players, characterId))
-      .sort((a, b) => b.winRatePct - a.winRatePct),
+    characters: balance.characters.map((entry) => ({
+      ...entry,
+      ...(legacyCharacterMetrics.get(entry.id) || {}),
+    })),
     failures: failures.map((record) => ({ gameIndex: record.gameIndex, seed: record.seed, failure: record.failure })),
+    replayCases: balance.replayCases,
   };
 }

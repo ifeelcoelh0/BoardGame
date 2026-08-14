@@ -1,5 +1,6 @@
 import { availableParallelism } from "node:os";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { isMainThread, parentPort, workerData, Worker } from "node:worker_threads";
 import {
   DEFAULT_BENCHMARK_SEED,
@@ -7,6 +8,14 @@ import {
   runBenchmarkBatch,
   summarizeBenchmark,
 } from "./bot-benchmark-core.mjs";
+
+const CORE_MODES = Object.freeze(["classico", "rapido", "dragao"]);
+
+async function writeJsonReport(filePath, payload) {
+  const directory = dirname(filePath);
+  if (directory && directory !== ".") await mkdir(directory, { recursive: true });
+  await writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
 
 function parseInteger(value, name, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
   const parsed = Number.parseInt(value, 10);
@@ -23,6 +32,7 @@ function parseArgs(argv) {
     playerCount: 4,
     baseSeed: DEFAULT_BENCHMARK_SEED,
     maxSteps: DEFAULT_MAX_STEPS,
+    startIndex: 0,
     workers: Math.max(1, Math.min(4, availableParallelism?.() || 1)),
     out: null,
     quiet: false,
@@ -35,6 +45,7 @@ function parseArgs(argv) {
     else if (arg === "--players") options.playerCount = parseInteger(next(), "--players", { min: 2, max: 4 });
     else if (arg === "--seed") options.baseSeed = parseInteger(next(), "--seed", { min: 0, max: 0xffffffff });
     else if (arg === "--max-steps") options.maxSteps = parseInteger(next(), "--max-steps", { min: 100, max: 100000 });
+    else if (arg === "--start-index") options.startIndex = parseInteger(next(), "--start-index", { min: 0, max: 100000000 });
     else if (arg === "--workers") options.workers = parseInteger(next(), "--workers", { min: 1, max: 32 });
     else if (arg === "--out") options.out = String(next() || "").trim() || null;
     else if (arg === "--quiet") options.quiet = true;
@@ -64,74 +75,89 @@ function comparisonLine(label, comparison) {
 }
 
 function printReport(summary) {
-  const { meta, duration, dice, rareNumberPresence: rare, trinity } = summary;
-  console.log("\nREINOS DO DRAGÃO — BOT BENCHMARK");
-  console.log("=".repeat(74));
-  console.log(`Modo: ${meta.mode} | ${meta.playerCount} bots | jogos pedidos: ${meta.requestedGames} | seed: ${meta.baseSeed}`);
-  console.log(`Concluídos: ${meta.completedGames}/${meta.requestedGames} | falhas: ${meta.failedGames} | observações de jogador: ${meta.playerObservations}`);
-  console.log(`Ações médias: ${number(duration.averageActions)} | rondas médias: ${number(duration.averageRounds)}`);
+  const { meta, sampling, duration, victory, dice, rareNumberPresence: rare, trinity } = summary;
+  console.log("\nREINOS DO DRAGÃO — BALANCE LAB");
+  console.log("=".repeat(86));
+  console.log(`Modo: ${meta.mode} | ${meta.playerCount} bots | jogos pedidos: ${meta.requestedGames} | seed base: ${meta.baseSeed} | índice inicial: ${meta.startIndex}`);
+  console.log(`App ${meta.appVersion} | Bot policy v${meta.botPolicyVersion} | estratégia v${meta.botStrategyVersion}`);
+  console.log(`Concluídos: ${meta.completedGames}/${meta.requestedGames} (${pct(meta.completionRatePct)}) | falhas: ${meta.failedGames} | observações: ${meta.playerObservations}`);
+  console.log(`Duração — ações: média ${number(duration.averageActions)} · mediana ${number(duration.medianActions)} · p95 ${number(duration.p95Actions)} | rondas: média ${number(duration.averageRounds)} · mediana ${number(duration.medianRounds)} · p95 ${number(duration.p95Rounds)}`);
 
-  console.log("\nDADOS RAROS");
+  console.log("\nSAMPLING");
+  console.log(`Combinações: ${sampling.combinationCount} | rotações/mesa: ${sampling.rotationsPerCombination} | ciclo equilibrado: ${sampling.cycleGames} jogos`);
+  console.log(`Ciclos completos: ${sampling.fullCycles} | resto: ${sampling.partialCycleGames} | equilíbrio exato nesta execução: ${sampling.exactlyBalanced ? "SIM" : "NÃO"}`);
+  if (!sampling.exactlyBalanced) {
+    console.log(`Sugestão: usa múltiplos de ${sampling.cycleGames} jogos (ex.: ${sampling.suggestedGameMultiples.join(", ")}) para igualdade exata de personagens/seats.`);
+  }
+
+  console.log("\nVITÓRIA E SEATS");
+  console.log(`Motivos: ${Object.entries(victory.endReasons).map(([reason, count]) => `${reason}=${count}`).join(" · ") || "—"}`);
+  console.log(`Score médio do vencedor: ${number(victory.averageWinnerScore)} | margem média: ${number(victory.averageScoreMargin)}`);
+  console.log("Seat   apar.    win%      Δ esperado   score    produção   ações");
+  for (const row of summary.seats) {
+    console.log(`${String(Number(row.id) + 1).padStart(4)}  ${String(row.appearances).padStart(5)}  ${pct(row.winRatePct).padStart(8)}  ${pp(row.winRateDeltaPp).padStart(12)}  ${number(row.averageScore).padStart(7)}  ${number(row.averageProduction).padStart(9)}  ${number(row.averageActions).padStart(7)}`);
+  }
+
+  console.log("\nPOR PERSONAGEM");
+  console.log("Personagem             apar.    win%      Δ esperado   score   prod.   aldeias palácios estradas cartas");
+  for (const row of summary.characters) {
+    console.log(`${row.characterName.slice(0, 21).padEnd(21)} ${String(row.appearances).padStart(5)}  ${pct(row.winRatePct).padStart(8)}  ${pp(row.winRateDeltaPp).padStart(12)}  ${number(row.averageScore).padStart(6)}  ${number(row.averageProduction).padStart(6)}  ${number(row.averageVillages).padStart(7)} ${number(row.averagePalaces).padStart(8)} ${number(row.averageRoads).padStart(8)} ${number(row.averageCardsBought).padStart(6)}`);
+  }
+
+  console.log("\nAÇÕES MAIS FREQUENTES");
+  for (const row of summary.actions.slice(0, 12)) {
+    console.log(`${row.type.padEnd(28)} ${String(row.count).padStart(8)}  ${pct(row.sharePct).padStart(8)}`);
+  }
+
+  console.log("\nNÚMEROS 2 / 12");
   for (const [label, stats] of [["2", dice.two], ["12", dice.twelve]]) {
-    console.log(`${label.padEnd(2)}  ${String(stats.rolls).padStart(6)} lançamentos | ${pct(stats.shareOfRollsPct)} dos lançamentos | teoria ${pct(stats.theoreticalSharePct)} | desvio ${pp(stats.deviationFromTheoryPp)}`);
-    console.log(`    saiu em ${pct(stats.gamesWithAtLeastOnePct)} dos jogos | produziu recursos em ${pct(stats.productiveRollsPct)} dessas saídas | ${number(stats.resourcesPerRareRoll)} recursos/saída`);
-    if (meta.mode === "dragao") {
+    console.log(`${label.padEnd(2)}  ${String(stats.rolls).padStart(6)} lançamentos | ${pct(stats.shareOfRollsPct)} | teoria ${pct(stats.theoreticalSharePct)} | desvio ${pp(stats.deviationFromTheoryPp)}`);
+    console.log(`    saiu em ${pct(stats.gamesWithAtLeastOnePct)} dos jogos | produção em ${pct(stats.productiveRollsPct)} das saídas | ${number(stats.resourcesPerRareRoll)} recursos/saída`);
+    if (meta.modeFeatures.disasters) {
       const types = stats.disasterTypes.map((entry) => `${entry.type} ${pct(entry.pct)}`).join(" · ") || "sem desastres aplicados";
       console.log(`    desastre aplicado em ${pct(stats.disasterAppliedPct)} das saídas | sem protegido ${pct(stats.disasterNoProtectedPct)} | ${types}`);
     }
   }
-
-  console.log("\nPRESENÇA EM 2 / 12 E VITÓRIA");
-  console.log(`Jogadores que construíram no 2:      ${pct(rare.built2Pct)} | vencedores com 2: ${pct(rare.winnerHad2Pct)}`);
-  console.log(`Jogadores que construíram no 12:     ${pct(rare.built12Pct)} | vencedores com 12: ${pct(rare.winnerHad12Pct)}`);
-  console.log(`Jogadores com 2 OU 12:               ${pct(rare.builtEitherPct)} | vencedores: ${pct(rare.winnerHadEitherPct)}`);
-  console.log(`Jogadores com 2 E 12:                ${pct(rare.builtBothPct)} | vencedores: ${pct(rare.winnerHadBothPct)}`);
+  console.log(`Presença final — 2: ${pct(rare.built2Pct)} | 12: ${pct(rare.built12Pct)} | 2 ou 12: ${pct(rare.builtEitherPct)} | ambos: ${pct(rare.builtBothPct)}`);
   console.log(comparisonLine("Win rate — 2", rare.comparisons.on2));
   console.log(comparisonLine("Win rate — 12", rare.comparisons.on12));
-  console.log(comparisonLine("Win rate — 2/12", rare.comparisons.onEither));
-  console.log(comparisonLine("Win rate — ambos", rare.comparisons.onBoth));
 
-  console.log("\nCOORTES DE PRESENÇA RARA");
-  console.log("Coorte              obs.    peso%    win%");
-  for (const row of rare.categories) {
-    console.log(`${row.label.padEnd(18)} ${String(row.n).padStart(5)}  ${pct(row.sharePct).padStart(8)}  ${pct(row.winRatePct).padStart(7)}`);
+  if (!meta.modeFeatures.classicRules) {
+    console.log("\nTRINDADE DAS ARMAS");
+    console.log(`Jogadores que completaram: ${pct(trinity.completedByPlayersPct)} | jogos com ≥1 Trindade: ${pct(trinity.gamesWithCompletionPct)}`);
+    console.log(`Vencedores que completaram: ${pct(trinity.winnerCompletedPct)} | ronda média: ${number(trinity.averageCompletionRound)}`);
+    console.log(comparisonLine("Win rate — Trind.", trinity.comparison));
   }
 
-  console.log("\nCONTROLO SIMPLES PELO N.º FINAL DE EDIFÍCIOS");
-  console.log("Edif.   obs.   nenhum     só 2     só 12     ambos");
-  for (const row of rare.byFinalBuildingCount) {
-    const cell = (entry) => entry.n ? `${pct(entry.winRatePct)}(${entry.n})` : "—";
-    console.log(`${String(row.buildingCount).padStart(4)}  ${String(row.n).padStart(5)}  ${cell(row.categories.none).padStart(10)}  ${cell(row.categories.only2).padStart(8)}  ${cell(row.categories.only12).padStart(9)}  ${cell(row.categories.both).padStart(9)}`);
-  }
-  const adjusted = rare.adjustedByFinalBuildingCount;
-  console.log(`Ajustado — 2      com ${pct(adjusted.on2.withWinRate)} | sem ${pct(adjusted.on2.withoutWinRate)} | Δ ${pp(adjusted.on2.deltaPercentagePoints)} | cobertura ${adjusted.on2.coveredObservations}`);
-  console.log(`Ajustado — 12     com ${pct(adjusted.on12.withWinRate)} | sem ${pct(adjusted.on12.withoutWinRate)} | Δ ${pp(adjusted.on12.deltaPercentagePoints)} | cobertura ${adjusted.on12.coveredObservations}`);
-  console.log(`Ajustado — 2/12   com ${pct(adjusted.onEither.withWinRate)} | sem ${pct(adjusted.onEither.withoutWinRate)} | Δ ${pp(adjusted.onEither.deltaPercentagePoints)} | cobertura ${adjusted.onEither.coveredObservations}`);
-  console.log(`Ajustado — ambos  com ${pct(adjusted.onBoth.withWinRate)} | sem ${pct(adjusted.onBoth.withoutWinRate)} | Δ ${pp(adjusted.onBoth.deltaPercentagePoints)} | cobertura ${adjusted.onBoth.coveredObservations}`);
-
-  console.log("\nTRINDADE DAS ARMAS");
-  console.log(`Jogadores que completaram: ${pct(trinity.completedByPlayersPct)} | jogos com ≥1 Trindade: ${pct(trinity.gamesWithCompletionPct)}`);
-  console.log(`Vencedores que completaram: ${pct(trinity.winnerCompletedPct)} | ronda média: ${number(trinity.averageCompletionRound)}`);
-  console.log(comparisonLine("Win rate — Trind.", trinity.comparison));
-  if (trinity.completionOrders.length) {
-    console.log("Ordens de conclusão mais frequentes:");
-    for (const entry of trinity.completionOrders.slice(0, 5)) {
-      console.log(`  ${entry.order.padEnd(36)} ${pct(entry.pct)} (${entry.count})`);
+  if (summary.replayCases.length) {
+    console.log("\nCASOS PARA REPRODUÇÃO");
+    for (const item of summary.replayCases.slice(0, 10)) {
+      console.log(`${item.reason.padEnd(20)} jogo ${item.gameIndex} | seed ${item.seed} | ${item.steps} ações / ${item.rounds} rondas | roster ${(item.roster || []).join(",")}`);
     }
+    const first = summary.replayCases[0];
+    console.log(`Reproduzir primeiro caso: npm run benchmark:bots -- --mode ${first.replay.mode} --players ${first.replay.players} --games 1 --seed ${first.replay.baseSeed} --start-index ${first.replay.startIndex} --workers 1`);
   }
 
-  console.log("\nPOR PERSONAGEM");
-  console.log("Personagem             apar.   win%     no 2%   win|2    no 12%  win|12   trind.%  win|trind.");
-  for (const row of summary.characters) {
-    console.log(
-      `${row.characterName.slice(0, 21).padEnd(21)} ${String(row.appearances).padStart(5)}  ${pct(row.winRatePct).padStart(7)}  ${pct(row.built2Pct).padStart(7)}  ${pct(row.winRateWith2Pct).padStart(7)}  ${pct(row.built12Pct).padStart(7)}  ${pct(row.winRateWith12Pct).padStart(7)}  ${pct(row.trinityPct).padStart(8)}  ${pct(row.winRateWithTrinityPct).padStart(10)}`,
-    );
+  console.log("\nNota: win rates medem o desempenho da estratégia de bot atual. Não provam equilíbrio humano nem causalidade.\n");
+}
+
+function printCoreComparison(results) {
+  console.log("\nCORE MODES — COMPARAÇÃO");
+  console.log("=".repeat(86));
+  console.log("Modo        jogos   rondas   ações    score vencedor  margem   falhas");
+  for (const { summary } of results) {
+    console.log(`${summary.meta.mode.padEnd(10)} ${String(summary.meta.completedGames).padStart(5)}  ${number(summary.duration.averageRounds).padStart(7)}  ${number(summary.duration.averageActions).padStart(7)}  ${number(summary.victory.averageWinnerScore).padStart(15)}  ${number(summary.victory.averageScoreMargin).padStart(7)}  ${String(summary.meta.failedGames).padStart(6)}`);
   }
 
-  if (meta.failedGames) {
-    console.log("\nATENÇÃO: existem simulações incompletas. O JSON contém seeds e motivos para reprodução.");
+  const byMode = Object.fromEntries(results.map(({ summary }) => [summary.meta.mode, summary]));
+  const characterIds = [...new Set(results.flatMap(({ summary }) => summary.characters.map((row) => row.characterId)))];
+  console.log("\nPersonagem             Clássico   Relâmpago   Dragão");
+  for (const characterId of characterIds) {
+    const rows = CORE_MODES.map((mode) => byMode[mode]?.characters.find((row) => row.characterId === characterId));
+    const name = rows.find(Boolean)?.characterName || characterId;
+    console.log(`${name.slice(0, 21).padEnd(21)} ${pct(rows[0]?.winRatePct).padStart(9)}  ${pct(rows[1]?.winRatePct).padStart(10)}  ${pct(rows[2]?.winRatePct).padStart(8)}`);
   }
-  console.log("\nNota: diferenças de win rate mostram associação, não provam causalidade. O ajuste por edifícios é descritivo e usa o total final de edifícios como estrato.\n");
+  console.log("\nUsa ciclos completos de sampling antes de interpretar diferenças pequenas entre personagens.\n");
 }
 
 async function runParallel(options) {
@@ -143,6 +169,7 @@ async function runParallel(options) {
       games: options.games,
       baseSeed: options.baseSeed,
       maxSteps: options.maxSteps,
+      startIndex: options.startIndex,
       onProgress: options.quiet ? undefined : (done, total) => {
         if (done === total || done % Math.max(1, Math.floor(total / 10)) === 0) {
           process.stderr.write(`\rBenchmark: ${done}/${total}`);
@@ -152,7 +179,7 @@ async function runParallel(options) {
   }
 
   const chunks = [];
-  let cursor = 0;
+  let cursor = options.startIndex;
   for (let workerIndex = 0; workerIndex < workerCount; workerIndex += 1) {
     const count = Math.floor(options.games / workerCount) + (workerIndex < options.games % workerCount ? 1 : 0);
     chunks.push({ startIndex: cursor, games: count });
@@ -192,7 +219,7 @@ async function runParallel(options) {
 }
 
 function help() {
-  console.log(`Uso:\n  npm run benchmark:bots -- --mode dragao --players 4 --games 1000\n\nOpções:\n  --mode <modo>         classico | dragao | rapido | guerra | exploracao\n  --players <2-4>       número de bots (predefinição: 4)\n  --games <n>           número de jogos (predefinição: 1000)\n  --seed <n>            seed base reproduzível\n  --workers <n>         workers paralelos (predefinição: até 4)\n  --max-steps <n>       limite de ações por jogo\n  --out <ficheiro.json> guarda o relatório completo em JSON\n  --quiet                esconde o progresso\n`);
+  console.log(`Uso:\n  npm run benchmark:bots -- --mode dragao --players 4 --games 2800 --out balance-dragao.json\n\nOpções:\n  --mode <modo>         core | classico | dragao | rapido | guerra | exploracao\n  --players <2-4>       número de bots (predefinição: 4)\n  --games <n>           número de jogos (predefinição: 1000)\n  --seed <n>            seed base reproduzível\n  --start-index <n>     índice global inicial; permite reproduzir um jogo isolado\n  --workers <n>         workers paralelos (predefinição: até 4)\n  --max-steps <n>       limite de ações por jogo\n  --out <ficheiro.json> guarda summary + registo de cada jogo (recomendado: balance-reports/...)\n  --quiet                esconde o progresso\n\nEm --mode core, --games é o número de jogos POR MODO. Com 8 personagens e 4 jogadores, usa múltiplos de 280 jogos para sampling exatamente equilibrado.\n`);
 }
 
 if (!isMainThread && workerData?.benchmarkWorker) {
@@ -209,26 +236,52 @@ if (!isMainThread && workerData?.benchmarkWorker) {
       help();
       process.exit(0);
     }
-    const allowedModes = new Set(["classico", "dragao", "rapido", "guerra", "exploracao"]);
+    const allowedModes = new Set(["core", "classico", "dragao", "rapido", "guerra", "exploracao"]);
     if (!allowedModes.has(options.mode)) throw new Error(`Modo inválido: ${options.mode}`);
 
-    const startedAt = Date.now();
-    const records = await runParallel(options);
-    if (!options.quiet) process.stderr.write("\n");
-    const summary = summarizeBenchmark(records, {
-      requestedGames: options.games,
-      mode: options.mode,
-      playerCount: options.playerCount,
-      baseSeed: options.baseSeed,
-    });
-    summary.meta.elapsedSeconds = Math.round((Date.now() - startedAt) / 10) / 100;
-    printReport(summary);
+    const runMode = async (mode) => {
+      const startedAt = Date.now();
+      const records = await runParallel({ ...options, mode });
+      if (!options.quiet) process.stderr.write("\n");
+      const summary = summarizeBenchmark(records, {
+        requestedGames: options.games,
+        mode,
+        playerCount: options.playerCount,
+        baseSeed: options.baseSeed,
+        startIndex: options.startIndex,
+      });
+      summary.meta.elapsedSeconds = Math.round((Date.now() - startedAt) / 10) / 100;
+      printReport(summary);
+      return { mode, summary, games: records };
+    };
 
-    if (options.out) {
-      await writeFile(options.out, `${JSON.stringify({ summary, games: records }, null, 2)}\n`, "utf8");
-      console.log(`Relatório JSON guardado em: ${options.out}`);
+    if (options.mode === "core") {
+      const results = [];
+      for (const mode of CORE_MODES) results.push(await runMode(mode));
+      printCoreComparison(results);
+      if (options.out) {
+        const payload = {
+          suite: {
+            id: "core",
+            modes: CORE_MODES,
+            gamesPerMode: options.games,
+            baseSeed: options.baseSeed,
+            startIndex: options.startIndex,
+          },
+          modes: Object.fromEntries(results.map(({ mode, summary, games }) => [mode, { summary, games }])),
+        };
+        await writeJsonReport(options.out, payload);
+        console.log(`Relatório JSON dos modos core guardado em: ${options.out}`);
+      }
+      if (results.some(({ summary }) => summary.meta.failedGames)) process.exitCode = 2;
+    } else {
+      const result = await runMode(options.mode);
+      if (options.out) {
+        await writeJsonReport(options.out, { summary: result.summary, games: result.games });
+        console.log(`Relatório JSON guardado em: ${options.out}`);
+      }
+      if (result.summary.meta.failedGames) process.exitCode = 2;
     }
-    if (summary.meta.failedGames) process.exitCode = 2;
   } catch (error) {
     console.error(`Benchmark falhou: ${error?.message || error}`);
     process.exitCode = 1;
