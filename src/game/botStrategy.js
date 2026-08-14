@@ -1,5 +1,6 @@
 import { GAME_ACTION } from "./gameProtocol.js";
 import { makeBoardGraph } from "./boardGeometry.js";
+import { vertexProductionScore } from "./productionPotential.js";
 import {
   BUILD_COSTS,
   PIECE_LIMITS,
@@ -31,11 +32,6 @@ import {
 
 export const BOT_STRATEGY_VERSION = 1;
 
-const DICE_PIPS = Object.freeze({
-  2: 1, 3: 2, 4: 3, 5: 4, 6: 5,
-  8: 5, 9: 4, 10: 3, 11: 2, 12: 1,
-});
-
 const ACTION_BASE_SCORE = Object.freeze({
   [GAME_ACTION.RESOLVE_DISCARD]: 100_000,
   [GAME_ACTION.RESOLVE_TSUNAMI]: 100_000,
@@ -66,23 +62,6 @@ const ACTION_BASE_SCORE = Object.freeze({
 
 function graphFor(game) {
   return makeBoardGraph(game?.board?.hexes || []);
-}
-
-function visibleHex(hex) {
-  return Boolean(hex) && hex.hid !== true && hex.terr !== "oculto";
-}
-
-function vertexProductionScore(game, graph, vertex) {
-  const adjacent = graph?.verts?.[vertex]?.hexes || [];
-  const terrains = new Set();
-  let pips = 0;
-  for (const hexKey of adjacent) {
-    const hex = graph?.hexMap?.[hexKey];
-    if (!visibleHex(hex) || hex.terr === "deserto") continue;
-    pips += DICE_PIPS[hex.num] || 0;
-    if (hex.terr) terrains.add(hex.terr);
-  }
-  return pips * 190 + terrains.size * 28;
 }
 
 function roadExpansionScore(game, graph, edgeKey) {

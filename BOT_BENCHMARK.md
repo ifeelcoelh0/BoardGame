@@ -1,53 +1,74 @@
-# Benchmark dos bots
+# Balance Lab dos bots
 
-Este benchmark é uma ferramenta de desenvolvimento. Corre partidas completas apenas com bots usando:
+O Balance Lab é uma ferramenta de desenvolvimento para correr partidas completas apenas com bots usando o mesmo caminho autoritativo do jogo:
 
-- a visão censurada de cada jogador (`createGameStateView`);
-- a política normal dos bots (`chooseBotAction`);
-- o reducer autoritativo normal (`applyGameAction`).
+- visão censurada de cada jogador (`createGameStateView`);
+- política normal dos bots (`chooseBotAction`);
+- reducer autoritativo (`applyGameAction`).
 
-Não altera regras e não dá aos bots acesso ao estado secreto do host.
+Não altera regras e não dá aos bots acesso ao estado secreto do host. As conclusões descrevem o comportamento da estratégia de bot atual; não provam, por si só, equilíbrio humano nem causalidade.
 
-## Modo Dragão — 1000 jogos
+## Modos base
 
-```bash
-npm run benchmark:bots -- --mode dragao --players 4 --games 1000
-```
-
-Por defeito usa até 4 worker threads para reduzir o tempo de execução. O resultado é determinístico para a mesma seed, mesmo mudando o número de workers.
-
-Para guardar todo o relatório, incluindo cada jogo e as seeds necessárias para reproduzir uma anomalia:
+Para correr Clássico, Relâmpago e Dragão na mesma experiência:
 
 ```bash
-npm run benchmark:bots -- --mode dragao --players 4 --games 1000 --out benchmark-dragao-1000.json
+npm run benchmark:bots -- --mode core --players 4 --games 280 --out balance-reports/core-280.json
 ```
 
-## Métricas específicas do Modo Dragão
+Com 8 personagens e 4 jogadores, um ciclo completo tem 280 jogos por modo: todas as 70 combinações de quatro personagens são usadas e cada combinação roda pelos quatro player slots. Usa múltiplos de 280 para manter esse sampling exatamente equilibrado.
 
-O resumo dá prioridade a percentagens para permitir comparar amostras grandes:
-
-- percentagem de todos os lançamentos que deram 2 ou 12;
-- percentagem de jogos em que saiu pelo menos um 2 ou 12;
-- percentagem dessas saídas que produziram recursos;
-- percentagem de jogadores que chegaram a construir junto de um 2, de um 12, de qualquer um ou de ambos;
-- win rate com e sem presença no 2/12, e diferença em pontos percentuais;
-- percentagem de vencedores que tinham presença no 2/12;
-- percentagem de jogadores que completaram Arqueiro + Cavaleiro + Catapulta;
-- percentagem de jogos com pelo menos uma Trindade das Armas;
-- win rate com e sem Trindade e diferença em pontos percentuais;
-- ronda média e ordem de conclusão da Trindade;
-- cortes por personagem.
-
-"Construiu no 2/12" significa que, em algum momento da partida, o jogador teve um edifício num vértice adjacente a um hexágono com esse número. A condição fica registada mesmo que esse edifício desapareça mais tarde.
-
-A Trindade é contabilizada apenas quando o evento autoritativo marca `trinityCompleted`; possuir cartas na mão não conta.
+A pasta `balance-reports/` é ignorada pelo Git e pelos checksums.
 
 ## Reprodutibilidade
 
-A rotação de personagens é determinística e distribui os oito personagens pela amostra. Cada jogo recebe a sua própria seed derivada da seed base. Se houver uma simulação incompleta, o JSON inclui `gameIndex`, `seed` e o motivo.
+Cada jogo recebe uma seed derivada da seed base e do `gameIndex`. O JSON guarda a seed, roster, índice e casos de duração anómala/falha. Um jogo pode ser reproduzido com os valores indicados no bloco `replay`.
 
-As diferenças de win rate são associações observadas na simulação; não demonstram, por si só, que uma mecânica causou a vitória.
+O número de workers não altera o resultado determinístico da mesma seed.
 
-## Leitura 2 / 12 com controlo por edifícios
+## Player slot, ordem de turno e diagnóstico do setup
 
-O relatório separa agora quatro coortes: `Nenhum`, `Só 2`, `Só 12` e `2 e 12`. Também mostra a win rate dentro de cada número final de edifícios e uma comparação padronizada por esse estrato. Isto reduz parte do enviesamento de simplesmente comparar jogadores que acabaram com quantidades muito diferentes de aldeias/palácios. Continua a ser análise descritiva: associação não prova causalidade.
+`seatIndex`/`Seat` identifica o slot interno do jogador no estado. Não deve ser confundido com a ordem real da partida, que é baralhada em `game.order`.
+
+O relatório v2 regista ambos separadamente:
+
+- win rate, score e produção por player slot;
+- win rate, score e produção por posição real na ordem de turno/setup;
+- duas colocações iniciais de cada jogador;
+- pips de produção da posição escolhida;
+- diversidade de recursos e números;
+- quantidade de vértices legais disponíveis no momento da escolha;
+- melhor posição disponível segundo a mesma heurística usada pelo bot;
+- rank da escolha e perda de score relativamente à melhor posição.
+
+A fórmula de potencial de produção usada pelo bot e pelo diagnóstico está centralizada em `src/game/productionPotential.js`, evitando que o relatório e a política atribuam valores diferentes ao mesmo vértice.
+
+## Desastres
+
+As métricas por jogador distinguem conceitos que anteriormente estavam agregados:
+
+- `disastersProtected`: estava protegido pelo número sagrado;
+- `disastersExposed`: estava sem proteção/imunidade quando o evento foi avaliado;
+- `disastersAppliedToPlayer`: um desastre foi realmente aplicado e o jogador estava no grupo afetado;
+- `disasterHarmEvents`: consequências negativas efetivas registadas (`RESOURCE_LOST`, `QUARANTINED`, `PORT_DISABLED` ou `PORT_CHOICE_REQUIRED`);
+- `disastersImmune`: imunidade retirou o jogador do grupo afetado.
+
+Isto evita contar um resultado `NO_PROTECTED` como se o jogador tivesse sofrido um desastre aplicado.
+
+## Trindade das Armas
+
+A Trindade é contabilizada quando o evento autoritativo marca `trinityCompleted`; possuir as cartas não conta.
+
+Além de taxa de conclusão e win rate, o relatório mede benefícios observáveis da imunidade depois de completar a Trindade:
+
+- desastres evitados por imunidade;
+- oportunidades de roubo do Dragão evitadas quando o jogador ainda tinha recursos;
+- unidades de produção salvas quando um número do hex do Dragão é lançado e uma construção imune continua a produzir.
+
+Estas métricas ajudam a separar o valor mecânico da imunidade da simples correlação entre "comprou muitas cartas" e "ganhou".
+
+## Números 2 / 12
+
+O relatório mantém quatro coortes: `Nenhum`, `Só 2`, `Só 12` e `2 e 12`, bem como win rate dentro do número final de edifícios e uma comparação padronizada por esse estrato. Isso reduz parte do enviesamento de comparar jogadores que terminaram com quantidades muito diferentes de construções.
+
+"Construiu no 2/12" significa que, em algum momento da partida, o jogador teve um edifício num vértice adjacente ao número. A condição permanece registada mesmo que o edifício desapareça mais tarde.

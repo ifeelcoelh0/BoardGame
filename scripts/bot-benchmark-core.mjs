@@ -1,11 +1,17 @@
 import { applyGameAction } from "../src/game/gameActionReducer.js";
 import { chooseBotAction } from "../src/game/botPolicy.js";
+import { listLegalActions } from "../src/game/legalActions.js";
 import { createInitialGame, createPlayer } from "../src/game/gameFactory.js";
 import { reduceLobbyToSetup } from "../src/game/gameSetupReducer.js";
 import { createGameStateView } from "../src/game/gameStateView.js";
 import { activateBotController } from "../src/game/playerPresence.js";
 import { makeBoardGraph } from "../src/game/boardGeometry.js";
+import { vertexProductionProfile } from "../src/game/productionPotential.js";
 import { CHARACTERS, characterName } from "../src/game/characterCatalog.js";
+import { TERRAIN_RESOURCE_BY_TYPE } from "../src/game/constructionReducer.js";
+import { GAME_ACTION } from "../src/game/gameProtocol.js";
+import { isRapidMode } from "../src/game/gameModes.js";
+import { handSize } from "../src/game/resources.js";
 import { nextBotActorIndex } from "../src/multiplayer/hostBotController.js";
 import {
   balancedRosterForGame,
@@ -77,8 +83,7 @@ export function createBotTable({ mode = "dragao", seed = DEFAULT_BENCHMARK_SEED,
   };
 }
 
-function rareNumberVertices(game, number) {
-  const graph = makeBoardGraph(game.board.hexes);
+function rareNumberVertices(game, number, graph = makeBoardGraph(game.board.hexes)) {
   const vertices = new Set();
   for (const hex of game.board.hexes || []) {
     if (hex?.num !== number) continue;
@@ -100,6 +105,89 @@ function sumProduction(gains) {
     .reduce((sum, amount) => sum + (Number(amount) || 0), 0), 0);
 }
 
+function averageFinite(values) {
+  const finite = values.filter(Number.isFinite);
+  return finite.length ? finite.reduce((sum, value) => sum + value, 0) / finite.length : null;
+}
+
+function setupPlacementSnapshot(game, actorIndex, action) {
+  if (game.phase !== "setup" || game.setup?.needRoad || action?.type !== GAME_ACTION.BUILD_VILLAGE) return null;
+  const graph = makeBoardGraph(game.board?.hexes || []);
+  const candidates = listLegalActions(game, actorIndex)
+    .filter((candidate) => candidate.type === GAME_ACTION.BUILD_VILLAGE)
+    .map((candidate) => vertexProductionProfile(game, graph, candidate.vertex));
+  const chosen = candidates.find((candidate) => candidate.vertex === action.vertex)
+    || vertexProductionProfile(game, graph, action.vertex);
+  const best = candidates.slice().sort((a, b) => b.score - a.score || b.pips - a.pips)[0] || chosen;
+  const chosenRank = 1 + candidates.filter((candidate) => candidate.score > chosen.score).length;
+  const multiplier = isRapidMode(game.mode) ? 2 : 1;
+  const resources = [...new Set(chosen.terrains
+    .map((terrain) => TERRAIN_RESOURCE_BY_TYPE[terrain])
+    .filter(Boolean))].sort();
+
+  return {
+    placementNumber: game.setup.i < game.players.length ? 1 : 2,
+    setupSequenceIndex: game.setup.i,
+    turnOrderPosition: game.order?.indexOf(actorIndex) ?? -1,
+    vertex: action.vertex,
+    pips: chosen.pips,
+    weightedPips: chosen.pips * multiplier,
+    expectedProductionPerRoll: (chosen.pips * multiplier) / 36,
+    productiveHexes: chosen.productiveHexes,
+    resourceDiversity: resources.length,
+    resources,
+    numbers: chosen.numbers,
+    candidateCount: candidates.length,
+    chosenScore: chosen.score,
+    chosenRank,
+    bestAvailableScore: best.score,
+    bestAvailablePips: best.pips,
+    opportunityLossScore: Math.max(0, best.score - chosen.score),
+    initialResourceGains: {},
+    initialResourceTotal: 0,
+  };
+}
+
+function recordSetupPlacement(record, actorIndex, snapshot, event) {
+  if (!snapshot) return;
+  const player = record.players[actorIndex];
+  if (!player) return;
+  const gains = event?.type === "SETUP_SETTLEMENT_BUILT" ? (event.resourceGains || {}) : {};
+  snapshot.initialResourceGains = { ...gains };
+  snapshot.initialResourceTotal = Object.values(gains).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
+  player.setupPlacements.push(snapshot);
+  player.setupPips = player.setupPlacements.reduce((sum, placement) => sum + placement.pips, 0);
+  player.setupWeightedPips = player.setupPlacements.reduce((sum, placement) => sum + placement.weightedPips, 0);
+  player.setupInitialResources = player.setupPlacements.reduce((sum, placement) => sum + placement.initialResourceTotal, 0);
+  player.setupResourceDiversity = new Set(player.setupPlacements.flatMap((placement) => placement.resources)).size;
+  player.setupNumberDiversity = new Set(player.setupPlacements.flatMap((placement) => placement.numbers)).size;
+  player.setupAverageChosenRank = averageFinite(player.setupPlacements.map((placement) => placement.chosenRank));
+  player.setupAverageOpportunityLossScore = averageFinite(player.setupPlacements.map((placement) => placement.opportunityLossScore));
+}
+
+function recordImmunityValue(gameBefore, event, record, graph) {
+  if (event?.type === "DRAGON_PLACED") {
+    for (const excluded of event.excluded || []) {
+      if (excluded?.reason !== "IMMUNE" || !Number.isSafeInteger(excluded.playerIndex)) continue;
+      if (handSize(gameBefore.players?.[excluded.playerIndex]) <= 0) continue;
+      const player = record.players[excluded.playerIndex];
+      if (player) player.dragonStealsAvoidedByImmunity += 1;
+    }
+    return;
+  }
+
+  if (event?.type !== "DICE_ROLLED" || !event.production || !gameBefore.board?.dragon) return;
+  if (!gameBefore.players?.some((player) => player?.immune)) return;
+  const dragonHex = graph?.hexMap?.[gameBefore.board.dragon];
+  if (!dragonHex || dragonHex.num !== event.total) return;
+  for (const vertex of dragonHex.corners || []) {
+    const building = gameBefore.builds?.[vertex];
+    if (!building || !gameBefore.players?.[building.p]?.immune) continue;
+    const player = record.players[building.p];
+    if (player) player.dragonProductionSavedByImmunity += Number(building.t) || 0;
+  }
+}
+
 function recordRarePresence(game, players, vertices2, vertices12) {
   for (let playerIndex = 0; playerIndex < players.length; playerIndex += 1) {
     const record = players[playerIndex];
@@ -114,9 +202,10 @@ function recordRarePresence(game, players, vertices2, vertices12) {
   }
 }
 
-function recordAppliedEvents(applied, gameAfter, record) {
+function recordAppliedEvents(applied, gameBefore, gameAfter, record, graph) {
   recordBalanceEvents(record, applied.events || []);
   for (const event of applied.events || []) {
+    recordImmunityValue(gameBefore, event, record, graph);
     if (event?.type === "DICE_ROLLED") {
       record.rolls += 1;
       if (event.total === 2 || event.total === 12) {
@@ -203,8 +292,13 @@ export function simulateBotGame({
     })),
   };
 
-  const vertices2 = rareNumberVertices(game, 2);
-  const vertices12 = rareNumberVertices(game, 12);
+  for (let playerIndex = 0; playerIndex < record.players.length; playerIndex += 1) {
+    record.players[playerIndex].turnOrderPosition = game.order?.indexOf(playerIndex) ?? null;
+  }
+
+  const graph = makeBoardGraph(game.board?.hexes || []);
+  const vertices2 = rareNumberVertices(game, 2, graph);
+  const vertices12 = rareNumberVertices(game, 12, graph);
   recordRarePresence(game, record.players, vertices2, vertices12);
 
   while (game.phase !== "ended" && steps < maxSteps) {
@@ -220,7 +314,9 @@ export function simulateBotGame({
       record.failure = { step: steps, actorIndex, reason: "LEGAL_BOT_ACTION_MISSING" };
       break;
     }
-    const applied = applyGameAction(game, player.playerId, action, {
+    const gameBefore = game;
+    const setupSnapshot = setupPlacementSnapshot(gameBefore, actorIndex, action);
+    const applied = applyGameAction(gameBefore, player.playerId, action, {
       rng: table.rng,
       now: () => steps * 1000,
       createId: table.makeId,
@@ -231,7 +327,9 @@ export function simulateBotGame({
     }
     game = applied.game;
     recordAcceptedAction(record, actorIndex, action);
-    recordAppliedEvents(applied, game, record);
+    recordAppliedEvents(applied, gameBefore, game, record, graph);
+    const setupEvent = (applied.events || []).find((event) => event?.type === "SETUP_SETTLEMENT_BUILT");
+    recordSetupPlacement(record, actorIndex, setupSnapshot, setupEvent);
     recordRarePresence(game, record.players, vertices2, vertices12);
     steps += 1;
   }
@@ -470,6 +568,8 @@ export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCou
     duration: balance.duration,
     victory: balance.victory,
     seats: balance.seats,
+    turnOrderPositions: balance.turnOrderPositions,
+    setup: balance.setup,
     actions: balance.actions,
     dice: {
       totalRolls,
@@ -496,6 +596,19 @@ export function summarizeBenchmark(allRecords, { requestedGames, mode, playerCou
       winnerCompletedPct: round2(percentage(winnerPlayers.filter((player) => player.trinity).length, winnerPlayers.length)),
       averageCompletionRound: round2(average(trinityPlayers.map((player) => player.trinityRound).filter(Number.isFinite))),
       comparison: trinityComparison,
+      measuredImmunityValue: {
+        totalDisastersAvoided: trinityPlayers.reduce((sum, player) => sum + (player.disastersImmune || 0), 0),
+        averageDisastersAvoided: round2(average(trinityPlayers.map((player) => player.disastersImmune || 0))),
+        totalDragonStealsAvoided: trinityPlayers.reduce((sum, player) => sum + (player.dragonStealsAvoidedByImmunity || 0), 0),
+        averageDragonStealsAvoided: round2(average(trinityPlayers.map((player) => player.dragonStealsAvoidedByImmunity || 0))),
+        totalDragonProductionSaved: trinityPlayers.reduce((sum, player) => sum + (player.dragonProductionSavedByImmunity || 0), 0),
+        averageDragonProductionSaved: round2(average(trinityPlayers.map((player) => player.dragonProductionSavedByImmunity || 0))),
+        playersWithAnyMeasuredBenefitPct: round2(percentage(trinityPlayers.filter((player) => (
+          (player.disastersImmune || 0) > 0
+          || (player.dragonStealsAvoidedByImmunity || 0) > 0
+          || (player.dragonProductionSavedByImmunity || 0) > 0
+        )).length, trinityPlayers.length)),
+      },
       completionOrders: [...orderCounts.entries()]
         .map(([order, count]) => ({ order, count, pct: round2(percentage(count, trinityPlayers.length)) }))
         .sort((a, b) => b.count - a.count),
