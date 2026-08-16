@@ -34,3 +34,12 @@ test("legacy synchronized story prose is localized at the presentation boundary"
   );
   assert.equal(localizeLegacyGameText("Saiu o 5!", "pt-PT"), "Saiu o 5!");
 });
+
+test("social utility uses the concise Chat label", () => {
+  setLocale("en", { persist: false });
+  assert.equal(t("utility.conversation"), "Chat");
+  assert.equal(t("utility.realmConversation"), "Chat");
+  setLocale("pt-PT", { persist: false });
+  assert.equal(t("utility.conversation"), "Chat");
+  setLocale("en", { persist: false });
+});

@@ -102,6 +102,9 @@ test("GameScreen shows a dedicated throw animation instead of animating the carr
   assert.match(source, /<DiceRollOverlay game=\{g\}/);
   assert.match(overlay, /diceRollPresentationKey/);
   assert.match(overlay, /seenKey/);
+  assert.match(overlay, /<DiceFaces/);
+  const matchStrip = await readFile(new URL("../src/ui/game/hud/GameMatchStrip.jsx", import.meta.url), "utf8");
+  assert.match(matchStrip, /<DiceFaces/);
 });
 
 test("resource production has a visual flight target and road placement cannot stay suggested after affordability is lost", async () => {
@@ -112,13 +115,15 @@ test("resource production has a visual flight target and road placement cannot s
   assert.match(board, /spawnResourceFlights/);
   assert.match(board, /gain\.sources/);
   assert.match(screen, /canContinueRoadPlacement/);
-  assert.match(screen, /\(me\.freeRoads \|\| 0\) <= 1/);
+  assert.match(screen, /finishConstructionPlacement/);
+  assert.match(screen, /shouldContinueRoadPlacement\(\{ setupMode, freeRoadsBefore \}\)/);
 });
 
 test("compact player banners rely on larger icons and accessible labels instead of tiny stat text", async () => {
   const banner = await readFile(new URL("../src/ui/game/PlayerBanner.jsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../src/styles/player-banner.css", import.meta.url), "utf8");
-  assert.match(banner, /aria-label=\{`\$\{label\}: \$\{value\}`\}/);
+  assert.match(banner, /awardLabel/);
+  assert.match(banner, /rdb-player-banner__award-mark/);
   assert.doesNotMatch(banner, /compactLabel/);
   assert.match(styles, /rdb-player-banner__stat small\{display:none\}/);
   assert.match(styles, /font:800 13px/);
@@ -138,12 +143,14 @@ test("session feedback is ephemeral and authentication success clears stale warn
 });
 
 
-test("dice throw reuses the canonical Reinos dice asset and self-dismisses after the throw", async () => {
+test("dice throw reuses the same dice faces shown beside the realm code and self-dismisses", async () => {
   const overlay = await readFile(new URL("../src/ui/game/DiceRollOverlay.jsx", import.meta.url), "utf8");
+  const matchStrip = await readFile(new URL("../src/ui/game/hud/GameMatchStrip.jsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../src/styles/dice-roll-overlay.css", import.meta.url), "utf8");
-  assert.match(overlay, /GAME_ACTION_ICONS\.rollDice/);
+  assert.match(overlay, /<DiceFaces/);
+  assert.match(matchStrip, /<DiceFaces/);
   assert.match(overlay, /onAnimationEnd=\{finishThrow\}/);
-  assert.doesNotMatch(overlay, /diceGlyph/);
+  assert.doesNotMatch(overlay, /GAME_ACTION_ICONS\.rollDice|diceGlyph/);
   assert.match(styles, /rd-dice-canonical-throw/);
   assert.match(styles, /100%\{opacity:0/);
 });

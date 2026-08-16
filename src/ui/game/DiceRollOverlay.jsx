@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import GameIcon from "../assets/GameIcon.jsx";
-import { GAME_ACTION_ICONS } from "../../assets/gameUiIcons.js";
+import DiceFaces from "./hud/DiceFaces.jsx";
 import { diceRollPresentationKey } from "./diceRollPresentation.js";
 import { t } from "../../locales/i18n.js";
 import "../../styles/dice-roll-overlay.css";
 
-const DISPLAY_MS = 1150;
+const DISPLAY_MS = 1050;
 
 export default function DiceRollOverlay({ game, reducedMotion = false }) {
   const rollKey = diceRollPresentationKey(game);
@@ -14,8 +13,6 @@ export default function DiceRollOverlay({ game, reducedMotion = false }) {
 
   useEffect(() => {
     if (!rollKey) {
-      // A new turn deliberately keeps the previous result in `turn.dice`.
-      // `rolled=false` is the real boundary that arms the next visual throw.
       seenKey.current = null;
       return undefined;
     }
@@ -23,10 +20,9 @@ export default function DiceRollOverlay({ game, reducedMotion = false }) {
     seenKey.current = rollKey;
     const values = game.turn.dice.slice();
     setRoll({ key: rollKey, values });
-    // Safety net in addition to animationend: the throw must never remain on screen.
     const timer = window.setTimeout(() => {
       setRoll((current) => current?.key === rollKey ? null : current);
-    }, reducedMotion ? 650 : DISPLAY_MS);
+    }, reducedMotion ? 560 : DISPLAY_MS);
     return () => window.clearTimeout(timer);
   }, [rollKey, reducedMotion]);
 
@@ -38,7 +34,7 @@ export default function DiceRollOverlay({ game, reducedMotion = false }) {
   return (
     <div className={`rd-dice-roll${reducedMotion ? " is-reduced-motion" : ""}`} aria-live="polite" aria-label={t("hud.diceValues", { values: roll.values.join(" and ") })}>
       <div className="rd-dice-roll__throw" aria-hidden="true" onAnimationEnd={finishThrow}>
-        <GameIcon name={GAME_ACTION_ICONS.rollDice} size={108} alt="" />
+        <DiceFaces values={roll.values} animationKey={roll.key} variant="overlay" empty={false} />
       </div>
     </div>
   );

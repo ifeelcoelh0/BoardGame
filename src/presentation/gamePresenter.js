@@ -244,7 +244,17 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
           return;
       }
       if (event.type === "PLAYER_TRADE_ACCEPTED") {
-          logTrade(g, "🤝 " + pname(g, event.actorIndex) + " aceitou a troca de " + pname(g, event.proposerIndex) + ".", event.actorIndex, voiceCue(g, event.actorIndex, "trade_done", "deal"));
+          const resources = [
+              ...Object.entries(event.give || {}).map(([resource, amount]) => ({ resource, amount: -amount })),
+              ...Object.entries(event.get || {}).map(([resource, amount]) => ({ resource, amount })),
+          ];
+          logTrade(
+              g,
+              "🤝 " + pname(g, event.actorIndex) + " aceitou a troca de " + pname(g, event.proposerIndex) + ".",
+              event.actorIndex,
+              voiceCue(g, event.actorIndex, "trade_done", "deal"),
+              resources.length ? { resources } : null,
+          );
           return;
       }
       if (event.type === "PLAYER_TRADE_DECLINED") {
