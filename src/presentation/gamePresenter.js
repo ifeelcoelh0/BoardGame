@@ -235,7 +235,10 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
               "⚖️ " + pname(g, event.actorIndex) + " trocou " + event.ratio + RES[event.give].i + " por 1" + RES[event.get].i + " no banco.",
               event.actorIndex,
               sfxCue("deal"),
-              { resources: [{ resource: event.give, amount: -event.ratio }, { resource: event.get, amount: 1 }] },
+              {
+                  resources: [{ resource: event.give, amount: -event.ratio }, { resource: event.get, amount: 1 }],
+                  feedbackText: pname(g, event.actorIndex) + " traded " + event.ratio + " " + resourceName(event.give, "en") + " for 1 " + resourceName(event.get, "en") + " at the bank.",
+              },
           );
           return;
       }
@@ -253,7 +256,10 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
               "🤝 " + pname(g, event.actorIndex) + " aceitou a troca de " + pname(g, event.proposerIndex) + ".",
               event.actorIndex,
               voiceCue(g, event.actorIndex, "trade_done", "deal"),
-              resources.length ? { resources } : null,
+              resources.length ? {
+                  resources,
+                  feedbackText: pname(g, event.actorIndex) + " completed a trade with " + pname(g, event.proposerIndex) + ".",
+              } : null,
           );
           return;
       }

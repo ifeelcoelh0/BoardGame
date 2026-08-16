@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { ACTION_PRESENTATION, deriveActionPresentation, mapSelectionPresentation } from "../src/ui/game/gameUiComposition.js";
 import { stableBoardGeometryKey } from "../src/ui/board/boardUpdateSignature.js";
 import { CHARACTER_SELECTION_ENTRY, classifyCharacterSelectionEntry, shouldAutoExitCharacterSelection } from "../src/ui/lobby/characterSelectionJourney.js";
@@ -49,4 +50,12 @@ test("initial character selection exits automatically after confirmation while a
     entry: CHARACTER_SELECTION_ENTRY.SWAP,
     player: { characterConfirmed: true },
   }), false);
+});
+
+
+test("transient action banners share the left-side event lane with dice results", async () => {
+  const actionCss = await readFile(new URL("../src/styles/game-action-toast.css", import.meta.url), "utf8");
+  const storyCss = await readFile(new URL("../src/styles/game-story-toast.css", import.meta.url), "utf8");
+  assert.match(actionCss, /\.rd-action-toast\{[^}]*left:18px;right:auto;/);
+  assert.match(storyCss, /\.rd-story-toast--dice\{left:14px;/);
 });

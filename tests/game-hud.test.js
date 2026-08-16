@@ -152,6 +152,11 @@ test("dice throw reuses the same dice faces shown beside the realm code and self
   assert.match(overlay, /onAnimationEnd=\{finishThrow\}/);
   assert.doesNotMatch(overlay, /GAME_ACTION_ICONS\.rollDice|diceGlyph/);
   assert.match(styles, /rd-dice-canonical-throw/);
+  assert.match(styles, /rd-die-tumble-a/);
+  assert.match(styles, /rd-die-tumble-b/);
+  assert.match(styles, /rd-die-settle/);
+  assert.match(overlay, /rollingFace/);
+  assert.match(overlay, /SETTLE_MS/);
   assert.match(styles, /100%\{opacity:0/);
 });
 

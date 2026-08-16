@@ -43,7 +43,7 @@ export default function GameActionToast({ game, entries = [], duration = 4200 })
       </div>
       <div className="rd-action-toast__copy">
         <small>{t("actionFeedback.trade")}</small>
-        <strong>{cleanGameUiText(entry.msg)}</strong>
+        <strong>{cleanGameUiText(entry.feedbackText || entry.msg)}</strong>
         <div className="rd-action-toast__resources" aria-label={t("chronicle.resourceMovement")}>
           {entry.resources.map((item, index) => (
             <span key={`${item.resource}-${index}`} className={item.amount > 0 ? "is-gain" : "is-loss"}>
