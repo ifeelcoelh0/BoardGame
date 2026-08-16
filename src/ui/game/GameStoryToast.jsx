@@ -12,7 +12,7 @@ function DiceGainRow({ gain, game }) {
   return (
     <div className="rd-story-toast__gain-row">
       <span className="rd-story-toast__gain-portrait" aria-hidden="true">
-        {player?.ch ? <CharacterSprite character={player.ch} size={32} /> : null}
+        {player?.ch ? <CharacterSprite character={player.ch} size={44} /> : null}
       </span>
       <strong>{gain.playerName}</strong>
       <span className="rd-story-toast__gain-resources">

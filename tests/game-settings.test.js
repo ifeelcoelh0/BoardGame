@@ -25,7 +25,7 @@ test("settings normalize quality, volumes and UI scale", () => {
   assert.equal(value.voicesVolume, 0.42);
   assert.equal(value.graphicsQuality, "medium");
   assert.equal(value.uiScale, 1.2);
-  assert.equal(value.fullscreenOnPlay, false);
+  assert.equal(Object.hasOwn(value, "fullscreenOnPlay"), false, "legacy auto-fullscreen preference is discarded");
   assert.equal(value.reducedMotion, true);
   assert.equal(value.muted, true);
 });

@@ -55,7 +55,6 @@ export default function GameSettingsControls({ settings, setSetting, fullscreen 
       <section>
         <header><small>{t("settings.comfort")}</small><strong>{t("settings.experience")}</strong></header>
         <ToggleRow label={t("settings.reducedMotion")} description={t("settings.reducedMotionDesc")} checked={settings.reducedMotion} onChange={(value) => setSetting("reducedMotion", value)} />
-        <ToggleRow label={t("settings.fullscreenOnPlay")} description={t("settings.fullscreenOnPlayDesc")} checked={settings.fullscreenOnPlay} onChange={(value) => setSetting("fullscreenOnPlay", value)} />
         {onToggleFullscreen && <GameButton variant="secondary" size="sm" onClick={onToggleFullscreen}>{fullscreen ? t("settings.exitFullscreen") : t("settings.enterFullscreen")}</GameButton>}
       </section>
     </div>

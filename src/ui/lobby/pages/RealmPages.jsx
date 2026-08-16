@@ -25,7 +25,7 @@ function ReadyActions({ realm }) {
     <div className="rd-lobby-book-ui__actions" data-tutorial-anchor="ready-actions">
       <button
         data-testid="ready-toggle"
-        className={localPlayer?.ready ? "is-ready" : ""}
+        className={localPlayer?.ready ? "is-cancel-ready" : "is-confirm-ready"}
         type="button"
         onClick={realm.onToggleReady}
         disabled={isStarting || !hasConfirmedCharacter}

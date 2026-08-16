@@ -59,15 +59,10 @@ export default function useGameSettings() {
     void (fullscreen ? exitGameFullscreen() : requestGameFullscreen());
   }, [fullscreen]);
 
-  const requestPlayFullscreen = useCallback(() => {
-    if (settings.fullscreenOnPlay) void requestGameFullscreen();
-  }, [settings.fullscreenOnPlay]);
-
   return {
     settings,
     setSetting,
     fullscreen,
     toggleFullscreen,
-    requestPlayFullscreen,
   };
 }
