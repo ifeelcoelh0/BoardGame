@@ -1,5 +1,3 @@
-const DIE_GLYPHS = Object.freeze(["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"]);
-
 export function diceRollPresentationKey(game) {
   const dice = game?.turn?.dice;
   if (game?.phase !== "play" || game?.turn?.rolled !== true) return null;
@@ -10,6 +8,3 @@ export function diceRollPresentationKey(game) {
   return `${round}:${position}:${dice[0]}-${dice[1]}`;
 }
 
-export function diceGlyph(value) {
-  return DIE_GLYPHS[value] || "?";
-}

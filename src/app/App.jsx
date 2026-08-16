@@ -36,7 +36,7 @@ export default function App() {
 
   const [bookState, dispatchBook] = useReducer(bookReducer, undefined, createInitialBookState);
   const gameSettings = useGameSettings();
-  const { settings, setSetting, fullscreen, toggleFullscreen, requestPlayFullscreen } = gameSettings;
+  const { settings, setSetting, fullscreen, toggleFullscreen } = gameSettings;
   const [reportCopied, setReportCopied] = useState(false);
   const dismissed = useRef(new Set());
   const characterSelectionEntryRef = useRef(null);
@@ -204,8 +204,8 @@ export default function App() {
             toast={toast}
             chat={chat}
             sendChat={sendChat}
-            onToggleReady={() => { requestPlayFullscreen(); session.toggleReady(); }}
-            onStart={() => { requestPlayFullscreen(); session.startGame(); }}
+            onToggleReady={session.toggleReady}
+            onStart={session.startGame}
             onSwapCharacter={() => { setBookOpen(false); navigate(APP_STAGE.CHARACTER_SELECTION); }}
             onTogglePerks={session.togglePerks}
             onLeave={leaveCurrentLobby}

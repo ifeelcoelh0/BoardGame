@@ -136,3 +136,29 @@ test("session feedback is ephemeral and authentication success clears stale warn
   assert.match(source, /WELCOME_AUTHENTICATED[\s\S]*setToast\(null\)/);
   assert.match(source, /GAME_ACTION_ACCEPTED[\s\S]*setToast\(null\)/);
 });
+
+
+test("dice throw reuses the canonical Reinos dice asset and self-dismisses after the throw", async () => {
+  const overlay = await readFile(new URL("../src/ui/game/DiceRollOverlay.jsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../src/styles/dice-roll-overlay.css", import.meta.url), "utf8");
+  assert.match(overlay, /GAME_ACTION_ICONS\.rollDice/);
+  assert.match(overlay, /onAnimationEnd=\{finishThrow\}/);
+  assert.doesNotMatch(overlay, /diceGlyph/);
+  assert.match(styles, /rd-dice-canonical-throw/);
+  assert.match(styles, /100%\{opacity:0/);
+});
+
+test("economy build costs visually separate the constructed piece from its resource price", async () => {
+  const source = await readFile(new URL("../src/ui/game/hud/GameEconomyStrip.jsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../src/styles/game-economy-strip.css", import.meta.url), "utf8");
+  assert.match(source, /rd-economy__build-kind/);
+  assert.match(source, /rd-economy__build-price/);
+  assert.match(styles, /border-right:1px solid/);
+});
+
+test("dice result rows balance character portraits with resources and separate players subtly", async () => {
+  const source = await readFile(new URL("../src/ui/game/GameStoryToast.jsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../src/styles/game-story-toast.css", import.meta.url), "utf8");
+  assert.match(source, /CharacterSprite character=\{player\.ch\} size=\{44\}/);
+  assert.match(styles, /gain-row\+\.rd-story-toast__gain-row\{border-top/);
+});

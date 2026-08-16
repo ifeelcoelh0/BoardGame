@@ -4,11 +4,12 @@ import DragonLobby from "./DragonLobby.jsx";
 import LobbyCodex from "./LobbyCodex.jsx";
 import { createEmptyLobbyViewModel, createLobbyViewModel } from "./lobbyViewModel.js";
 import { canStartLobby, LOBBY_START_INTRO_MS } from "../../game/lobbyRules.js";
-import { BOOK_SCOPE } from "./bookPages.js";
+import { BOOK_PAGE, BOOK_SCOPE } from "./bookPages.js";
 import { CODEX_PHASE, codexLeaving, codexVisible, completeCodexRitual, initialCodexPhase, syncCodexPhase } from "./lobbyCodexFlow.js";
 import "../../styles/dragon-lobby.css";
 import { t } from "../../locales/i18n.js";
 import WizardGuide from "../tutorial/WizardGuide.jsx";
+import GameIcon from "../assets/GameIcon.jsx";
 import { WIZARD_SCOPE } from "../../tutorial/wizardJourney.js";
 import "../../styles/lobby-codex.css";
 
@@ -159,6 +160,11 @@ export default function LobbyExperience({
     onBookPageChange?.(page);
   };
 
+  const openSettings = () => {
+    onBookPageChange?.(BOOK_PAGE.SETTINGS);
+    openBook(true);
+  };
+
   /* Pacote de dados do reino. É construído aqui e não nas páginas para que as
      páginas continuem a não conhecer o modelo de jogo nem a rede. */
   const realm = game && viewModel.localPlayer
@@ -231,17 +237,36 @@ export default function LobbyExperience({
       />
 
       {codexPhase === CODEX_PHASE.SALON && !isSelectingCharacter && !isStarting && (
+        <div className="rd-lobby-corner-tools" aria-label={t("utility.options")}>
+          {audio?.onToggleFullscreen && (
+            <button
+              type="button"
+              className={audio.fullscreen ? "is-active" : ""}
+              onClick={audio.onToggleFullscreen}
+              aria-label={audio.fullscreen ? t("settings.exitFullscreen") : t("settings.enterFullscreen")}
+              title={audio.fullscreen ? t("settings.exitFullscreen") : t("settings.enterFullscreen")}
+            >
+              <GameIcon name="RDD_Fullscreen" size={32} alt="" />
+            </button>
+          )}
+          <button type="button" onClick={openSettings} aria-label={t("utility.options")} title={t("utility.options")}>
+            <GameIcon name="RDD_Options" size={32} alt="" />
+          </button>
+        </div>
+      )}
+
+      {codexPhase === CODEX_PHASE.SALON && !isSelectingCharacter && !isStarting && (
         <div className="rd-entry-book-access" aria-label={t("lobby.quickActions")}>
           <div className="rd-entry-book-access__actions">
             <button type="button" className="is-codex" onClick={() => openBook(true)}>{t("lobby.openCodex")}</button>
             {realm && (
               <button
                 type="button"
-                className={`is-ready${realm.localPlayer?.ready ? " is-on" : ""}`}
+                className={realm.localPlayer?.ready ? "is-cancel-ready" : "is-ready"}
                 onClick={realm.onToggleReady}
                 disabled={!realm.hasConfirmedCharacter}
               >
-                {realm.localPlayer?.ready ? t("lobby.readyCheck") : t("lobby.iAmReady")}
+                {realm.localPlayer?.ready ? t("lobby.readyCancel") : t("lobby.iAmReady")}
               </button>
             )}
             {realm?.isHost && (

@@ -32,8 +32,13 @@ export default function GameEconomyStrip({
         <div className="rd-economy__costs" aria-label={t("economy.buildCosts")}>
           {COST_ROWS.map((row) => (
             <article key={row.id}>
-              <GameIcon name={row.icon} size={28} alt="" />
-              <span><strong>{t(row.labelKey)}</strong><ResourceCost cost={costs[row.id]} /></span>
+              <div className="rd-economy__build-kind">
+                <GameIcon name={row.icon} size={38} alt="" />
+                <strong>{t(row.labelKey)}</strong>
+              </div>
+              <div className="rd-economy__build-price">
+                <ResourceCost cost={costs[row.id]} />
+              </div>
             </article>
           ))}
         </div>

@@ -10,7 +10,6 @@ export const DEFAULT_GAME_SETTINGS = Object.freeze({
   graphicsQuality: DEFAULT_GRAPHICS_QUALITY,
   reducedMotion: false,
   uiScale: 1,
-  fullscreenOnPlay: true,
 });
 
 function clamp01(value, fallback) {
@@ -35,7 +34,6 @@ export function normalizeGameSettings(value = null) {
     graphicsQuality: normalizeGraphicsQuality(source.graphicsQuality),
     reducedMotion: source.reducedMotion === true,
     uiScale: clampScale(source.uiScale),
-    fullscreenOnPlay: source.fullscreenOnPlay !== false,
   };
 }
 

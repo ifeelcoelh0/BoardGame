@@ -37,3 +37,20 @@ test("codex navigation controls sit above the page interaction layer", () => {
   assert.match(rule(".rd-lobby-book-ui__foot"), /pointer-events\s*:\s*auto/);
   assert.match(rule(".rd-lobby-book-ui__close"), /z-index\s*:\s*8/);
 });
+
+
+test("lobby wall exposes voluntary fullscreen/settings shortcuts and ready cancellation is visually distinct", async () => {
+  const experience = readFileSync(new URL("../src/ui/lobby/LobbyExperience.jsx", import.meta.url), "utf8");
+  const pages = readFileSync(new URL("../src/ui/lobby/pages/RealmPages.jsx", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../src/app/App.jsx", import.meta.url), "utf8");
+  const controls = readFileSync(new URL("../src/ui/settings/GameSettingsControls.jsx", import.meta.url), "utf8");
+  assert.match(experience, /rd-lobby-corner-tools/);
+  assert.match(experience, /RDD_Fullscreen/);
+  assert.match(experience, /RDD_Options/);
+  assert.match(experience, /BOOK_PAGE\.SETTINGS/);
+  assert.match(experience, /is-cancel-ready/);
+  assert.match(pages, /is-confirm-ready/);
+  assert.match(pages, /is-cancel-ready/);
+  assert.doesNotMatch(app, /requestPlayFullscreen/);
+  assert.doesNotMatch(controls, /fullscreenOnPlay/);
+});
