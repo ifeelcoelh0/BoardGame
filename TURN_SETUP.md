@@ -10,6 +10,19 @@ Browser -> GET /api/turn-credentials -> Vercel Function -> Cloudflare Realtime T
 A função devolve apenas `iceServers` temporários. O PeerJS usa esses servidores
 para WebRTC; P2P direto continua a ser preferido, e TURN funciona como fallback.
 
+## Resiliência
+
+- A Vercel Function repete uma vez erros transitórios do fornecedor TURN
+  (`429`/`5xx` ou falha de rede).
+- O browser repete uma vez uma falha transitória do endpoint local.
+- Credenciais temporárias válidas ficam em `sessionStorage` até perto da sua
+  expiração. Um refresh da página pode reutilizá-las sem depender de uma nova
+  chamada ao fornecedor.
+- `TURN_NOT_CONFIGURED` não é tratado como falha transitória: significa que as
+  variáveis secretas da Vercel estão em falta e deve ser corrigido no deploy.
+- O relatório de diagnóstico usa a última configuração ICE realmente resolvida
+  pelo runtime, em vez de mostrar apenas o fallback STUN compilado no bundle.
+
 ## Variáveis Vercel
 
 Configurar em **Project > Settings > Environment Variables** para Preview e Production:

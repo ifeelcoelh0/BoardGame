@@ -28,6 +28,7 @@ function cloneProductionStats(stats, playerCount) {
 export function calculateProduction(game, graph, roll) {
   const gains = game.players.map(() => emptyGainMap());
   const dragonBlocked = game.players.map(() => 0);
+  const sources = game.players.map(() => []);
   const warMode = isWarMode(game.mode);
 
   for (const hex of game.board.hexes) {
@@ -52,10 +53,11 @@ export function calculateProduction(game, graph, roll) {
       const recipient = occupant != null ? occupant : building.p;
       const amount = occupant != null ? 1 : building.t;
       gains[recipient][resource] += amount;
+      sources[recipient].push({ hex: hex.k, vertex, resource, amount });
     }
   }
 
-  return { gains, dragonBlocked };
+  return { gains, dragonBlocked, sources };
 }
 
 export function reduceProduction(game, graph, roll) {

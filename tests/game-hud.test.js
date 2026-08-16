@@ -94,3 +94,45 @@ test("fullscreen icon is registered as a canonical Reinos asset", () => {
   assert.equal(CUSTOM_GAME_ICONS.RDD_Fullscreen.width, 36);
   assert.equal(CUSTOM_GAME_ICONS.RDD_Fullscreen.height, 36);
 });
+
+
+test("GameScreen shows a dedicated throw animation instead of animating the carried previous dice result", async () => {
+  const source = await readFile(new URL("../src/ui/game/GameScreen.jsx", import.meta.url), "utf8");
+  const overlay = await readFile(new URL("../src/ui/game/DiceRollOverlay.jsx", import.meta.url), "utf8");
+  assert.match(source, /<DiceRollOverlay game=\{g\}/);
+  assert.match(overlay, /diceRollPresentationKey/);
+  assert.match(overlay, /seenKey/);
+});
+
+test("resource production has a visual flight target and road placement cannot stay suggested after affordability is lost", async () => {
+  const screen = await readFile(new URL("../src/ui/game/GameScreen.jsx", import.meta.url), "utf8");
+  const economy = await readFile(new URL("../src/ui/game/hud/GameEconomyStrip.jsx", import.meta.url), "utf8");
+  const board = await readFile(new URL("../src/ui/board/boardSceneController.js", import.meta.url), "utf8");
+  assert.match(economy, /data-rd-resource-target/);
+  assert.match(board, /spawnResourceFlights/);
+  assert.match(board, /gain\.sources/);
+  assert.match(screen, /canContinueRoadPlacement/);
+  assert.match(screen, /\(me\.freeRoads \|\| 0\) <= 1/);
+});
+
+test("compact player banners rely on larger icons and accessible labels instead of tiny stat text", async () => {
+  const banner = await readFile(new URL("../src/ui/game/PlayerBanner.jsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../src/styles/player-banner.css", import.meta.url), "utf8");
+  assert.match(banner, /aria-label=\{`\$\{label\}: \$\{value\}`\}/);
+  assert.doesNotMatch(banner, /compactLabel/);
+  assert.match(styles, /rdb-player-banner__stat small\{display:none\}/);
+  assert.match(styles, /font:800 13px/);
+});
+
+test("steal player choices emphasize the public resource hand count", async () => {
+  const source = await readFile(new URL("../src/ui/game/decisions/GameDecisionSystem.jsx", import.meta.url), "utf8");
+  assert.match(source, /emphasizeResourceCount/);
+  assert.match(source, /rd-decision-player__resource-count/);
+});
+
+test("session feedback is ephemeral and authentication success clears stale warnings", async () => {
+  const source = await readFile(new URL("../src/app/useRealmSession.js", import.meta.url), "utf8");
+  assert.match(source, /setTimeout\(\(\) => \{[\s\S]*setToast/);
+  assert.match(source, /WELCOME_AUTHENTICATED[\s\S]*setToast\(null\)/);
+  assert.match(source, /GAME_ACTION_ACCEPTED[\s\S]*setToast\(null\)/);
+});

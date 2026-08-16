@@ -1,6 +1,8 @@
 const DEFAULT_TTL_SECONDS = 86_400;
 const MIN_TTL_SECONDS = 600;
 const MAX_TTL_SECONDS = 86_400;
+const PROVIDER_ATTEMPTS = 2;
+const PROVIDER_RETRY_DELAY_MS = 180;
 
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -42,6 +44,54 @@ function containsTurn(iceServers) {
   });
 }
 
+function retryableProviderStatus(status) {
+  return status === 429 || status >= 500;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function generateProviderCredentials(endpoint, apiToken, ttl, fetchFn = fetch) {
+  let lastError = null;
+  for (let attempt = 0; attempt < PROVIDER_ATTEMPTS; attempt += 1) {
+    try {
+      const upstream = await fetchFn(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ ttl }),
+      });
+
+      if (!upstream.ok) {
+        const error = new Error(`TURN provider HTTP ${upstream.status}`);
+        error.status = upstream.status;
+        lastError = error;
+        if (attempt + 1 < PROVIDER_ATTEMPTS && retryableProviderStatus(upstream.status)) {
+          await sleep(PROVIDER_RETRY_DELAY_MS * (attempt + 1));
+          continue;
+        }
+        throw error;
+      }
+
+      return await upstream.json();
+    } catch (error) {
+      lastError = error;
+      const status = Number(error?.status);
+      const retryable = !Number.isFinite(status) || retryableProviderStatus(status);
+      if (attempt + 1 < PROVIDER_ATTEMPTS && retryable) {
+        await sleep(PROVIDER_RETRY_DELAY_MS * (attempt + 1));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError || new Error("TURN provider unavailable");
+}
+
 export default {
   async fetch(request) {
     if (request.method !== "GET") {
@@ -62,22 +112,7 @@ export default {
     const endpoint = `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(keyId)}/credentials/generate-ice-servers`;
 
     try {
-      const upstream = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiToken}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ ttl }),
-      });
-
-      if (!upstream.ok) {
-        console.error("TURN credential provider rejected request", { status: upstream.status });
-        return json({ error: "TURN_PROVIDER_ERROR" }, 502);
-      }
-
-      const payload = await upstream.json();
+      const payload = await generateProviderCredentials(endpoint, apiToken, ttl);
       const iceServers = withoutBrowserBlockedPort53(payload?.iceServers);
       if (!iceServers.length || !containsTurn(iceServers)) {
         console.error("TURN credential provider returned no usable TURN server");
@@ -87,19 +122,26 @@ export default {
       return json({
         iceServers,
         expiresIn: ttl,
+        expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
         provider: "cloudflare",
       });
     } catch (error) {
       console.error("TURN credential provider request failed", {
         name: error?.name || "Error",
         message: error?.message || String(error),
+        status: Number.isFinite(Number(error?.status)) ? Number(error.status) : undefined,
       });
-      return json({ error: "TURN_PROVIDER_UNAVAILABLE" }, 502);
+      return json(
+        { error: "TURN_PROVIDER_UNAVAILABLE" },
+        502,
+        { "Retry-After": "2" },
+      );
     }
   },
 };
 
 export {
   credentialTtlSeconds,
+  generateProviderCredentials,
   withoutBrowserBlockedPort53,
 };

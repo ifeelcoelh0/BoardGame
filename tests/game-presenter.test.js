@@ -101,7 +101,10 @@ test("dice presentation keeps harvest animation metadata inside the story event"
       dice: [3, 5],
       total: 8,
       seven: null,
-      production: { gains: [{ madeira: 1 }, {}] },
+      production: {
+        gains: [{ madeira: 1 }, {}],
+        sources: [[{ hex: "h1", vertex: "v1", resource: "madeira", amount: 1 }], []],
+      },
     }],
   });
 
@@ -111,6 +114,9 @@ test("dice presentation keeps harvest animation metadata inside the story event"
   const harvest = game.presentation.log.find((entry) => entry.msg.includes("colheu"));
   assert.ok(harvest);
   assert.deepEqual(harvest.resources, [{ resource: "madeira", amount: 1 }]);
+  assert.deepEqual(game.presentation.story.gains[0].sources, [
+    { hex: "h1", vertex: "v1", resource: "madeira", amount: 1 },
+  ]);
 });
 
 test("palace presentation combines synchronized story state with a semantic audio cue", () => {

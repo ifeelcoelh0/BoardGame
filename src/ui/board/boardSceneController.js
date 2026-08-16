@@ -46,8 +46,10 @@ function mulberry(seed) {
 export function createBoardScene(container, gr, board, players, mode, options = {}) {
     const T = THREE;
     const graphics = resolveGraphicsQualityProfile(options.graphicsQuality);
+    const localSeat = Number.isSafeInteger(options.localSeat) ? options.localSeat : null;
+    const reducedMotion = options.reducedMotion === true;
     const ambientCount = (base, minimum = 1) => scaledAmbientCount(base, graphics, minimum);
-    const world = { anims: [], fx: [], handlers: {}, dragonHex: board.dragon, disposed: false };
+    const world = { anims: [], fx: [], handlers: {}, dragonHex: board.dragon, disposed: false, domFx: new Set() };
     const fogG = {}, fogTok = {}, fogDec = {}, dynW = {};
     const centers = {};
     board.hexes.forEach((h) => {
@@ -1829,6 +1831,93 @@ export function createBoardScene(container, gr, board, players, mode, options = 
             });
         });
     }
+    function visibleResourceTarget(resource) {
+        if (typeof document === "undefined") return null;
+        const candidates = [...document.querySelectorAll(`[data-rd-resource-target="${resource}"]`)];
+        return candidates.find((node) => {
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+        }) || null;
+    }
+    function projectHexCenter(hexKey) {
+        const center = centers[hexKey];
+        if (!center) return null;
+        const point = new T.Vector3(center.x, TOP + 10, center.z).project(camera);
+        const rect = el.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        return {
+            x: rect.left + (point.x + 1) * 0.5 * rect.width,
+            y: rect.top + (1 - point.y) * 0.5 * rect.height,
+        };
+    }
+    function pulseResourceTarget(target) {
+        target.classList.add("is-receiving-resource");
+        setTimeout(() => target.classList.remove("is-receiving-resource"), reducedMotion ? 240 : 720);
+    }
+    function spawnResourceFlights(storyEvent) {
+        if (localSeat == null || typeof document === "undefined") return;
+        const gain = Array.isArray(storyEvent?.gains)
+            ? storyEvent.gains.find((entry) => entry?.playerIndex === localSeat)
+            : null;
+        const sources = Array.isArray(gain?.sources) ? gain.sources : [];
+        if (!sources.length) return;
+
+        sources.forEach((source, index) => {
+            const resource = source?.resource;
+            const target = resource ? visibleResourceTarget(resource) : null;
+            const start = projectHexCenter(source?.hex);
+            if (!target || !start) return;
+            pulseResourceTarget(target);
+            if (reducedMotion) return;
+
+            const icon = gameIconEntry(RESOURCE_ICON_BY_KEY[resource]);
+            if (!icon) return;
+            const targetRect = target.getBoundingClientRect();
+            const end = {
+                x: targetRect.left + targetRect.width / 2,
+                y: targetRect.top + targetRect.height / 2,
+            };
+            const node = document.createElement("span");
+            node.className = "rd-resource-flight";
+            node.setAttribute("aria-hidden", "true");
+            node.style.left = `${start.x}px`;
+            node.style.top = `${start.y}px`;
+            const image = document.createElement("img");
+            image.src = assetUrl(icon.path);
+            image.alt = "";
+            node.appendChild(image);
+            const amount = Math.max(1, Number(source?.amount) || 1);
+            if (amount > 1) {
+                const badge = document.createElement("b");
+                badge.textContent = `+${amount}`;
+                node.appendChild(badge);
+            }
+            document.body.appendChild(node);
+            world.domFx.add(node);
+
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const bend = Math.min(115, Math.max(52, Math.abs(dx) * 0.13 + 48));
+            const animation = typeof node.animate === "function" ? node.animate([
+                { transform: "translate(-50%, -50%) scale(.72)", opacity: 0 },
+                { transform: "translate(-50%, -50%) scale(1.08)", opacity: 1, offset: 0.16 },
+                { transform: `translate(calc(-50% + ${dx * 0.56}px), calc(-50% + ${dy * 0.52 - bend}px)) scale(1.02)`, opacity: 1, offset: 0.58 },
+                { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.54)`, opacity: 0.12 },
+            ], {
+                duration: 980,
+                delay: index * 90,
+                easing: "cubic-bezier(.22,.75,.22,1)",
+                fill: "forwards",
+            }) : null;
+
+            const cleanup = () => {
+                world.domFx.delete(node);
+                node.remove();
+            };
+            if (animation) animation.finished.then(cleanup, cleanup);
+            else setTimeout(cleanup, 1_050 + index * 90);
+        });
+    }
     const spotMat = new T.MeshBasicMaterial({ color: 14725690, transparent: true, opacity: 0.85 });
     function syncSpots(sv, se, sh) {
         while (spotGroup.children.length)
@@ -1964,6 +2053,7 @@ export function createBoardScene(container, gr, board, players, mode, options = 
             if (storyEvent && storyEvent.kind === "dados" && storyEvent.n && storyEvent.id !== world.lastEv && Date.now() - storyEvent.id < 15e3) {
                 world.lastEv = storyEvent.id;
                 spawnHarvest(g2, storyEvent.n);
+                spawnResourceFlights(storyEvent);
             }
         },
         set handlers(h) {
@@ -1985,6 +2075,8 @@ export function createBoardScene(container, gr, board, players, mode, options = 
             world.disposed = true;
             renderLoop.dispose();
             resizeObserver.disconnect();
+            world.domFx.forEach((node) => node.remove());
+            world.domFx.clear();
             disposeObjectTree(scene);
             renderer.dispose();
             if (el.parentNode)

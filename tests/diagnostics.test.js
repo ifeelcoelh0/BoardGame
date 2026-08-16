@@ -10,6 +10,13 @@ test("normaliza erros sem expor tokens longos", () => {
   assert.match(value.message, /\[redacted\]/);
 });
 
+test("diagnostics preserve the immediate TURN/network cause without exposing secrets", () => {
+  const cause = new Error("Endpoint TURN respondeu com HTTP 503 (TURN_NOT_CONFIGURED).");
+  const value = normalizeDiagnosticError(new Error("Não foi possível obter credenciais TURN temporárias.", { cause }));
+  assert.equal(value.cause.name, "Error");
+  assert.match(value.cause.message, /TURN_NOT_CONFIGURED/);
+});
+
 test("evento inclui build e timestamp", () => {
   const event = createDiagnosticEvent("test", { phase: "lobby" }, () => new Date("2026-08-06T18:00:00Z"));
   assert.equal(event.buildVersion, APP_BUILD_VERSION);

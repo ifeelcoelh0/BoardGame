@@ -4,3 +4,21 @@
 @keyframes rdb-subtitle-in{from{opacity:0;transform:translate(-50%,-5px)}to{opacity:1;transform:translate(-50%,0)}}
 @media(max-width:820px){.rdb-character-subtitle{max-width:190px;font-size:10px;padding:5px 7px}}
 @media(prefers-reduced-motion:reduce){.rdb-character-subtitle{animation:none}}
+
+/* Compact banner stats: icons carry the meaning; text remains in title/aria-label. */
+.rdb-player-banner__stats{gap:4px}
+.rdb-player-banner__stat{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  min-height:31px;
+  padding:2px 4px;
+}
+.rdb-player-banner__stat img{grid-row:auto;flex:0 0 auto;filter:drop-shadow(1px 2px 1px rgba(0,0,0,.65))}
+.rdb-player-banner__stat small{display:none}
+.rdb-player-banner__stat b{font:800 13px/1 'Cinzel',serif;min-width:12px;text-align:center}
+@media(max-width:820px){
+  .rdb-player-banner__stat{display:flex;grid-template-columns:none;min-height:27px;padding:1px 3px;gap:2px}
+  .rdb-player-banner__stat b{font-size:11px}
+}
