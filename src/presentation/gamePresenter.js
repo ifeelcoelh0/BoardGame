@@ -487,7 +487,8 @@ export function createGamePresenter({ random = Math.random, now = Date.now } = {
                       gains.push({
                           playerIndex,
                           playerName: pname(g, playerIndex),
-                          resources: parts.map(([resource, amount]) => ({ resource, amount }))
+                          resources: parts.map(([resource, amount]) => ({ resource, amount })),
+                          sources: (rolled.production?.sources?.[playerIndex] || []).map((source) => ({ ...source }))
                       });
                   });
                   fireEv(g, "dados", actorIndex, "Saiu o " + rolled.total + "!", gains.length ? "A terra respondeu ao chamamento dos dados." : "A terra ficou em silêncio; ninguém colheu recursos.", null, { n: rolled.total, dice: rolled.dice.slice(), gains });

@@ -6,7 +6,9 @@ import {
   APP_STAGE,
   appFlowReducer,
   createInitialAppFlow,
+  hasAuthenticatedGameSeat,
   navigateTo,
+  shouldRenderAuthenticatedGame,
   stageForAuthenticatedGame
 } from "../src/ui/appFlow.js";
 
@@ -69,3 +71,18 @@ test("authenticated players enter the game stage after the lobby", () => {
   assert.equal(stageForAuthenticatedGame(null, 0), null);
 });
 
+
+
+test("an active match is never rendered before the local session has an authenticated seat", () => {
+  const game = { phase: "play", players: [{ playerId: "host" }, { playerId: "guest" }] };
+  assert.equal(hasAuthenticatedGameSeat(game, null), false);
+  assert.equal(hasAuthenticatedGameSeat(game, -1), false);
+  assert.equal(shouldRenderAuthenticatedGame(game, null), false);
+  assert.equal(shouldRenderAuthenticatedGame(game, 1), true);
+});
+
+test("public active-game snapshots cannot cross the authenticated game-screen gate", () => {
+  const publicSnapshot = { phase: "play", players: [{ playerId: "host" }, { playerId: "guest" }] };
+  assert.equal(shouldRenderAuthenticatedGame(publicSnapshot, null), false);
+  assert.equal(shouldRenderAuthenticatedGame(publicSnapshot, 99), false);
+});

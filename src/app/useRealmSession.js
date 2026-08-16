@@ -86,6 +86,14 @@ export default function useRealmSession({ stage, navigate, book }) {
     const hostGamePresence = useRef(null);
     const botDecisionMemory = useRef(new Map());
     gref.current = game;
+    useEffect(() => {
+        if (!toast?.id) return undefined;
+        const toastId = toast.id;
+        const timer = window.setTimeout(() => {
+            setToast((current) => current?.id === toastId ? null : current);
+        }, 4500);
+        return () => window.clearTimeout(timer);
+    }, [toast?.id]);
     const setLocalIdentity = (identity) => {
         myPlayerId.current = identity?.playerId || null;
         mySeatId.current = identity?.seatId || null;
@@ -205,6 +213,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         gref.current = null;
         setSeat(null);
         setErr("");
+        setToast(null);
         setEmotes({});
         setChat([]);
         socialController.current?.clear();
@@ -429,17 +438,22 @@ export default function useRealmSession({ stage, navigate, book }) {
             return;
         }
         if (event.type === "LOBBY_ACTION_REJECTED" || event.type === "GAME_ACTION_REJECTED") {
-            setErr(event.userMessage);
+            // Authentication races are transient feedback, not durable page errors.
+            // Once the private seat is restored the stale warning must disappear.
+            setErr(event.reason === "UNAUTHENTICATED" ? "" : event.userMessage);
             setToast({ id: Date.now() + Math.random(), msg: "⚠️ " + event.userMessage, pi: null });
             return;
         }
         if (event.type === "LOBBY_ACTION_ACCEPTED") {
             setErr("");
+            setToast(null);
             if (event.actionType === LOBBY_ACTION.SELECT_CHARACTER)
             return;
         }
-        if (event.type === "GAME_ACTION_ACCEPTED")
+        if (event.type === "GAME_ACTION_ACCEPTED") {
             setErr("");
+            setToast(null);
+        }
     };
     const hostActions = createHostActionController({
         getRuntime: () => net.current,
@@ -702,6 +716,7 @@ export default function useRealmSession({ stage, navigate, book }) {
         const requestId = createStableId("create");
         pendingIdentity.current = { type: "host-create", requestId };
         setErr("");
+        setToast(null);
         try {
             const roomCode = generateRoomCode();
             const sessionToken = createSessionToken();
@@ -761,6 +776,7 @@ export default function useRealmSession({ stage, navigate, book }) {
     };
     const joinRealm = async (roomCodeInput = codeIn) => {
         setErr("");
+        setToast(null);
         clearLocalIdentity();
         setSeat(null);
         const c = normalizeRoomCode(roomCodeInput);
@@ -788,6 +804,7 @@ export default function useRealmSession({ stage, navigate, book }) {
             if (event.type === "WELCOME_AUTHENTICATED") {
                 setConnSt("on");
                 setErr("");
+                setToast(null);
                 const playerIndex = syncSeatFromGame(event.game);
                 navigate(stageForAuthenticatedGame(event.game, playerIndex));
                 return;
@@ -821,6 +838,7 @@ export default function useRealmSession({ stage, navigate, book }) {
                 else
                     syncSeatFromGame(gref.current);
                 setErr("");
+                setToast(null);
                 setConnSt("on");
                 const currentGame = event.game || gref.current;
                 const currentSeat = findPlayerIndexById(currentGame, event.identity?.playerId);

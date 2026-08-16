@@ -2,6 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createPeerConfig, getNetworkConfigSummary, parseIceServers, resolvePeerConfig } from "../src/multiplayer/config.js";
 
+function memoryStorage() {
+  const values = new Map();
+  return {
+    getItem: (key) => values.has(key) ? values.get(key) : null,
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: (key) => values.delete(key),
+  };
+}
+
 test("uses safe STUN-only defaults", () => {
   const config = createPeerConfig({});
   assert.equal(config.host, undefined);
@@ -75,6 +84,72 @@ test("required TURN fails closed when temporary credentials cannot be fetched", 
     fetchFn: async () => new Response("unavailable", { status: 503 }),
     timeoutMs: 1000,
   }), /credenciais TURN temporárias/);
+});
+
+test("temporary TURN fetch retries transient endpoint failures", async () => {
+  let attempts = 0;
+  const config = await resolvePeerConfig({
+    VITE_TURN_CREDENTIALS_ENDPOINT: "/api/turn-credentials",
+    VITE_REQUIRE_TURN: "true",
+  }, {
+    storage: null,
+    retries: 1,
+    retryDelayMs: 0,
+    timeoutMs: 0,
+    fetchFn: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return new Response(JSON.stringify({ error: "TURN_PROVIDER_UNAVAILABLE" }), {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({
+        expiresIn: 3600,
+        iceServers: [
+          { urls: "stun:stun.cloudflare.com:3478" },
+          { urls: "turns:turn.cloudflare.com:443?transport=tcp", username: "temp", credential: "temp-secret" },
+        ],
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  });
+  assert.equal(attempts, 2);
+  assert.equal(getNetworkConfigSummary(config).turnEnabled, true);
+});
+
+test("valid TURN credentials are cached for the browser session and survive refresh-style re-resolution", async () => {
+  const storage = memoryStorage();
+  let fetches = 0;
+  const env = {
+    VITE_TURN_CREDENTIALS_ENDPOINT: "/api/turn-credentials",
+    VITE_REQUIRE_TURN: "true",
+  };
+  const first = await resolvePeerConfig(env, {
+    storage,
+    now: () => 1_000_000,
+    timeoutMs: 0,
+    fetchFn: async () => {
+      fetches += 1;
+      return new Response(JSON.stringify({
+        expiresIn: 3600,
+        iceServers: [
+          { urls: "stun:stun.cloudflare.com:3478" },
+          { urls: "turn:turn.cloudflare.com:3478?transport=udp", username: "temp", credential: "secret" },
+        ],
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  });
+  assert.equal(getNetworkConfigSummary(first).turnEnabled, true);
+  const second = await resolvePeerConfig(env, {
+    storage,
+    now: () => 1_010_000,
+    fetchFn: async () => {
+      fetches += 1;
+      throw new Error("endpoint should not be called while cache is valid");
+    },
+  });
+  assert.equal(fetches, 1);
+  assert.equal(getNetworkConfigSummary(second).turnEnabled, true);
 });
 
 

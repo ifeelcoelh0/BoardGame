@@ -155,6 +155,7 @@ export function reduceDiceRoll(game, graph, actorIndex, dice) {
       production: {
         gains: production.gains,
         dragonBlocked: production.dragonBlocked,
+        sources: production.sources,
       },
       seven: null,
     },

@@ -40,7 +40,7 @@ export default function GameEconomyStrip({
       )}
       <div className="rd-economy__resources" aria-label={t("economy.hand")}>
         {resourceKeys.map((resource) => (
-          <span key={resource} title={resourceDefinitions[resource]?.n}>
+          <span key={resource} title={resourceDefinitions[resource]?.n} data-rd-resource-target={resource}>
             <ResourceIcon resource={resource} size={30} title={resourceDefinitions[resource]?.n} />
             <b>{resources?.[resource] || 0}</b>
           </span>

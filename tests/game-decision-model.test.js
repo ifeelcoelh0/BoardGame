@@ -102,6 +102,7 @@ test("steal decision outranks a local card decision", () => {
   const model = buildGameDecisionModel(g, graph(), 0, { decision: { type: "monopolio", cardId: 3 } });
   assert.equal(model.type, GAME_DECISION_TYPE.STEAL);
   assert.equal(model.players[0].name, "Vlad Drácula");
+  assert.equal(model.players[0].handSize, 15);
   assert.equal(model.dismissible, false);
 });
 

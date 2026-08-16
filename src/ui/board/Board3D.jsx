@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { createBoardScene } from "./boardSceneController.js";
 import { stableBoardGeometryKey, stableSpotKey } from "./boardUpdateSignature.js";
 import { registerPerformanceProbe } from "../three/performanceProbeRegistry.js";
+import "../../styles/resource-flight.css";
 
-export default function Board3D({ g, gr, spotsV, spotsE, spotsH, onVert, onEdge, onHex, graphicsQuality }) {
+export default function Board3D({ g, gr, spotsV, spotsE, spotsH, onVert, onEdge, onHex, graphicsQuality, seat, reducedMotion = false }) {
   const wrapRef = useRef(null);
   const controllerRef = useRef(null);
   const cameraStateRef = useRef(null);
@@ -26,6 +27,8 @@ export default function Board3D({ g, gr, spotsV, spotsE, spotsH, onVert, onEdge,
     const controller = createBoardScene(wrapRef.current, gr, g.board, g.players, g.mode, {
       graphicsQuality,
       initialCameraState: cameraStateRef.current,
+      localSeat: seat,
+      reducedMotion,
     });
     controllerRef.current = controller;
     const unregisterPerformance = registerPerformanceProbe("board", () => controller.getPerformanceSnapshot());
@@ -40,7 +43,7 @@ export default function Board3D({ g, gr, spotsV, spotsE, spotsH, onVert, onEdge,
       controller.dispose();
       if (controllerRef.current === controller) controllerRef.current = null;
     };
-  }, [boardGeometryKey, g.code, g.mode, graphicsQuality]);
+  }, [boardGeometryKey, g.code, g.mode, graphicsQuality, seat, reducedMotion]);
 
   useEffect(() => {
     const controller = controllerRef.current;

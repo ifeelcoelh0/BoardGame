@@ -11,7 +11,14 @@ function safeText(value, max = 500) {
 
 export function normalizeDiagnosticError(error) {
   if (error instanceof Error) {
-    return { name: safeText(error.name, 80), message: safeText(error.message), stack: safeText(error.stack, 2000) };
+    const normalized = { name: safeText(error.name, 80), message: safeText(error.message), stack: safeText(error.stack, 2000) };
+    if (error.cause instanceof Error) {
+      normalized.cause = {
+        name: safeText(error.cause.name, 80),
+        message: safeText(error.cause.message),
+      };
+    }
+    return normalized;
   }
   return { name: "Error", message: safeText(error) };
 }

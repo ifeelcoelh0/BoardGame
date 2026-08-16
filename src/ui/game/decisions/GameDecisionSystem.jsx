@@ -104,7 +104,15 @@ function ResourceCounters({ values, inventory, onChange, label }) {
   );
 }
 
-function PlayerChoices({ players, onPick, selectedIndex = null, allowAll = false, onPickAll = null, disableDisconnected = false }) {
+function PlayerChoices({
+  players,
+  onPick,
+  selectedIndex = null,
+  allowAll = false,
+  onPickAll = null,
+  disableDisconnected = false,
+  emphasizeResourceCount = false,
+}) {
   return (
     <div className="rd-decision-player-grid">
       {allowAll && (
@@ -125,7 +133,14 @@ function PlayerChoices({ players, onPick, selectedIndex = null, allowAll = false
         >
           <span className="rd-decision-player__portrait"><CharacterSprite character={player.characterId} size={64} /></span>
           <strong>{player.name}</strong>
-          <small>{player.connected === false ? t("common.offline") : t("decision.resourceCount", { count: player.handSize })}</small>
+          {emphasizeResourceCount ? (
+            <>
+              <span className="rd-decision-player__resource-count">{t("decision.resourceCount", { count: player.handSize })}</span>
+              {player.connected === false && <small>{t("common.offline")}</small>}
+            </>
+          ) : (
+            <small>{player.connected === false ? t("common.offline") : t("decision.resourceCount", { count: player.handSize })}</small>
+          )}
         </button>
       ))}
     </div>
@@ -307,7 +322,7 @@ export default function GameDecisionSystem({
   } else if (model.type === GAME_DECISION_TYPE.QUEUE_RESOURCE) {
     body = <><ResourceInventory resources={model.inventory} /><ResourceChoice label={t("decision.receiveRemaining", { count: model.remaining })} onPick={(resource) => void dispatchGameAction(GAME_ACTION.RESOLVE_QUEUE_RESOURCE, { resource })} /></>;
   } else if (model.type === GAME_DECISION_TYPE.STEAL) {
-    body = <PlayerChoices players={model.players} onPick={(player) => { if (Date.now() - model.openedAt < 350) return; void dispatchGameAction(GAME_ACTION.STEAL_RESOURCE, { victimIndex: player.index }); }} />;
+    body = <PlayerChoices players={model.players} emphasizeResourceCount onPick={(player) => { if (Date.now() - model.openedAt < 350) return; void dispatchGameAction(GAME_ACTION.STEAL_RESOURCE, { victimIndex: player.index }); }} />;
   } else if (model.type === GAME_DECISION_TYPE.SPY_TARGET) {
     body = <PlayerChoices players={model.players} onPick={(player) => {
       void dispatchGameAction(GAME_ACTION.PLAY_DEV_CARD, { cardId: model.cardId, targetPlayerId: player.playerId }).then((result) => {

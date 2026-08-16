@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import turnCredentialsHandler, {
   credentialTtlSeconds,
+  generateProviderCredentials,
   withoutBrowserBlockedPort53,
 } from "../api/turn-credentials.js";
 
@@ -60,6 +61,7 @@ test("TURN function keeps provider secrets server-side and returns temporary ICE
     assert.equal(response.headers.get("cache-control"), "no-store, max-age=0");
     assert.equal(seenAuthorization, "Bearer server-secret");
     assert.equal(payload.provider, "cloudflare");
+    assert.equal(typeof payload.expiresAt, "string");
     assert.equal(payload.iceServers.some((server) => JSON.stringify(server.urls).includes("turn:")), true);
     assert.equal(JSON.stringify(payload).includes("server-secret"), false);
   } finally {
@@ -69,4 +71,18 @@ test("TURN function keeps provider secrets server-side and returns temporary ICE
     if (previousToken == null) delete process.env.CLOUDFLARE_TURN_API_TOKEN;
     else process.env.CLOUDFLARE_TURN_API_TOKEN = previousToken;
   }
+});
+
+test("TURN provider generation retries a transient upstream failure once", async () => {
+  let attempts = 0;
+  const payload = await generateProviderCredentials("https://rtc.example/turn", "secret", 3600, async () => {
+    attempts += 1;
+    if (attempts === 1) return new Response("unavailable", { status: 503 });
+    return new Response(JSON.stringify({ iceServers: [{ urls: "turn:turn.example:3478", username: "u", credential: "c" }] }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+  assert.equal(attempts, 2);
+  assert.equal(payload.iceServers.length, 1);
 });

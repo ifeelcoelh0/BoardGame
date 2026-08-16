@@ -171,6 +171,13 @@ test("production pays villages and palaces and updates statistics immutably", ()
   assert.deepEqual(result.game.players[0].res, resources({ madeira: 1, tijolo: 1 }));
   assert.deepEqual(result.game.players[1].res, resources({ madeira: 2 }));
   assert.deepEqual(result.game.stats.produced, [2, 2]);
+  assert.deepEqual(result.sources[0], [
+    { hex: "h1", vertex: "A", resource: "madeira", amount: 1 },
+    { hex: "h2", vertex: "A", resource: "tijolo", amount: 1 },
+  ]);
+  assert.deepEqual(result.sources[1], [
+    { hex: "h1", vertex: "B", resource: "madeira", amount: 2 },
+  ]);
   assert.deepEqual(original.players[0].res, resources());
   assert.deepEqual(original.stats.produced, [0, 0]);
 });

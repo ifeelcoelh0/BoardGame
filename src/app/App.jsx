@@ -4,7 +4,7 @@ import AppShell, { SceneLoading } from "../ui/app/AppShell.jsx";
 import ConnectionLostOverlay from "../ui/app/ConnectionLostOverlay.jsx";
 import { CHARACTER_PERKS as PERKS } from "../presentation/perkCatalog.js";
 import { buildDiagnosticReport, createDiagnosticReport } from "../diagnostics/diagnostics.js";
-import { APP_STAGE, appFlowReducer, createInitialAppFlow, navigateTo } from "../ui/appFlow.js";
+import { APP_STAGE, appFlowReducer, createInitialAppFlow, hasAuthenticatedGameSeat, navigateTo, shouldRenderAuthenticatedGame } from "../ui/appFlow.js";
 import {
   BOOK_PAGE,
   bookReducer,
@@ -75,9 +75,8 @@ export default function App() {
     [diagnosticsPageOpen],
   );
 
-  const hasActiveLocalSeat = Boolean(
-    game && Number.isInteger(seat) && Array.isArray(game.players) && game.players[seat],
-  );
+  const hasActiveLocalSeat = hasAuthenticatedGameSeat(game, seat);
+  const renderAuthenticatedGame = shouldRenderAuthenticatedGame(game, seat);
 
   const localLobbyPlayer = hasActiveLocalSeat ? game.players[seat] : null;
   useEffect(() => {
@@ -167,9 +166,9 @@ export default function App() {
     }
   }
 
-  if (!game || game.phase === "lobby") {
+  if (!renderAuthenticatedGame) {
     const leaveCurrentLobby = () => {
-      if (!game) return session.exitToTitle();
+      if (!game || !hasActiveLocalSeat) return session.exitToTitle();
       const message = seat === 0 ? t("app.dissolveConfirm") : t("app.leaveConfirm");
       if (!window.confirm(message)) return;
       if (seat === 0) session.exitToTitle();

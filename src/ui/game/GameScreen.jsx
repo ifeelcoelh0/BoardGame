@@ -22,7 +22,7 @@ import { awardImportantEventModel, disasterImportantEventModel, storyImportantEv
 import { CHARACTER_PERKS } from "../../presentation/perkCatalog.js";
 import { CHARACTER_GLOW_COLORS as GLOW, shadeColor as shade } from "../board/boardVisualConfig.js";
 import { GAME_ACTION } from "../../game/gameProtocol.js";
-import { PIECE_LIMITS as LIMITS, RESOURCE_DEFINITIONS as RES, RESOURCE_KEYS as RKEYS, BUILD_COSTS as COSTS, handSize } from "../../game/resources.js";
+import { PIECE_LIMITS as LIMITS, RESOURCE_DEFINITIONS as RES, RESOURCE_KEYS as RKEYS, BUILD_COSTS as COSTS, canPay, handSize } from "../../game/resources.js";
 import { validPalaces, validRoads, validVillages } from "../../game/buildingRules.js";
 import { DISASTER_DEFINITIONS as DISASTERS } from "../../game/disasterReducer.js";
 import { bribeTargets, militaryActionsLeft, neighboringHexes as hexNbrs, unitTargets, validDeployHexes } from "../../game/warReducer.js";
@@ -48,6 +48,7 @@ import CharacterSubtitle from "./social/CharacterSubtitle.jsx";
 import useCharacterSubtitles from "./useCharacterSubtitles.js";
 import GameStoryToast from "./GameStoryToast.jsx";
 import DevelopmentCardReveal from "./DevelopmentCardReveal.jsx";
+import DiceRollOverlay from "./DiceRollOverlay.jsx";
 import EndgameExperience from "./endgame/EndgameExperience.jsx";
 import GameGrimoirePanel from "./hud/GameGrimoirePanel.jsx";
 import { GAME_ACTION_ICONS } from "../../assets/gameUiIcons.js";
@@ -139,6 +140,11 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
     useEffect(() => {
         if (hardInteractionBlock) dispatchUi({ type: "reset-turn-interaction" });
     }, [hardInteractionBlock, qItem?.t, qItem?.p, g.trade?.id, g.turn.steal?.at, g.turn.deploy, g.turn.mustDragon]);
+    const canContinueRoadPlacement = (me.freeRoads || 0) > 0 || canPay(me, COSTS.estrada);
+    useEffect(() => {
+        if (mode === "estrada" && g.phase === "play" && !canContinueRoadPlacement)
+            setMode(null);
+    }, [mode, g.phase, canContinueRoadPlacement]);
     const {
         cardVisible,
         disasterVisible,
@@ -200,7 +206,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
                 spotsH = new Set(hexNbrs(g, g.wagons[selW].at));
             else if (mode === "fundar" && selW)
                 spotsV = new Set(farSpots(g, gr, selW));
-            else if (mode === "estrada")
+            else if (mode === "estrada" && canContinueRoadPlacement)
                 spotsE = new Set(validRoads(g, gr, seat));
             else if (mode === "aldeia")
                 spotsV = new Set(validVillages(g, gr, seat, false));
@@ -235,7 +241,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
     };
     const onEdge = (e) => {
         afterAccepted(GAME_ACTION.BUILD_ROAD, { edge: e }, () => {
-            if (!setupMode && me.freeRoads <= 1) setMode(null);
+            if (!setupMode && (me.freeRoads || 0) <= 1) setMode(null);
         });
     };
     const onHex = (k) => {
@@ -434,7 +440,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
             fundar: t("game.foundRemote"),
             suborno: t("game.chooseBribe"),
         }[mode];
-    return  <AppShell data-testid="game-screen" data-game-mode={g.mode} data-game-phase={g.phase}><div style={{ position: "fixed", inset: 0, zIndex: 0 }}><Suspense fallback={<SceneLoading label={t("game.preparingBoard")} />}><Board3D g={g} gr={gr} spotsV={spotsV} spotsE={spotsE} spotsH={spotsH} onVert={onVert} onEdge={onEdge} onHex={onHex} graphicsQuality={graphicsQuality}/></Suspense></div>{toast &&  <div className={"toast"}>{toast.msg}</div>}<GameHud
+    return  <AppShell data-testid="game-screen" data-game-mode={g.mode} data-game-phase={g.phase}><div style={{ position: "fixed", inset: 0, zIndex: 0 }}><Suspense fallback={<SceneLoading label={t("game.preparingBoard")} />}><Board3D g={g} gr={gr} spotsV={spotsV} spotsE={spotsE} spotsH={spotsH} onVert={onVert} onEdge={onEdge} onHex={onHex} graphicsQuality={graphicsQuality} seat={seat} reducedMotion={settings?.reducedMotion === true}/></Suspense></div><DiceRollOverlay game={g} reducedMotion={settings?.reducedMotion === true} />{toast &&  <div className={"toast"}>{toast.msg}</div>}<GameHud
         code={g.code}
         round={g.round}
         dice={g.turn.dice}

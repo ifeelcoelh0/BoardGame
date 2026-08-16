@@ -100,6 +100,9 @@ test("a normal roll records the dice, produces resources and leaves the input un
   assert.deepEqual(result.game.stats.rolls, { 8: 1 });
   assert.equal(result.game.stats.totalRolls, 1);
   assert.deepEqual(result.event.production.gains[0], resources({ madeira: 1 }));
+  assert.deepEqual(result.event.production.sources[0], [
+    { hex: "h1", vertex: "A", resource: "madeira", amount: 1 },
+  ]);
   assert.equal(original.turn.rolled, false);
   assert.equal(original.players[0].res.madeira, 0);
 });

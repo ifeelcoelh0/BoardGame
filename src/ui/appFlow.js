@@ -49,6 +49,22 @@ export function navigateTo(stage) {
   return { type: APP_FLOW_EVENT.NAVIGATE, stage };
 }
 
+
+export function hasAuthenticatedGameSeat(game, seat) {
+  return Boolean(
+    game
+    && Number.isInteger(seat)
+    && Array.isArray(game.players)
+    && game.players[seat]
+    && typeof game.players[seat].playerId === "string"
+    && game.players[seat].playerId.length > 0
+  );
+}
+
+export function shouldRenderAuthenticatedGame(game, seat) {
+  return Boolean(game && game.phase !== "lobby" && hasAuthenticatedGameSeat(game, seat));
+}
+
 export function stageForAuthenticatedGame(game, seat) {
   if (!game || !Number.isInteger(seat) || !Array.isArray(game.players)) return null;
   if (game.phase !== "lobby") return APP_STAGE.GAME;
