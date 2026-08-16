@@ -186,6 +186,8 @@ export function reduceTradeAcceptance(game, actorIndex, tradeId) {
       actorIndex,
       proposerIndex: trade.from,
       tradeId,
+      give: { ...trade.get },
+      get: { ...trade.give },
     },
   };
 }

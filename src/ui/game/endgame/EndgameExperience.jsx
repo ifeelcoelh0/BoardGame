@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import CharacterSprite from "../../assets/CharacterSprite.jsx";
 import GameButton from "../../system/GameButton.jsx";
 import EndStats from "../EndStats.jsx";
+import EndgameChat from "./EndgameChat.jsx";
 import { buildEndgameModel } from "./gameEndgameModel.js";
 import { t } from "../../../locales/i18n.js";
 import "../../../styles/game-endgame.css";
 
-export default function EndgameExperience({ game, graph, seat, onExit, onRematch, model: providedModel = null, embedded = false }) {
+export default function EndgameExperience({ game, graph, seat, onExit, onRematch, chat = [], sendChat, model: providedModel = null, embedded = false }) {
   const [minimized, setMinimized] = useState(false);
   const model = useMemo(() => providedModel || buildEndgameModel(game, graph, seat), [providedModel, game, graph, seat]);
   if (!model) return null;
@@ -22,7 +23,10 @@ export default function EndgameExperience({ game, graph, seat, onExit, onRematch
           <div className="rd-endgame__signature" aria-label={t("end.signature", { name: model.winner.name })}>{model.winner.shortName}</div>
         </header>
         {model.winner.quote && <blockquote>“{model.winner.quote}”</blockquote>}
-        <EndStats model={model} />
+        <div className="rd-endgame__body">
+          <EndStats model={model} />
+          {!embedded && <EndgameChat game={game} chat={chat} sendChat={sendChat} />}
+        </div>
         <footer className="rd-endgame__actions">
           <GameButton variant="secondary" onClick={() => { if (!embedded) setMinimized(true); }}>{t("end.viewMap")}</GameButton>
           {!embedded && onRematch && (
