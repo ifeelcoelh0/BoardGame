@@ -4,12 +4,13 @@ import DragonLobby from "./DragonLobby.jsx";
 import LobbyCodex from "./LobbyCodex.jsx";
 import { createEmptyLobbyViewModel, createLobbyViewModel } from "./lobbyViewModel.js";
 import { canStartLobby, LOBBY_START_INTRO_MS } from "../../game/lobbyRules.js";
-import { BOOK_PAGE, BOOK_SCOPE } from "./bookPages.js";
+import { BOOK_SCOPE } from "./bookPages.js";
 import { CODEX_PHASE, codexLeaving, codexVisible, completeCodexRitual, initialCodexPhase, syncCodexPhase } from "./lobbyCodexFlow.js";
 import "../../styles/dragon-lobby.css";
 import { t } from "../../locales/i18n.js";
 import WizardGuide from "../tutorial/WizardGuide.jsx";
 import GameIcon from "../assets/GameIcon.jsx";
+import LobbySettingsPanel from "./LobbySettingsPanel.jsx";
 import { WIZARD_SCOPE } from "../../tutorial/wizardJourney.js";
 import "../../styles/lobby-codex.css";
 
@@ -56,6 +57,7 @@ export default function LobbyExperience({
 }) {
   const [previewCharacterId, setPreviewCharacterId] = useState(null);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [codexPhase, setCodexPhase] = useState(() => initialCodexPhase({ bookOpen, selectingCharacter: isSelectingCharacter }));
   const copyResetTimerRef = useRef(null);
 
@@ -64,6 +66,7 @@ export default function LobbyExperience({
       ? createLobbyViewModel({ game, seat, characters, perks })
       : createEmptyLobbyViewModel(characters)
   ), [game, seat, characters, perks]);
+  const isStarting = Boolean(game?.lobbyStarting);
 
   /* O relógio de presença vive aqui porque tanto o livro como o espelho
      acessível do DragonLobby precisam do mesmo valor. Estava só no DragonLobby,
@@ -89,6 +92,10 @@ export default function LobbyExperience({
   }, []);
 
   useEffect(() => {
+    if (isSelectingCharacter || isStarting) setSettingsOpen(false);
+  }, [isSelectingCharacter, isStarting]);
+
+  useEffect(() => {
     if (isSelectingCharacter) {
       if (bookOpen) onBookOpenChange?.(false);
       setCodexPhase((phase) => syncCodexPhase(phase, { bookOpen: false, selectingCharacter: true }));
@@ -108,7 +115,6 @@ export default function LobbyExperience({
   const previewPerk = previewCharacter && game?.mode === "guerra"
     ? perks[previewCharacter.id] ?? null
     : null;
-  const isStarting = Boolean(game?.lobbyStarting);
   const startDurationMs = isStarting
     ? Math.max(0, Number(game.lobbyStarting.introEndsAt) - Number(game.lobbyStarting.startedAt)) || LOBBY_START_INTRO_MS
     : LOBBY_START_INTRO_MS;
@@ -161,8 +167,7 @@ export default function LobbyExperience({
   };
 
   const openSettings = () => {
-    onBookPageChange?.(BOOK_PAGE.SETTINGS);
-    openBook(true);
+    setSettingsOpen(true);
   };
 
   /* Pacote de dados do reino. É construído aqui e não nas páginas para que as
@@ -235,6 +240,16 @@ export default function LobbyExperience({
         audio={audio}
         diagnostics={diagnostics}
       />
+
+      {settingsOpen && (
+        <LobbySettingsPanel
+          settings={audio?.settings}
+          setSetting={audio?.setSetting}
+          fullscreen={audio?.fullscreen === true}
+          onToggleFullscreen={audio?.onToggleFullscreen}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       {codexPhase === CODEX_PHASE.SALON && !isSelectingCharacter && !isStarting && (
         <div className="rd-lobby-corner-tools" aria-label={t("utility.options")}>

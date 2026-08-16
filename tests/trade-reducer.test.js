@@ -164,6 +164,8 @@ test("accepting a trade transfers both bundles, closes it and increments both pl
   assert.equal(result.game.players[1].res.ouro, 1);
   assert.deepEqual(result.game.stats.p2pTrades, [5, 3, 0]);
   assert.equal(result.game.trade, null);
+  assert.deepEqual(result.event.give, { ouro: 1 });
+  assert.deepEqual(result.event.get, { madeira: 2 });
   assert.equal(original.players[0].res.madeira, 3);
   assert.equal(original.trade.id, targetedTrade().id);
 });

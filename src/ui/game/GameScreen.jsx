@@ -39,6 +39,7 @@ import { formatReconnectClock } from "./gameScreenRuntimeModel.js";
 import useGameScreenAudio from "./useGameScreenAudio.js";
 import { deriveGameOverlayVisibility } from "./gameOverlayVisibility.js";
 import { deriveActionPresentation } from "./gameUiComposition.js";
+import { shouldContinueRoadPlacement } from "./constructionPlacementPolicy.js";
 import { buildGameActionModel, GAME_ACTION_COMMAND } from "./gameActionModel.js";
 import { boardInteractionBlockReason, developmentCardPlayReason } from "./gameInteractionGuards.js";
 import { createGameActionDispatchGate } from "./gameActionDispatchGate.js";
@@ -47,6 +48,7 @@ import GameEmoteBubble from "./social/GameEmoteBubble.jsx";
 import CharacterSubtitle from "./social/CharacterSubtitle.jsx";
 import useCharacterSubtitles from "./useCharacterSubtitles.js";
 import GameStoryToast from "./GameStoryToast.jsx";
+import GameActionToast from "./GameActionToast.jsx";
 import DevelopmentCardReveal from "./DevelopmentCardReveal.jsx";
 import DiceRollOverlay from "./DiceRollOverlay.jsx";
 import EndgameExperience from "./endgame/EndgameExperience.jsx";
@@ -219,6 +221,10 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
             if (result) onAccepted?.(result);
         });
     };
+    const finishConstructionPlacement = () => {
+        setMode(null);
+        setActionPanelMinimized(false);
+    };
     const onVert = (v) => {
         if (mode === "fundar" && selW) {
             afterAccepted(GAME_ACTION.FOUND_REMOTE_VILLAGE, { wagonId: selW, vertex: v }, () => {
@@ -232,16 +238,22 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
             return;
         }
         if (mode === "aldeia") {
-            afterAccepted(GAME_ACTION.BUILD_VILLAGE, { vertex: v }, () => setMode(null));
+            afterAccepted(GAME_ACTION.BUILD_VILLAGE, { vertex: v }, finishConstructionPlacement);
             return;
         }
         if (mode === "palacio") {
-            afterAccepted(GAME_ACTION.BUILD_PALACE, { vertex: v }, () => setMode(null));
+            afterAccepted(GAME_ACTION.BUILD_PALACE, { vertex: v }, finishConstructionPlacement);
         }
     };
     const onEdge = (e) => {
+        const freeRoadsBefore = me.freeRoads || 0;
         afterAccepted(GAME_ACTION.BUILD_ROAD, { edge: e }, () => {
-            if (!setupMode && (me.freeRoads || 0) <= 1) setMode(null);
+            // Construção normal volta ao menu depois de uma peça. O Construtor
+            // de Estradas é a exceção intencional: a primeira das duas estradas
+            // grátis mantém a colocação ativa para a segunda; a segunda fecha.
+            if (!shouldContinueRoadPlacement({ setupMode, freeRoadsBefore })) {
+                finishConstructionPlacement();
+            }
         });
     };
     const onHex = (k) => {
@@ -440,7 +452,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
             fundar: t("game.foundRemote"),
             suborno: t("game.chooseBribe"),
         }[mode];
-    return  <AppShell data-testid="game-screen" data-game-mode={g.mode} data-game-phase={g.phase}><div style={{ position: "fixed", inset: 0, zIndex: 0 }}><Suspense fallback={<SceneLoading label={t("game.preparingBoard")} />}><Board3D g={g} gr={gr} spotsV={spotsV} spotsE={spotsE} spotsH={spotsH} onVert={onVert} onEdge={onEdge} onHex={onHex} graphicsQuality={graphicsQuality} seat={seat} reducedMotion={settings?.reducedMotion === true}/></Suspense></div><DiceRollOverlay game={g} reducedMotion={settings?.reducedMotion === true} />{toast &&  <div className={"toast"}>{toast.msg}</div>}<GameHud
+    return  <AppShell data-testid="game-screen" data-game-mode={g.mode} data-game-phase={g.phase}><div style={{ position: "fixed", inset: 0, zIndex: 0 }}><Suspense fallback={<SceneLoading label={t("game.preparingBoard")} />}><Board3D g={g} gr={gr} spotsV={spotsV} spotsE={spotsE} spotsH={spotsH} onVert={onVert} onEdge={onEdge} onHex={onHex} graphicsQuality={graphicsQuality} seat={seat} reducedMotion={settings?.reducedMotion === true}/></Suspense></div><DiceRollOverlay game={g} reducedMotion={settings?.reducedMotion === true} /><GameActionToast game={g} entries={gameLog} />{toast &&  <div className={"toast"}>{toast.msg}</div>}<GameHud
         code={g.code}
         round={g.round}
         dice={g.turn.dice}
@@ -521,7 +533,7 @@ export default function GameScreen({ game, seat, dispatchGameAction, toast, dism
     />}{disasterVisible &&  <ImportantEventBanner model={disasterImportantEventModel(g, disasterEvent)} onDismiss={() => {
         dismissed.current.add(disasterEvent.id);
         force((x) => x + 1);
-    }} />}{g.phase === "ended" && g.winner != null && <EndgameExperience game={g} graph={gr} seat={seat} onExit={onExit} onRematch={onRematch} />} {utilityPanel === HUD_UTILITY.OPTIONS &&  <OptionsUtilityPanel
+    }} />}{g.phase === "ended" && g.winner != null && <EndgameExperience game={g} graph={gr} seat={seat} chat={chat || []} sendChat={sendChat} onExit={onExit} onRematch={onRematch} />} {utilityPanel === HUD_UTILITY.OPTIONS &&  <OptionsUtilityPanel
         settings={settings}
         setSetting={setSetting}
         fullscreen={fullscreen}

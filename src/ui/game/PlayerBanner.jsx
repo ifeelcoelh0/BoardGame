@@ -29,15 +29,17 @@ function BannerIcon({ name, size = 20, title, className = "" }) {
   return <GameIcon name={name} size={size} title={title} className={className} />;
 }
 
-function BannerStat({ icon, label, value, highlighted = false }) {
+function BannerStat({ icon, label, value, highlighted = false, awardLabel = null }) {
+  const title = highlighted && awardLabel ? `${awardLabel} · ${label}: ${value}` : label;
   return (
     <span
       className={`rdb-player-banner__stat${highlighted ? " is-highlighted" : ""}`}
-      title={label}
-      aria-label={`${label}: ${value}`}
+      title={title}
+      aria-label={highlighted && awardLabel ? `${awardLabel}. ${label}: ${value}` : `${label}: ${value}`}
     >
       <BannerIcon name={icon} size={24} />
       <b>{value}</b>
+      {highlighted && <span className="rdb-player-banner__award-mark" aria-hidden="true"><BannerIcon name="Ac_Medal01" size={16} /></span>}
     </span>
   );
 }
@@ -217,8 +219,8 @@ export default function PlayerBanner({
       <span className="rdb-player-banner__stats">
         <BannerStat icon={SUMMARY_ICONS.resources} label={t("hud.resourcesInHand")} value={resourceCount} />
         <BannerStat icon={SUMMARY_ICONS.cards} label={t("hud.developmentCards")} value={developmentCards} />
-        <BannerStat icon={SUMMARY_ICONS.road} label={t("hud.roadsBuilt")} value={roadCount} highlighted={hasLongestRoad} />
-        <BannerStat icon={SUMMARY_ICONS.troops} label={t("hud.armyStrength")} value={troopCount} highlighted={hasLargestArmy} />
+        <BannerStat icon={SUMMARY_ICONS.road} label={t("hud.roadsBuilt")} value={roadCount} highlighted={hasLongestRoad} awardLabel={t("hud.longestRoad")} />
+        <BannerStat icon={SUMMARY_ICONS.troops} label={t("hud.armyStrength")} value={troopCount} highlighted={hasLargestArmy} awardLabel={t("hud.largestArmy")} />
       </span>
 
       <span className="rdb-player-banner__affordance" aria-hidden="true">

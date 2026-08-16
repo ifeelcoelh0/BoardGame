@@ -13,6 +13,7 @@ import { addCharacterSelectionWall, GALLERY_FRAMING } from "./lobbySceneGallery.
 import { createCharacterScroll } from "./lobbySceneScroll.js";
 import { createGameBook, createRoomCodePlaque, BOOK_ANCHOR, BOOK_READ_NORMAL, BOOK_VIEW_DISTANCE } from "./lobbySceneBook.js";
 import { clearCharacterDetailTextureCache } from "./lobbyCharacterTextures.js";
+import { lobbyStartupPixelRatio, lobbyTargetFps, scheduleLobbyStartupUpgrade } from "./lobbySceneStartup.js";
 
 export function createLobbyScene(container, options = {}) {
   const graphics = resolveGraphicsQualityProfile(options.graphicsQuality);
@@ -23,14 +24,19 @@ export function createLobbyScene(container, options = {}) {
   const camera = new THREE.PerspectiveCamera(39, 1, 0.1, 60);
 
   const renderer = new THREE.WebGLRenderer({ antialias: graphics.renderer.antialias, alpha: false, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, graphics.renderer.lobbyPixelRatioCap));
+  const fullPixelRatio = Math.min(window.devicePixelRatio || 1, graphics.renderer.lobbyPixelRatioCap);
+  // The very first WebGL frame is where shader compilation, texture upload and
+  // shadow-map allocation all compete for the main/GPU thread. Start with a
+  // deliberately cheap warm-up frame budget, then restore the selected quality
+  // once the browser has had time to paint and reach an idle slice.
+  renderer.setPixelRatio(lobbyStartupPixelRatio(window.devicePixelRatio || 1, graphics.renderer.lobbyPixelRatioCap));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   // As sombras continuam dinâmicas, mas são atualizadas explicitamente a uma
   // cadência menor do que o render. A PointLight da lareira exige seis mapas
   // de sombra, por isso recalculá-los em cada frame era um custo desproporcional.
   renderer.shadowMap.autoUpdate = false;
-  renderer.shadowMap.needsUpdate = true;
+  renderer.shadowMap.needsUpdate = false;
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.06;
@@ -217,7 +223,8 @@ export function createLobbyScene(container, options = {}) {
   let disposed = false;
   let cameraMove = null;
   let codexActive = false;
-  let forceShadowUpdate = true;
+  let startupComplete = false;
+  let forceShadowUpdate = false;
   let shadowUpdates = 0;
   let lastShadowUpdateAt = Number.NEGATIVE_INFINITY;
   const SHADOW_UPDATE_INTERVAL = 1000 / graphics.lobby.shadowHz;
@@ -331,7 +338,7 @@ export function createLobbyScene(container, options = {}) {
       wash.intensity += (1.45 * wallDim - wash.intensity) * Math.min(1, delta * 6);
     });
 
-    if (forceShadowUpdate || now - lastShadowUpdateAt >= SHADOW_UPDATE_INTERVAL) {
+    if (startupComplete && (forceShadowUpdate || now - lastShadowUpdateAt >= SHADOW_UPDATE_INTERVAL)) {
       renderer.shadowMap.needsUpdate = true;
       lastShadowUpdateAt = now;
       forceShadowUpdate = false;
@@ -342,14 +349,25 @@ export function createLobbyScene(container, options = {}) {
 
   const renderLoop = createVisibilityAwareFrameLoop({
     onFrame: renderFrame,
-    // Câmara e abertura/assinatura do pergaminho continuam a 60 fps. Quando a
-    // sala está apenas com fogo, personagens e livro em idle, 30 fps preserva
-    // a leitura visual e corta aproximadamente metade dos renders completos.
-    getTargetFps: () => (codexActive
-      ? graphics.lobby.codexFps
-      : cameraMove || scroll.isAnimating
-        ? graphics.lobby.activeFps
-        : graphics.lobby.idleFps),
+    // Câmara e abertura/assinatura do pergaminho continuam fluidas after the
+    // first-load warm-up. During the warm-up we intentionally cap the scene so
+    // shader/texture work cannot monopolise a high-refresh display.
+    getTargetFps: () => lobbyTargetFps({
+      startupComplete,
+      codexActive,
+      cameraMoving: !!cameraMove,
+      scrollAnimating: scroll.isAnimating,
+      graphics,
+    }),
+  });
+
+  const cancelStartupUpgrade = scheduleLobbyStartupUpgrade(() => {
+    if (disposed || startupComplete) return;
+    startupComplete = true;
+    renderer.setPixelRatio(fullPixelRatio);
+    renderer.shadowMap.needsUpdate = true;
+    forceShadowUpdate = true;
+    resize();
   });
 
   const moveCamera = (toPosition, toTarget, duration = 1300, arcHeight = 0.7, onComplete = null) => {
@@ -490,7 +508,7 @@ export function createLobbyScene(container, options = {}) {
       if (!actor || !rim) return;
       actor.setCharacter(characterId ?? null);
       rim.visible = Boolean(characterId);
-      forceShadowUpdate = true;
+      if (startupComplete) forceShadowUpdate = true;
     },
     /**
      * states: { [characterId]: { status: "free" | "taken" | "local", ownerColor } }
@@ -597,6 +615,8 @@ export function createLobbyScene(container, options = {}) {
         graphicsQuality: graphics.id,
         targetIdleFps: graphics.lobby.idleFps,
         shadowHz: graphics.lobby.shadowHz,
+        startupComplete,
+        pixelRatio: renderer.getPixelRatio(),
         shadowUpdates,
         shadowUpdatesPerSecond: renderLoop.getStats().visibleElapsed > 0
           ? shadowUpdates / renderLoop.getStats().visibleElapsed
@@ -606,6 +626,7 @@ export function createLobbyScene(container, options = {}) {
     dispose() {
       disposed = true;
       cameraMove = null;
+      cancelStartupUpgrade();
       renderLoop.dispose();
       observer.disconnect();
       renderer.domElement.removeEventListener("pointermove", handlePointerMove);

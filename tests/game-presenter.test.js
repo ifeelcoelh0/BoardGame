@@ -40,11 +40,18 @@ test("trade presentation writes only through the synchronized presentation slice
     type: "PLAYER_TRADE_ACCEPTED",
     actorIndex: 1,
     proposerIndex: 0,
+    give: { ouro: 1 },
+    get: { madeira: 2 },
   });
 
   assert.equal(game.presentation.log.length, 1);
   assert.match(game.presentation.log[0].msg, /Princesa Maria.*Vlad Drácula/);
   assert.equal(game.presentation.log[0].kind, "trade");
+  assert.deepEqual(game.presentation.log[0].resources, [
+    { resource: "ouro", amount: -1 },
+    { resource: "madeira", amount: 2 },
+  ]);
+  assert.equal(game.presentation.log[0].feedbackText, "Princesa Maria completed a trade with Vlad Drácula.");
   assert.equal("log" in game, false);
   assert.equal("ev" in game, false);
 });
@@ -66,6 +73,7 @@ test("bank trade chronicle keeps explicit resource outflow and inflow", () => {
     { resource: "cavalos", amount: -4 },
     { resource: "tijolo", amount: 1 },
   ]);
+  assert.equal(game.presentation.log[0].feedbackText, "Vlad Drácula traded 4 Horses for 1 Brick at the bank.");
 });
 
 test("scoring presentation synchronizes awards with a semantic voice cue", () => {

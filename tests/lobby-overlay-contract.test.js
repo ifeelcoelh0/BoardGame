@@ -47,10 +47,20 @@ test("lobby wall exposes voluntary fullscreen/settings shortcuts and ready cance
   assert.match(experience, /rd-lobby-corner-tools/);
   assert.match(experience, /RDD_Fullscreen/);
   assert.match(experience, /RDD_Options/);
-  assert.match(experience, /BOOK_PAGE\.SETTINGS/);
+  assert.match(experience, /<LobbySettingsPanel/);
+  assert.match(experience, /setSettingsOpen\(true\)/);
+  assert.doesNotMatch(experience, /BOOK_PAGE\.SETTINGS/);
   assert.match(experience, /is-cancel-ready/);
   assert.match(pages, /is-confirm-ready/);
   assert.match(pages, /is-cancel-ready/);
   assert.doesNotMatch(app, /requestPlayFullscreen/);
   assert.doesNotMatch(controls, /fullscreenOnPlay/);
+});
+
+
+test("lobby settings shortcut reuses game settings controls without routing through the Codex", () => {
+  const panel = readFileSync(new URL("../src/ui/lobby/LobbySettingsPanel.jsx", import.meta.url), "utf8");
+  assert.match(panel, /GameUtilityPanelShell/);
+  assert.match(panel, /GameSettingsControls/);
+  assert.match(panel, /onToggleFullscreen/);
 });

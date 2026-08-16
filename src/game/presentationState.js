@@ -32,6 +32,7 @@ function normalizeLogEntry(entry) {
     kind: normalizeLogKind(source.kind),
     emphasis: normalizeLogEmphasis(source.emphasis),
     ...(typeof source.icon === "string" && source.icon ? { icon: source.icon } : {}),
+    ...(typeof source.feedbackText === "string" && source.feedbackText ? { feedbackText: source.feedbackText.slice(0, 240) } : {}),
     ...(resources.length ? { resources } : {}),
     ...(source.audio && typeof source.audio === "object" && !Array.isArray(source.audio) ? { audio: clone(source.audio) } : {}),
   };
@@ -106,6 +107,7 @@ export function appendGameLog(game, message, playerIndex = null, options = {}) {
     kind: normalizeLogKind(options.kind),
     emphasis: normalizeLogEmphasis(options.emphasis),
     ...(typeof options.icon === "string" && options.icon ? { icon: options.icon } : {}),
+    ...(typeof options.feedbackText === "string" && options.feedbackText ? { feedbackText: options.feedbackText.slice(0, 240) } : {}),
     ...(resources.length ? { resources } : {}),
     ...(options.audio && typeof options.audio === "object" && !Array.isArray(options.audio) ? { audio: clone(options.audio) } : {}),
   };

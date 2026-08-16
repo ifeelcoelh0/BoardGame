@@ -22,3 +22,15 @@
   .rdb-player-banner__stat{display:flex;grid-template-columns:none;min-height:27px;padding:1px 3px;gap:2px}
   .rdb-player-banner__stat b{font-size:11px}
 }
+
+/* Awards must read at a glance in the compact banner, not only in Details. */
+.rdb-player-banner__stat{position:relative}
+.rdb-player-banner__stat.is-highlighted{
+  border-color:rgba(246,205,87,.9);
+  background:linear-gradient(180deg,rgba(139,88,18,.52),rgba(70,38,8,.38));
+  box-shadow:0 0 0 1px rgba(255,227,128,.13),0 0 12px rgba(225,169,48,.26),inset 0 1px rgba(255,244,190,.15);
+}
+.rdb-player-banner__stat.is-highlighted>b{color:#ffe28c;text-shadow:0 1px 2px #341800}
+.rdb-player-banner__stat.is-highlighted>img{filter:drop-shadow(0 0 4px rgba(255,209,85,.5)) drop-shadow(1px 2px 1px rgba(0,0,0,.65))}
+.rdb-player-banner__award-mark{position:absolute!important;right:-5px;top:-7px;display:grid!important;place-items:center;width:18px;height:18px;padding:0!important;border:0!important;background:transparent!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.75));pointer-events:none}
+.rdb-player-banner__award-mark img{width:16px!important;height:16px!important;filter:none!important}

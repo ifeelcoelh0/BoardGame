@@ -28,6 +28,7 @@ const PT = {
   "wizard.trainingSavedTitle": "Escolha registada", "wizard.trainingSavedBody": "Muito bem. Vou lembrar-me de que queres aprender {mode}. Chama-me pela esfera mágica sempre que precisares de ajuda.", "wizard.gotIt": "Entendido",
   "wizard.callWizard": "Chamar o Mago", "wizard.helpTitle": "Em que posso ajudar?", "wizard.helpFoyerBody": "Posso voltar a guiar-te pelo salão ou recomeçar a introdução desde o início.", "wizard.helpRealmBody": "Posso voltar a guiar-te por este Reino ou recomeçar toda a introdução.",
   "wizard.startTour": "Começar visita guiada", "wizard.resumeTour": "Continuar visita", "wizard.repeatHere": "Repetir este guia", "wizard.restartAll": "Recomeçar introdução", "wizard.trainingPreference": "Preferência de treino: {mode}",
+  "actionFeedback.trade": "TROCA", "utility.conversation": "Chat", "utility.chat": "Chat", "utility.realmConversation": "Chat",
   "resources.madeira": "Madeira", "resources.tijolo": "Tijolo", "resources.cavalos": "Cavalos", "resources.ouro": "Ouro", "resources.obsidiana": "Obsidiana",
   "unit.knight": "Cavaleiro", "unit.catapult": "Catapulta", "unit.archer": "Arqueiro", "unit.troop": "Tropa",
   "terrain.forest": "Floresta Sombria", "terrain.clay": "Poços de Argila", "terrain.meadows": "Prados Selvagens", "terrain.caves": "Grutas Douradas", "terrain.mountains": "Montanhas de Obsidiana", "terrain.burned": "Terras Ardidas", "terrain.ice": "Geleira Eterna", "terrain.hidden": "Território Oculto", "terrain.unknown": "terreno desconhecido",
@@ -60,7 +61,7 @@ const PT = {
   "save.lobby": "No salão", "save.setup": "A preparar o reino", "save.play": "Em partida", "save.ended": "Concluído", "save.unknownState": "Estado desconhecido", "save.invalid": "Save inválido", "save.unknownDate": "Data desconhecida", "save.unknownMode": "Modo desconhecido",
   "lobby.openCodex": "Abrir códice", "lobby.resumeLast": "Retomar último", "lobby.foundRealm": "Fundar reino", "lobby.joinRealm": "Entrar num reino", "lobby.players": "Jogadores", "lobby.match": "Partida", "lobby.sealPact": "Selar o pacto com {name}",
   "hud.vpAbbrev": "PV", "hud.victoryPoints": "Pontos de Vitória", "hud.publicVictoryPoints": "Pontos de Vitória públicos", "hud.yourTotalVictoryPoints": "Os teus Pontos de Vitória totais",
-  "end.source.villages": "Aldeias", "end.source.palaces": "Palácios", "end.source.longestRoad": "Estrada Mais Longa", "end.source.largestArmy": "Maior Exército", "end.source.occupations": "Ocupações", "end.source.glory": "Glória de Guerra", "end.source.vpCards": "Cartas PV", "end.scoreSource": "{label} +{points} PV", "end.noScoreSources": "Sem fontes de PV",
+  "end.afterMatch": "DEPOIS DA PARTIDA", "end.chatEmpty": "A mesa está em silêncio. Diz alguma coisa antes de todos saírem.", "end.source.villages": "Aldeias", "end.source.palaces": "Palácios", "end.source.longestRoad": "Estrada Mais Longa", "end.source.largestArmy": "Maior Exército", "end.source.occupations": "Ocupações", "end.source.glory": "Glória de Guerra", "end.source.vpCards": "Cartas PV", "end.scoreSource": "{label} +{points} PV", "end.noScoreSources": "Sem fontes de PV",
 };
 
 export default Object.freeze(PT);
