@@ -1,5 +1,60 @@
 # Changelog — Reinos do Dragão
 
+> As entradas de v0.99.32 em diante foram reconstruídas a partir dos pull requests (#1 a #23).
+
+## Agosto 2026 — melhorias posteriores (PR #10 a #23)
+
+- **Segurança:** primeira estrutura do `security-lab/` (PR #23).
+- **Sessões em direto:** correções de bugs de ligação e de jogabilidade em partidas ao vivo (PR #19–#21).
+- **Polimento:** banners de eventos, dados, lobby e definições (PR #22).
+- **Onboarding:** MVP do assistente (wizard) para novos jogadores (PR #18).
+- **Limpeza:** remoção de artefactos de release antigos do código-fonte (PR #17).
+- **Bots:** maior diversidade de estratégias (PR #16).
+- **Balance Lab:** simulação equilibrada dos modos principais e diagnósticos de setup e imunidade (PR #14–#15).
+- **Regras:** regras dos modos principais e estado do turno centralizados (PR #13).
+- **Integridade dos saves:** hardening dos modos principais e da integridade dos saves (PR #12).
+
+## v0.99.43 — Recuperação de partidas
+
+- Correção da expectativa de reconexão no setup durante a recuperação (PR #11).
+
+## v0.99.42 — Replay determinístico
+
+- Novo verificador de replay determinístico (PR #10).
+
+## v0.99.40 — Acessibilidade e localização
+
+- Acessibilidade e localização da interface (PR #8).
+- Legendas exatas para as falas das personagens (PR #9).
+
+## v0.99.39 — Transição sessão → partida
+
+- Transição entre a sessão de lobby e a partida (PR #7).
+
+## v0.99.37 — Hardening dos modos principais
+
+- Hardening dos modos de jogo principais (PR #6).
+
+## v0.99.36 — Bots v2
+
+- Segunda versão dos bots (PR #5).
+
+## v0.99.35 — HUD de jogo v2
+
+- Nova versão da HUD da partida (PR #4).
+
+## v0.99.34 — Livro do lobby v2
+
+- Nova versão do livro do lobby (PR #3).
+
+## v0.99.33 — Bots
+
+- Primeira versão dos bots (PR #2).
+
+## v0.99.32 — TURN dinâmico
+
+- Credenciais TURN temporárias via Vercel Function e Cloudflare Realtime TURN (PR #1). Ver `TURN_SETUP.md`.
+
 
 ## v0.99.31 — Settings + Playtest Polish
 
