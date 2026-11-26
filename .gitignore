@@ -13,3 +13,5 @@ balance-reports/
 /boardgame-v*-base.zip
 /reinos-do-dragao-v*.patch
 /subtitle-current-files.zip
+
+cypress/screenshots/
